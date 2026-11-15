@@ -2,6 +2,10 @@
 
 **Goal:** Ship a runnable repo-backed APM catalog/editor with Paperclip export and readback.
 
+This records the initial implementation. The frontend replacement is tracked in
+Team Harvest TEA-125 and `frontend/IMPLEMENTATION.md`; it retains the existing
+package store and Paperclip adapter.
+
 **Architecture:** Python package storage and consumer adapter behind a loopback HTTP API; browser modules for the UI. Native APM packages are the sole preset source.
 
 **Tech stack:** Python 3.11+, PyYAML, standard-library HTTP/ZIP/Git process calls; HTML/CSS/JavaScript. Reuse the tested Python converter instead of maintaining two runtimes for local storage.

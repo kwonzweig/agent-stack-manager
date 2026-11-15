@@ -1,0 +1,279 @@
+/* Agent Presets Lab app.css: scoped report, contents, source and inspector rules.
+   Their geometry is retained, while paint uses the Skills Manager theme. */
+.asm-lab {
+  --line: var(--color-border-subtle);
+  --ink: var(--color-text-primary);
+  --muted: var(--color-text-muted);
+  --surface: var(--color-surface);
+  --faint: var(--color-text-faint);
+  --blue: var(--color-accent);
+  --green: var(--color-accent);
+  --amber: var(--color-text-tertiary);
+  --red: var(--color-danger);
+  font-size: 13px;
+}
+.asm-lab .section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+.asm-lab .section-heading h2, .asm-lab .additional h2 { font-size: 16px; line-height: 1.35; font-weight: 690; }
+.asm-lab .summary-box, .asm-lab .report-list, .asm-lab .contents-list, .asm-lab .source-panel, .asm-lab .additional {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.asm-lab .summary-box { overflow: hidden; }
+.asm-lab .summary-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+.asm-lab .summary-table th, .asm-lab .summary-table td { padding: 5px 12px; text-align: left; height: 30px; }
+.asm-lab .summary-table th:first-child { width: 25%; }
+.asm-lab .summary-table thead, .asm-lab .report-head, .asm-lab .file-toolbar {
+  background: var(--surface);
+  color: var(--muted);
+}
+.asm-lab .summary-table thead th { font-weight: 620; border-bottom: 1px solid var(--line); }
+.asm-lab .summary-table tbody tr + tr { border-top: 1px solid var(--color-border-faint); }
+.asm-lab .summary-table tbody th { font-weight: 570; }
+.asm-lab .summary-table .number { text-align: right; }
+.asm-lab .summary-table tfoot { background: var(--color-surface-hover); font-weight: 700; border-top: 1px solid var(--line); }
+.asm-lab .summary-table tfoot th, .asm-lab .summary-table tfoot td { height: 33px; }
+.asm-lab .summary-table .kind-label { white-space: nowrap; }
+.asm-lab .summary-table .kind-icon { width: 20px; height: 20px; font-size: 12px; }
+.asm-lab .kind-label { display: inline-flex; align-items: center; gap: 7px; vertical-align: middle; }
+.asm-lab .summary-table .column-good, .asm-lab .count-good { color: var(--green); }
+.asm-lab .summary-table .column-warn, .asm-lab .count-warn { color: var(--amber); }
+.asm-lab .summary-table .column-bad, .asm-lab .count-bad { color: var(--red); }
+.asm-lab .count-good, .asm-lab .count-warn, .asm-lab .count-bad { font-weight: 650; }
+.asm-lab .zero { color: var(--faint); }
+.asm-lab .report-items { margin-top: 21px; }
+.asm-lab .report-list { overflow: hidden; }
+.asm-lab .report-list ul, .asm-lab .contents-list, .asm-lab .additional ul, .asm-lab .evidence, .asm-lab .field-results { list-style: none; margin: 0; padding: 0; }
+.asm-lab .report-row {
+  display: grid;
+  grid-template-columns: minmax(155px, 1.24fr) minmax(81px, .55fr) minmax(91px, .6fr) minmax(155px, 1.65fr) 12px;
+  min-height: 60px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 13px;
+  position: relative;
+}
+.asm-lab .report-head {
+  font-size: 12px;
+  font-weight: 640;
+  min-height: 35px;
+  border-bottom: 1px solid var(--line);
+}
+.asm-lab .report-row + .report-row, .asm-lab .contents-row + .contents-row { border-top: 1px solid var(--color-border-faint); }
+.asm-lab .report-row:has(.row-action:hover), .asm-lab .report-row:has(.row-action:focus-visible), .asm-lab .contents-row:has(.row-action:hover), .asm-lab .contents-row:has(.row-action:focus-visible) { background: var(--color-surface-hover); }
+.asm-lab .component-label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.asm-lab .component-name { display: grid; align-content: center; min-width: 0; gap: 3px; }
+.asm-lab .row-action {
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font-weight: 650;
+  color: var(--ink);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.asm-lab .row-action::after { content: ""; position: absolute; inset: 0; }
+.asm-lab .row-action:focus-visible { outline: 0; }
+.asm-lab .row-action:focus-visible::after { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.asm-lab .row-action:hover { color: var(--blue); }
+.asm-lab .component-kind, .asm-lab .no-value { color: var(--faint); font-size: 11px; }
+.asm-lab .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  font-weight: 640;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+.asm-lab .status > span { font-size: 12px; line-height: 1; font-weight: 700; }
+.asm-lab .status-good { background: var(--color-accent-bg); color: var(--green); }
+.asm-lab .status-warn { background: var(--color-surface-hover); color: var(--amber); }
+.asm-lab .status-bad { background: var(--color-danger-bg); color: var(--red); }
+.asm-lab .status-neutral { background: var(--color-surface-active); color: var(--color-text-tertiary); }
+.asm-lab .stage-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.asm-lab .row-reason { min-width: 0; color: var(--muted); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.asm-lab .row-reason > span:not(.no-value) {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.asm-lab .row-arrow { color: var(--color-text-faint); justify-self: end; font-size: 18px; }
+.asm-lab .additional { margin-top: 18px; padding: 13px; }
+.asm-lab .additional h2 { margin-bottom: 8px; }
+.asm-lab .additional li + li { margin-top: 8px; }
+.asm-lab .additional code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.asm-lab .additional li p, .asm-lab .inspector-section p { color: var(--muted); line-height: 1.45; margin-top: 4px; overflow-wrap: anywhere; }
+.asm-lab .report-footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); }
+.asm-lab .report-dates { font-size: 12px; color: var(--muted); display: grid; gap: 5px; }
+.asm-lab .report-dates div { display: flex; flex-wrap: wrap; column-gap: 9px; }
+.asm-lab .report-dates dt { min-width: 80px; }
+.asm-lab .artifacts { display: flex; flex-wrap: wrap; gap: 8px 15px; margin-bottom: 9px; }
+.asm-lab .artifact-link { font-size: 13px; }
+.asm-lab .contents-row {
+  position: relative;
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  grid-template-columns: minmax(120px, 1fr) 88px minmax(100px, .8fr) 14px;
+  min-height: 48px;
+  padding: 8px 13px;
+}
+.asm-lab .source-host { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.asm-lab .source-panel { overflow: hidden; }
+.asm-lab .file-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.asm-lab .file-picker { min-width: 0; }
+.asm-lab select {
+  display: block;
+  max-width: 100%;
+  min-height: 34px;
+  padding: 4px 24px 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--color-surface);
+}
+.asm-lab .file-actions { display: flex; gap: 7px; }
+.asm-lab .source-code, .asm-lab .values pre {
+  margin: 0;
+  padding: 14px;
+  font: 12px/1.55 Consolas, "Courier New", monospace;
+  tab-size: 2;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  overflow: auto;
+}
+.asm-lab .source-code { max-height: 63vh; }
+.asm-lab .source-code:focus-visible, .asm-lab .values pre:focus-visible { outline-offset: -2px; }
+.asm-lab .stage-details, .asm-lab .values { display: grid; gap: 8px; margin-bottom: 12px; }
+.asm-lab .stage-detail, .asm-lab .value-panel, .asm-lab .inspector-section { border: 1px solid var(--line); border-radius: 6px; }
+.asm-lab .stage-detail, .asm-lab .inspector-section { padding: 9px 10px; }
+.asm-lab .stage-detail h3 { display: flex; align-items: center; gap: 8px; }
+.asm-lab .stage-detail p { line-height: 1.5; color: var(--muted); margin-top: 6px; }
+.asm-lab .stage-detail .detail-date { font-size: 11px; }
+.asm-lab .evidence { margin-top: 6px; overflow-wrap: anywhere; font-size: 12px; }
+.asm-lab .evidence li { margin-top: 3px; }
+.asm-lab .value-panel { overflow: hidden; }
+.asm-lab .value-panel summary { cursor: pointer; padding: 9px 10px; font-weight: 650; }
+.asm-lab .value-panel pre { max-height: 240px; padding: 9px 10px; border-top: 1px solid var(--line); }
+.asm-lab .inspector-section { margin-bottom: 12px; }
+.asm-lab .field-results li { padding: 7px 0; }
+.asm-lab .field-results li + li { border-top: 1px solid var(--line); }
+.asm-lab .field-results p { display: flex; gap: 7px; align-items: center; margin: 0; }
+.asm-lab .field-results li > span { color: var(--muted); font-size: 12px; }
+.asm-lab .hashes { display: grid; gap: 7px; padding: 0 10px 10px; overflow-wrap: anywhere; }
+.asm-lab .hashes dt { color: var(--muted); font-size: 12px; }
+.asm-lab .hashes dd { margin-top: 4px; }
+.asm-lab .comments { margin-top: 12px; margin-bottom: 0; padding: 12px; }
+.asm-lab .comment-list { color: var(--muted); font-size: 12px; margin-block: 8px 12px; }
+.asm-lab .comment-list ul { list-style: none; margin: 0; padding: 0; }
+.asm-lab .comment-list li { padding: 8px 0; }
+.asm-lab .comment-list li + li { border-top: 1px solid var(--line); }
+.asm-lab .comment-list header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 3px 12px; }
+.asm-lab .comment-list strong { color: var(--ink); overflow-wrap: anywhere; }
+.asm-lab .comment-list li p { color: var(--ink); font-size: 13px; white-space: pre-wrap; }
+.asm-lab .comment-form { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.asm-lab .comment-form .button { justify-self: end; min-height: 32px; }
+.asm-lab .form-field { display: grid; gap: 5px; font-weight: 600; }
+.asm-lab .form-field input, .asm-lab .form-field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 7px 9px;
+  background: var(--color-surface);
+  font-weight: 400;
+}
+.asm-lab .form-field textarea { resize: vertical; }
+.asm-lab .comments .form-message { margin: 0; color: var(--red); font-size: 13px; }
+.asm-lab .report-row { gap: 6px; padding-inline: 9px; }
+.asm-lab .report-row { grid-template-columns: minmax(115px, 1fr) minmax(78px, .55fr) minmax(91px, .65fr) 12px; }
+.asm-lab .report-row > :last-child { grid-area: 1 / 4; }
+.asm-lab .report-head > :nth-child(4) { display: none; }
+.asm-lab .row-reason { grid-column: 1 / -1; padding-left: 37px; }
+.asm-lab .row-reason:has(.no-value) { display: none; }
+.asm-lab .section-heading { gap: 5px; margin-bottom: 8px; }
+.asm-lab .section-heading h2, .asm-lab .additional h2 { font-size: 15px; }
+.asm-lab .section-heading .button { font-size: 12px; min-height: 28px; }
+.asm-lab .summary-table { font-size: 12px; }
+.asm-lab .summary-table th, .asm-lab .summary-table td { padding: 3px 5px; height: 29px; }
+.asm-lab .summary-table th:first-child { width: 27%; padding-left: 8px; }
+.asm-lab .summary-table th:last-child, .asm-lab .summary-table td:last-child { padding-right: 8px; }
+.asm-lab .summary-table .kind-label { gap: 4px; }
+.asm-lab .summary-table .kind-icon { width: 15px; height: 15px; font-size: 10px; }
+.asm-lab .report-items { margin-top: 15px; }
+.asm-lab .report-head { display: none; }
+.asm-lab .report-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 10px;
+    grid-template-rows: auto auto;
+    gap: 6px 7px;
+    padding: 9px;
+  }
+.asm-lab .report-row .component-label { grid-column: 1 / 3; }
+.asm-lab .report-row > :last-child { grid-area: 1 / 3; }
+.asm-lab .report-row .stage-cell { grid-row: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+.asm-lab .stage-label { position: static; width: auto; height: auto; clip-path: none; font-size: 10px; color: var(--muted); }
+.asm-lab .row-reason { padding-left: 0; }
+.asm-lab .report-row .component-name { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 7px; }
+.asm-lab .contents-row { gap: 5px; grid-template-columns: minmax(110px, 1fr) 63px minmax(65px, .65fr) 9px; padding-inline: 8px; }
+.asm-lab .contents-row .kind-icon { width: 24px; height: 24px; font-size: 13px; }
+.asm-lab .contents-row .component-label { gap: 5px; }
+.asm-lab .source-host { font-size: 10px; }
+.asm-lab .summary-table .kind-icon { display: none; }
+.asm-lab :is(.summary-box, .report-list, .contents-list, .source-panel, .inspector-section, .stage-detail, .value-panel) { background: var(--color-surface); }
+.asm-lab .section-heading { flex-wrap: wrap; }
+.asm-lab .section-heading h3, .asm-lab .inspector-section h3, .asm-lab .stage-detail h3 { font-size: 14px; font-weight: 650; }
+.asm-lab .lab-icon-button { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); }
+.asm-lab .lab-icon-button:hover { background: var(--color-surface-hover); color: var(--ink); }
+.asm-lab .comment-form button { justify-self: end; }
+.asm-lab .status { font-weight: 600; }
+.asm-lab .summary-box { overflow-x: auto; }
+.asm-lab .summary-table { min-width: 365px; }
+.asm-lab.empty { padding: 19px 14px; color: var(--muted); }
+@media (max-width: 950px) {
+  .asm-lab .report-row { grid-template-columns: minmax(115px, 1fr) minmax(78px, .55fr) minmax(91px, .65fr) 12px; }
+  .asm-lab .report-row > :last-child { grid-area: 1 / 4; }
+  .asm-lab .report-row .row-reason { grid-row: 2; grid-column: 1 / -1; }
+  .asm-lab .report-head > :nth-child(4) { display: none; }
+  .asm-lab .contents-row { grid-template-columns: minmax(105px, 1fr) minmax(68px, .4fr) 14px; gap: 7px; }
+  .asm-lab .source-host { display: none; }
+}
+@media (max-width: 520px) {
+  .asm-lab .report-head { display: none; }
+  .asm-lab .report-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 5px 8px; padding: 10px 12px; }
+  .asm-lab .report-row .component-label { grid-column: 1 / 3; padding-right: 15px; }
+  .asm-lab .report-row > :last-child { grid-area: 1 / 3; }
+  .asm-lab .report-row .stage-cell { grid-row: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .asm-lab .report-row .row-reason { grid-row: 3; }
+  .asm-lab .stage-label { position: static; width: auto; height: auto; clip-path: none; color: var(--muted); font-size: 11px; }
+}
+
+

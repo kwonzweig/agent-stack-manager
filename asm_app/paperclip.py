@@ -47,8 +47,23 @@ def _read_package(root, package_id):
     return Store(root).get(package_id)
 
 
+class _Reason(str):
+    cause = None
+
+
+def _because(text, cause):
+    """A reason that also names why Paperclip left the component out."""
+    reason = _Reason(text)
+    reason.cause = cause
+    return reason
+
+
 def _status(status, reason):
-    return {"status": status, "reason": reason}
+    result = {"status": status, "reason": str(reason)}
+    cause = getattr(reason, "cause", None)
+    if cause:
+        result["cause"] = cause
+    return result
 
 
 def _repo_key(repository):
@@ -137,7 +152,7 @@ def _report(package, root):
         elif kind == "package":
             reason = "Stack membership expanded."
         elif kind in ("hook", "plugin"):
-            reason = f"The Paperclip exporter has no mapping for this {kind}."
+            reason = _because(f"Paperclip has no setting for agent {kind}s.", "unsupported")
         else:
             reason = "The Paperclip exporter has no mapping for this component."
         row = {
@@ -260,9 +275,13 @@ def export_package(report):
 
 
 class _PaperclipError(RuntimeError):
-    def __init__(self, message, code=None):
+    def __init__(self, message, code=None, cause=None):
         super().__init__(message)
         self.code = code
+        self.cause = cause
+
+    def reason(self):
+        return _because(str(self), self.cause)
 
 
 class _Paperclip:
@@ -287,13 +306,18 @@ class _Paperclip:
                 return json.load(response)
         except HTTPError as error:
             message = f"Paperclip returned HTTP {error.code}."
+            cause = None
             try:
                 payload = json.loads(error.read(4096))
                 if isinstance(payload, dict) and isinstance(payload.get("error"), str):
                     message = f"{message} {payload['error'][:700]}"
+                    details = payload.get("details")
+                    if (payload.get("code") == "skill_source_github_read_failed" and isinstance(details, dict)
+                            and details.get("status") in (401, 403, 404)):
+                        cause = "access"
             except (ValueError, OSError):
                 pass
-            raise _PaperclipError(message, error.code) from error
+            raise _PaperclipError(message, error.code, cause) from error
         except (URLError, TimeoutError, OSError, ValueError) as error:
             raise _PaperclipError("Paperclip could not be reached or returned invalid data.") from error
 
@@ -329,9 +353,13 @@ def _resolve_skills(api, report):
             continue
         entry = next((entry for entry in source["entries"] if entry["path"] == target["path"]), {})
         skill = library.get(entry.get("skillId"))
-        error = entry.get("error")
+        refusal = entry.get("error")
+        error = refusal
         if not skill:
             error = error or source.get("lastError")
+        if refusal:
+            found[identity] = (None, _because(f"Paperclip refused the skill. {refusal[:700]}", "refused"))
+            continue
         if error:
             found[identity] = (None, f"Paperclip could not import the skill. {error[:700]}")
             continue
@@ -499,7 +527,7 @@ def _register_sources(api, report, errors):
     try:
         sources = api.request(path)
     except _PaperclipError as error:
-        errors.update({_source_id(row["target"]): str(error) for row in _sources(report)})
+        errors.update({_source_id(row["target"]): error.reason() for row in _sources(report)})
         return
     for (_, ref), paths in targets.items():
         repository = next(iter(paths.values()))["repositoryUrl"]
@@ -527,7 +555,7 @@ def _register_sources(api, report, errors):
                                    "excludedFolders": []}, "POST")
         except _PaperclipError as error:
             for skill_path in pending:
-                errors[_source_id(paths[skill_path])] = str(error)
+                errors[_source_id(paths[skill_path])] = error.reason()
 
 
 def _create_agent(api, package, report):

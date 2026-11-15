@@ -42,9 +42,11 @@ Create/save payload: `title,description,kind,workArea,usage,instruction,componen
 
 ## Paperclip interface (`asm_app/paperclip.py`)
 
-`convert(package, *, root:Path)` -> `{consumer:"paperclip",items:[{id,name,kind,conversion:{status,reason},import:{status,reason},source,target}],summary:{total,converted,unconverted,imported,notImported},files:[{path,content}]}`.
+`convert(package, *, root:Path)` -> `{consumer:"paperclip",items:[{id,name,kind,conversion:{status,reason,cause?},import:{status,reason,cause?},source,target}],summary:{total,converted,unconverted,imported,notImported},files:[{path,content}]}`.
 
 Conversion statuses `converted,unconverted`; import statuses `saved,missing,not_checked`. Reasons concise English. No runtime field. Every source component appears. Unsupported hooks/plugins must be unconverted, not silently flattened/dropped.
+
+`cause` is present when the adapter knows why Paperclip left the component out: `unsupported` (Paperclip has no setting for this kind), `refused` (Paperclip's scan refused the skill), `access` (Paperclip could not read the source repository). Without a `cause`, a component that is not saved is a failure to look into.
 
 `export_package(report)` -> ZIP bytes.
 

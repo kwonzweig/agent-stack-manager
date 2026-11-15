@@ -131,6 +131,9 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlsplit('http://'+host)
         if parsed.hostname not in ('localhost','127.0.0.1','::1') or parsed.port != self.server.server_port:
             return False
+        # A link on another page may open the app. Its static files hold no data.
+        if self.command in ('GET','HEAD') and not urlsplit(self.path).path.startswith('/api/'):
+            return True
         origin = self.headers.get('Origin')
         if origin and origin not in ('http://'+host,'https://'+host):
             return False

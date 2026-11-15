@@ -37,7 +37,7 @@ The initial Web app engineer and CAO packages preserve the selections used in th
 | Claude Code | Placeholder |
 | CC Switch | Placeholder |
 
-The Paperclip adapter converts Instruction, GitHub skill references and stdio MCP configuration. Hook and plugin conversion is not implemented and each is reported as unconverted. Non-stdio or unrecognized components are also reported explicitly. A saved configuration does not establish runtime success.
+The Paperclip adapter converts Instruction, GitHub skill references and stdio MCP configuration. Paperclip has no setting for agent hooks or plugins, so each is reported as unconverted with that cause. A skill that Paperclip's scan refuses is left out and reported as refused. Non-stdio or unrecognized components are also reported explicitly. A saved configuration does not establish runtime success.
 
 Export without touching a consumer:
 

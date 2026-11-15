@@ -74,6 +74,21 @@ class StoreTests(unittest.TestCase):
         self.assertIn("model: unusual", agent.read_text(encoding="utf-8"))
         self.assertEqual((saved["title"], saved["instruction"]), ("Checkout specialist", "Review refunds."))
 
+    def test_preset_icon_is_saved_in_preset_labels_and_listed(self):
+        package = self.create()
+        self.assertEqual(package["icon"], "")
+        manifest = self.root / "packages/checkout-engineer/apm.yml"
+        saved = self.store.save(package["id"], {"revision": package["revision"], "icon": "rocket"})
+        self.assertEqual(saved["icon"], "rocket")
+        self.assertEqual(yaml.safe_load(manifest.read_text())["x-preset-labels"]["icon"], "rocket")
+        self.assertEqual(self.store.list_packages()[0]["icon"], "rocket")
+        cleared = self.store.save(package["id"], {"revision": saved["revision"], "icon": ""})
+        self.assertEqual(cleared["icon"], "")
+        self.assertNotIn("icon", yaml.safe_load(manifest.read_text())["x-preset-labels"])
+        for value in ("<svg/>", "Rocket", 7):
+            with self.assertRaises(StoreError):
+                self.store.save(package["id"], {"revision": cleared["revision"], "icon": value})
+
     def test_source_url_names_the_same_case_sensitive_path_as_the_source(self):
         item = next(row for row in self.create(names=["react-start"])["components"] if row["kind"] == "skill")
         self.assertEqual(item["source"], {

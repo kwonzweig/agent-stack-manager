@@ -16,13 +16,13 @@ All JSON errors are `{ "error": "message" }`. Paths use URL-encoded package ids.
 - `add_comment(id,component_id,payload)` -> comment
 - `lock(id,update=False)` -> `{ok,output}`; bounded fixed APM invocation, no shell.
 
-PackageSummary: `id,title,description,kind` (`preset` or `stack`), `version,workArea:[],usage:[],componentCount`.
+PackageSummary: `id,title,description,kind` (`preset` or `stack`), `icon` (a lowercase icon name such as `rocket`, or empty when none was chosen), `version,workArea:[],usage:[],componentCount`.
 
 Package extends summary: `revision,instruction,components:[],files:[{path,content}]`.
 
 Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`. Catalog components additionally contain `type:"component"` and native `apm` creation metadata; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
 
-Create/save payload: `title,description,kind,workArea,usage,instruction,componentIds`. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save should retain unsupported native fields unless deliberately removed. New package id derived from title, with collision rejection rather than replacement.
+Create/save payload: `title,description,kind,icon,workArea,usage,instruction,componentIds`. An empty `icon` removes the stored one. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save should retain unsupported native fields unless deliberately removed. New package id derived from title, with collision rejection rather than replacement.
 
 ## HTTP routes (`asm_app/server.py`, root owns)
 

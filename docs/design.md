@@ -6,7 +6,7 @@ The first release is a local dashboard. The UI uses Skills Manager's theme, icon
 
 ## Data and behavior
 
-- `packages/<id>/apm.yml` plus native `.apm/` files store stack/preset content. `x-preset-labels` holds title, workArea, usage and catalog kind. APM dependencies hold membership.
+- `packages/<id>/apm.yml` plus native `.apm/` files store stack/preset content. `x-preset-labels` holds title, icon, workArea, usage and catalog kind. APM dependencies hold membership.
 - `catalog/components.json` indexes reusable component sources and creation templates. It does not duplicate a preset's membership. Catalog also reads stack/preset packages directly.
 - Python reuses the existing Python APM conversion work and APM CLI. The local HTTP server serves a prebuilt React bundle from `asm_app/web/`; frontend source lives in `frontend/`. Filesystem access and local Paperclip access run on this machine, not a hosted Worker.
 - Editing writes real package files and checks a content revision to avoid overwriting another editor. Downloads contain the current native package files.

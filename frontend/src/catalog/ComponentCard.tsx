@@ -1,7 +1,7 @@
 // Grid and list cards from AITMPL dashboard/src/components/ComponentGrid.tsx (MIT).
 import type { CatalogItem } from '../types';
-import { TYPE_CONFIG } from './icons';
-import TypeIcon from './TypeIcon';
+import { KIND_STYLES } from '../lib/kinds';
+import { KindIcon } from '../components/ComponentUI';
 import { itemName } from './catalogItem';
 
 interface Props {
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function ComponentCard({ item, index, viewMode, inCart, onOpen, onToggle }: Props) {
-  const config = TYPE_CONFIG[item.kind];
+  const config = KIND_STYLES[item.kind];
   const name = itemName(item);
   const isList = viewMode === 'list';
   const actionLabel = inCart ? 'Remove ' + name + ' from stack' : 'Add ' + name + ' to stack';
@@ -37,7 +37,7 @@ export default function ComponentCard({ item, index, viewMode, inCart, onOpen, o
         className={'rounded flex items-center justify-center shrink-0 ' + (isList ? 'w-11 h-11' : 'w-10 h-10')}
         style={{ backgroundColor: config.color + '15', color: config.color, border: '1px solid ' + config.color + '30' }}
       >
-        <TypeIcon type={config.icon} size={isList ? 22 : 20} />
+        <KindIcon kind={item.kind} className={isList ? 'h-[22px] w-[22px]' : 'h-5 w-5'} />
       </div>
 
       <div className="min-w-0 flex-1">

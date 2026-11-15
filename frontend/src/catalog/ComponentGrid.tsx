@@ -1,7 +1,7 @@
 // Adapted from AITMPL dashboard/src/components/ComponentGrid.tsx (MIT).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CatalogItem } from '../types';
-import { TYPE_CONFIG } from './icons';
+import { KIND_STYLES } from '../lib/kinds';
 import ComponentCard from './ComponentCard';
 import { itemName } from './catalogItem';
 
@@ -52,7 +52,7 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
     [items, activeType],
   );
   const categories = [...new Set(typeComponents.map((item) => item.kind))].sort((a, b) =>
-    TYPE_CONFIG[a].singular.localeCompare(TYPE_CONFIG[b].singular),
+    KIND_STYLES[a].singular.localeCompare(KIND_STYLES[b].singular),
   );
   const repositories = [...new Set(typeComponents.flatMap((item) => item.source?.repositoryUrl || []))].sort();
 
@@ -67,7 +67,7 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
       results = results.filter((item) =>
         [
           itemName(item), item.description, item.source?.path, item.source?.repositoryUrl,
-          item.sourceUrl, TYPE_CONFIG[item.kind].singular, ...(item.workArea ?? []), ...(item.usage ?? []),
+          item.sourceUrl, KIND_STYLES[item.kind].singular, ...(item.workArea ?? []), ...(item.usage ?? []),
         ].some((value) => value?.toLowerCase().includes(query)),
       );
     }
@@ -196,7 +196,7 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
             >
               <option value="all">All kinds</option>
               {categories.map((cat) => (
-                <option key={cat} value={cat}>{TYPE_CONFIG[cat].singular}</option>
+                <option key={cat} value={cat}>{KIND_STYLES[cat].singular}</option>
               ))}
             </select>
 
@@ -351,7 +351,7 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
             )}
             {category !== 'all' && (
               <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--color-surface-3)] text-[var(--color-text-tertiary)] border border-[var(--color-border)]">
-                {TYPE_CONFIG[category].singular}
+                {KIND_STYLES[category].singular}
               </span>
             )}
           </div>

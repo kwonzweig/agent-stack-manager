@@ -5,24 +5,25 @@ export interface Draft {
   title: string;
   description: string;
   kind: PackageKind;
+  icon: string;
   workArea: string[];
   usage: string[];
   instruction: string;
   members: Component[];
 }
 
-const fields = ["title", "description", "kind", "workArea", "usage", "instruction"] as const;
+const fields = ["title", "description", "kind", "icon", "workArea", "usage", "instruction"] as const;
 type Field = (typeof fields)[number];
 const equal = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 export function createDraft(pkg: Package): Draft {
-  const { title, description, kind, workArea, usage, instruction, components } = pkg;
-  return { original: pkg, title, description, kind, workArea, usage, instruction,
+  const { title, description, kind, icon, workArea, usage, instruction, components } = pkg;
+  return { original: pkg, title, description, kind, icon, workArea, usage, instruction,
     members: components.filter(item => item.id !== "instruction") };
 }
 
-export function makePayload({ original, members, title, description, kind, workArea, usage, instruction }: Draft) {
-  return { revision: original.revision, title, description, kind, workArea, usage, instruction,
+export function makePayload({ original, members, title, description, kind, icon, workArea, usage, instruction }: Draft) {
+  return { revision: original.revision, title, description, kind, icon, workArea, usage, instruction,
     componentIds: members.map(item => item.id) };
 }
 

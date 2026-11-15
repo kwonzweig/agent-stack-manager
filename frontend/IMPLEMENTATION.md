@@ -16,11 +16,11 @@ The existing local server owns packages, catalog sources, and Paperclip conversi
 | src/index.css, tailwind.config.js, postcss.config.js | src/index.css, tailwind.config.js, postcss.config.js | Same light/dark tokens, type stack, controls, panels and geometry. Add a keyboard focus outline. |
 | src/components/Layout.tsx and src/components/Sidebar.tsx | src/App.tsx and src/components/Sidebar.tsx | Keep the 220 px sidebar, scroll region, navigation and icon/count rows. Use the ASM routes and package summaries; collapse navigation on narrow screens. |
 | src/views/WorkspaceView.tsx | src/components/Workspace.tsx | Take the workspace header, count, search, tags, segmented controls and card body. Components replace installed skills; saved files and Paperclip use existing ASM APIs. |
-| src/components/CreatePresetDialog.tsx and RenamePresetDialog.tsx | src/components/PresetDialog.tsx | Keep the dialog width, inputs and action styles. The creation dialog handles name, description and package type; metadata edit adds supported work area and usage. ASM has no stored icon field; the original inference rules select the icon. |
+| src/components/CreatePresetDialog.tsx and RenamePresetDialog.tsx | src/components/PresetDialog.tsx | Keep the dialog width, inputs and action styles. The creation dialog handles name, description and package type; metadata edit adds supported work area and usage. The header icon opens a searchable icon grid, as Paperclip's [AgentIconPicker](https://github.com/paperclipai/paperclip/blob/master/ui/src/components/AgentIconPicker.tsx) does, and the choice is saved in `x-preset-labels.icon`. Presets without one use the original inference rules. |
 | src/components/AddSkillsSheet.tsx and SkillPickerRow.tsx | src/components/ComponentPicker.tsx | Preserve the picker header/search, row checkbox, included-state indicator and footer. Add to a preset draft rather than to a host. |
 | src/components/DetailSheet.tsx | src/components/DetailSheet.tsx | Port the workspace overlay, scroll area, heading and close action. Drop the Tauri drag bar and support narrow browser viewports. |
 | src/components/CardActionMenu.tsx, src/components/SkillMarkdown.tsx | same paths | Copy the action menu and Markdown renderer. |
-| src/lib/presetIcons.tsx, src/lib/skillTags.ts, src/utils.ts | same paths | Copy icon maps and inference, tag palette and utility classes. Change the preset icon helper's input type from the Tauri type to an equivalent local shape. |
+| src/lib/presetIcons.tsx, src/utils.ts | same paths | Copy icon maps and inference, and utility classes. Change the preset icon helper's input type from the Tauri type to an equivalent local shape. |
 
 Agent Presets Lab (2026-11-14), dist/app.js and dist/app.css:
 

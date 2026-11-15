@@ -1,0 +1,29 @@
+name: cao
+version: 0.1.0
+description: Coordinate the human request, delegate work, and ask AR to hire or train
+  when capabilities are missing.
+targets:
+- claude
+- codex
+dependencies:
+  apm:
+  - git: https://github.com/kwonzweig/agent-operating-standards.git
+    ref: e12f3eae70da3102dd5eb8fc71907fd705417f0f
+    path: skills/agent-operating-standards
+  - git: https://github.com/example-org/setup-kit.git
+    ref: bc53b48d8517381c9ba01615ec526ad001d7ccf5
+    path: skills/work-process
+  - git: https://github.com/kwonzweig/there-is-a-tool-for-that.git
+    ref: 7653d1cc78d4a3c7a4dc459e095606b7aaa430c3
+    path: skills/find-tools
+  - git: https://github.com/vercel-labs/skills.git
+    ref: 14cf84aa922cccc7e5b11fee5af9a01b3750fddf
+    path: skills/find-skills
+  - git: https://github.com/blader/humanizer.git
+    ref: 225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8
+  - name: session-report
+    marketplace: claude-plugins-official
+    version: b5b01ac4f889fec0c4c6bb89f27ca7c8574473f6
+  mcp: []
+x-preset-labels:
+  title: CAO

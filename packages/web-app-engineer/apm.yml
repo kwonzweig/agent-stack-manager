@@ -1,0 +1,112 @@
+name: web-app-engineer
+version: 0.1.0
+description: Build and review web apps with the shared Web App Stack.
+targets:
+- claude
+- codex
+dependencies:
+  apm:
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/brainstorming
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/diagnosing-superpowers
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/dispatching-parallel-agents
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/executing-plans
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/finishing-a-development-branch
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/receiving-code-review
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/requesting-code-review
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/subagent-driven-development
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/systematic-debugging
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/test-driven-development
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/using-git-worktrees
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/using-superpowers
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/verification-before-completion
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/writing-plans
+  - git: https://github.com/obra/superpowers.git
+    ref: 22f0b463e7a5e579904dd6211a520321035526f7
+    path: skills/writing-skills
+  - git: https://github.com/garrytan/gstack.git
+    ref: 6b033e79fa06477cbec44875209db65a281e0718
+    path: qa
+  - git: https://github.com/garrytan/gstack.git
+    ref: 6b033e79fa06477cbec44875209db65a281e0718
+    path: review
+  - git: https://github.com/garrytan/gstack.git
+    ref: 6b033e79fa06477cbec44875209db65a281e0718
+    path: design-review
+  - git: https://github.com/TanStack/router.git
+    ref: 0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09
+    path: packages/react-start/skills/react-start
+  - git: https://github.com/TanStack/router.git
+    ref: 0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09
+    path: packages/start-client-core/skills/start-core
+  - git: https://github.com/TanStack/router.git
+    ref: 0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09
+    path: packages/start-client-core/skills/start-core/server-functions
+  - git: https://github.com/TanStack/router.git
+    ref: 0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09
+    path: packages/start-client-core/skills/start-core/server-routes
+  - git: https://github.com/TanStack/router.git
+    ref: 0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09
+    path: packages/start-client-core/skills/start-core/auth-server-primitives
+  - git: https://github.com/TanStack/router.git
+    ref: 0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09
+    path: packages/start-client-core/skills/start-core/deployment
+  - git: https://github.com/TanStack/router.git
+    ref: 0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09
+    path: packages/start-client-core/skills/start-core/execution-model
+  - git: https://github.com/TanStack/router.git
+    ref: 0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09
+    path: packages/start-client-core/skills/start-core/middleware
+  - git: https://github.com/shadcn-ui/ui.git
+    ref: e62c9435fff729a175f38983dee73b2cb4f6a069
+    path: skills/shadcn
+  - git: https://github.com/supabase/agent-skills.git
+    ref: c9be0e931b7930f7d02126d04774d904c381e7d7
+    path: skills/supabase
+  - git: https://github.com/supabase/agent-skills.git
+    ref: c9be0e931b7930f7d02126d04774d904c381e7d7
+    path: skills/supabase-postgres-best-practices
+  - git: https://github.com/anthropics/skills.git
+    ref: 2c5958ecac7cee2b583967a2c4981d0f4a75c579
+    path: skills/webapp-testing
+  - git: https://github.com/kwonzweig/ai-slop-prevention.git
+    ref: 84293890727baa92444b3608774429368f338cc4
+  - name: frontend-design
+    marketplace: claude-plugins-official
+    version: b5b01ac4f889fec0c4c6bb89f27ca7c8574473f6
+  mcp:
+  - name: playwright
+    registry: false
+    transport: stdio
+    command: npx
+    args:
+    - '@playwright/mcp@0.0.85'
+x-preset-labels:
+  title: Web app engineer

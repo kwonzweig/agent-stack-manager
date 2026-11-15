@@ -49,6 +49,17 @@ class ServerTests(unittest.TestCase):
         code, _, _ = self.request('/api/consumers', headers={'Host':'unrelated.example'})
         self.assertEqual(code, 403)
 
+    def test_page_opens_from_a_link_on_another_site(self):
+        for site in ('cross-site', 'same-site'):
+            code, body, _ = self.request('/', headers={
+                'Sec-Fetch-Site':site, 'Sec-Fetch-Mode':'navigate', 'Sec-Fetch-Dest':'document'})
+            self.assertEqual(code, 200, site)
+            self.assertIn(b'<div id="root">', body)
+
+    def test_api_read_from_another_site_is_rejected(self):
+        code, _, _ = self.request('/api/consumers', headers={'Sec-Fetch-Site':'cross-site'})
+        self.assertEqual(code, 403)
+
     def test_rejects_non_json_write(self):
         code, _, _ = self.request('/api/presets', data=b'{}')
         self.assertEqual(code, 415)

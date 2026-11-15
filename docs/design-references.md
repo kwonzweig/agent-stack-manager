@@ -1,5 +1,10 @@
 # Agent Stack Manager interface references
 
+Historical reference notes for the initial UI in PR #1. That UI was rejected.
+The current frontend reuses upstream code; use `frontend/IMPLEMENTATION.md`
+and its source notices for the current implementation. The ASM-specific
+theme and layout choices recorded below are not the current design spec.
+
 ## Screens inspected
 
 | Reference screen | Visible layout and controls | Published image |

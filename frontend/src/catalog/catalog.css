@@ -1,0 +1,164 @@
+/* AITMPL dashboard/src/styles/global.css (MIT), scoped to the ASM Catalog. */
+@font-face {
+  font-family: 'Geist';
+  src: url('./Geist-Latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./GeistMono-Symbols.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  unicode-range: U+2000-2001, U+2004-2008, U+200A, U+23B8-23BD, U+2500-259F;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./GeistMono-Latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+.aitmpl-catalog {
+  /* Backgrounds - Clean whites */
+  --color-surface-0: #ffffff;
+  --color-surface-1: #fafafa;
+  --color-surface-2: #f5f5f5;
+  --color-surface-3: #efefef;
+  --color-surface-4: #e8e8e8;
+
+  /* Borders - Soft grays */
+  --color-border: #e5e5e5;
+  --color-border-hover: #d4d4d4;
+  --color-border-strong: #cbd5e0;
+
+  /* Text colors */
+  --color-text-primary: #0f0f0f;
+  --color-text-secondary: #525252;
+  --color-text-tertiary: #737373; /* 4.7:1 on white (#8a8a8a failed AA at 3.4:1) */
+
+  /* Accent color */
+  --color-accent: #d57455;
+  --color-accent-hover: #c5654a;
+  --color-accent-light: rgba(213, 116, 85, 0.08);
+
+  /* Card backgrounds */
+  --color-card-bg: #ffffff;
+  --color-card-hover: #fafafa;
+
+  /* Card shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+
+  --color-primary-500: #5e6ad2;
+  --color-primary-600: #4b55a8;
+  --font-sans: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-0);
+  font-family: var(--font-sans);
+}
+
+.dark .aitmpl-catalog {
+  /* Backgrounds */
+  --color-surface-0: #0b0b0a;
+  --color-surface-1: #141413;
+  --color-surface-2: #1c1c1a;
+  --color-surface-3: #262624;
+  --color-surface-4: #302f2c;
+
+  /* Borders - Sharp terminal borders */
+  --color-border: #2a2926;
+  --color-border-hover: #d57455;
+  --color-border-strong: #3d3c38;
+
+  /* Text colors */
+  --color-text-primary: #faf9f5;
+  /* Reading text follows GitHub dark / X: body copy near-white, muted only for metadata.
+     On #0b0b0a: primary 18.7:1, secondary 10.9:1, tertiary 7.2:1 (6.3:1 on surface-2). */
+  --color-text-secondary: #c3c1b7;
+  --color-text-tertiary: #9f9d93;
+
+  /* Accent color */
+  --color-accent: #d57455;
+  --color-accent-hover: #e38d6e;
+  --color-accent-light: rgba(213, 116, 85, 0.1);
+
+  /* Terminal green */
+  --color-success: #3fb950;
+  --color-success-bg: rgba(63, 185, 80, 0.1);
+
+  /* Card backgrounds */
+  --color-card-bg: #141413;
+  --color-card-hover: #1c1c1a;
+
+  /* Card shadows — flat terminal look */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 0 0 1px #d57455, 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.aitmpl-catalog :is(.font-mono, .font-ui-mono) {
+  font-family: var(--font-mono);
+}
+
+@keyframes aitmpl-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.aitmpl-catalog .animate-fade-in-up {
+  animation: aitmpl-fade-in-up 0.5s ease-out;
+}
+
+
+.aitmpl-catalog input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+
+.aitmpl-stack-dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+  backdrop-filter: blur(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aitmpl-catalog .animate-fade-in-up {
+    animation: none;
+  }
+}
+
+/* Tailwind 3 needs explicit alpha colors for the upstream coral gradients. */
+.aitmpl-stack-accent {
+  background: linear-gradient(to bottom right, var(--color-accent), rgb(213 116 85 / 80%));
+}
+
+.aitmpl-stack-accent:hover {
+  background: linear-gradient(to bottom right, rgb(213 116 85 / 90%), rgb(213 116 85 / 70%));
+}
+
+.aitmpl-stack-dialog[open] {
+  animation: aitmpl-stack-slide 300ms ease-out;
+}
+
+@keyframes aitmpl-stack-slide {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aitmpl-stack-dialog[open] {
+    animation: none;
+  }
+}

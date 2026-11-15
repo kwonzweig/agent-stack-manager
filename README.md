@@ -69,6 +69,25 @@ This resolves dependencies and writes `apm.lock.yaml` without deploying into hos
 
 ## Development
 
+The React frontend is in `frontend/`. Its production build is included in
+`asm_app/web/`, so running the Python app does not require Node.js.
+
+To change the frontend, use Node.js 22.12 or newer:
+
+```sh
+cd frontend
+npm ci
+npm test
+npm run build
+```
+
+Reload the local dashboard after building. UI source and compiled files belong
+in the same commit. The interface reuses Skills Manager and Claude Code
+Templates components; source versions and adaptations are recorded in
+`frontend/IMPLEMENTATION.md` and the bundled license notices.
+
+Run the backend checks from the repository root:
+
 ```sh
 python -m unittest discover -s tests -v
 ```

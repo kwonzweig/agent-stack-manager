@@ -6,9 +6,9 @@ This records the initial implementation. The frontend replacement is tracked in
 Team Harvest TEA-125 and `frontend/IMPLEMENTATION.md`; it retains the existing
 package store and Paperclip adapter.
 
-**Architecture:** Python package storage and consumer adapter behind a loopback HTTP API; browser modules for the UI. Native APM packages are the sole preset source.
+**Architecture:** Python package storage and consumer adapter behind a loopback HTTP API; a prebuilt React bundle for the UI. Native APM packages are the sole preset source.
 
-**Tech stack:** Python 3.11+, PyYAML, standard-library HTTP/ZIP/Git process calls; HTML/CSS/JavaScript. Reuse the tested Python converter instead of maintaining two runtimes for local storage.
+**Tech stack:** Python 3.11+, PyYAML, standard-library HTTP/ZIP/Git process calls; React, TypeScript and Vite for the frontend in `frontend/`. Reuse the tested Python converter instead of maintaining two runtimes for local storage.
 
 **Spec:** [design.md](design.md).
 
@@ -26,4 +26,4 @@ Create a preset from real catalog entries, edit and reload native files, downloa
 
 ## Verification scope
 
-Storage, HTTP editing/export/comments and consumer conversion/readback are covered by automated tests. Paperclip imports were exercised only in Preset Import Lab. Frontend modules were syntax-checked and rendered against live API responses. Browser interaction and responsive layout still need a visual pass; no Computer Use was used.
+Storage, HTTP editing/export/comments and consumer conversion/readback are covered by automated tests. Paperclip imports were exercised only in Preset Import Lab. The React frontend was rendered at 1440px and 390px and exercised in a browser against an isolated data copy: create a preset from catalog entries, edit and save, reload, comment, inspect source and download the APM ZIP ([PR #2](https://github.com/kwonzweig/agent-stack-manager/pull/2)).

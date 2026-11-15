@@ -67,6 +67,7 @@ class PaperclipFixture:
         self.assignments = []
         self.requests = []
         self.source_rejected = False
+        self.source_private = False
         self.sources_unavailable = False
         self.preview_error = None
         self.ignore_instruction_update = False
@@ -95,6 +96,10 @@ class PaperclipFixture:
                 return 422, {"error": "Wrong repository source, commit or path"}
             if self.source_rejected:
                 return 422, {"error": "Check failed verification"}
+            if self.source_private:
+                return 422, {"error": "Repository, branch, or file is unavailable. Check the URL and GitHub repository access.",
+                             "code": "skill_source_github_read_failed",
+                             "details": {"code": "skill_source_github_read_failed", "status": 404}}
             self.add_source(with_check=True)
             return 201, {"source": self.sources[0]}
         if method == "PATCH" and url == COMPANY_PATH + "/skill-sources/source-1":
@@ -275,6 +280,36 @@ class PaperclipTests(unittest.TestCase):
         self.assertIn("Check failed verification", items["check"]["import"]["reason"])
         self.assertIsNone(items["check"]["target"].get("key"))
         self.assertEqual(self.fixture.assignments, [])
+
+    def test_hook_and_plugin_name_paperclip_as_the_reason(self):
+        items = by_id(paperclip.convert(self.package, root=ROOT))
+        for item_id, kind in (("stop", "hook"), ("design", "plugin")):
+            conversion = items[item_id]["conversion"]
+            self.assertEqual(conversion["cause"], "unsupported")
+            self.assertEqual(conversion["reason"], f"Paperclip has no setting for agent {kind}s.")
+        self.assertNotIn("cause", items["check"]["conversion"])
+
+    def test_skill_refused_by_paperclip_is_reported_as_refused(self):
+        refusal = "checklist.md: Remote-fetch or dynamic execution pattern is not allowed."
+        self.fixture.sources[:] = [{"id": "source-1", "repositoryUrl": REPO, "trackingRef": REF,
+                                    "lastScanCommit": REF, "revision": 1, "excludedFolders": [],
+                                    "entries": [{"path": PATH, "selection": "selected", "skillId": None,
+                                                 "present": True, "error": refusal}]}]
+        skill = by_id(self.readback())["check"]["import"]
+        self.assertEqual(skill["status"], "missing")
+        self.assertEqual(skill["cause"], "refused")
+        self.assertIn(refusal, skill["reason"])
+
+    def test_private_source_is_reported_as_needing_access(self):
+        self.fixture.source_private = True
+        skill = by_id(self.apply())["check"]["import"]
+        self.assertEqual(skill["status"], "missing")
+        self.assertEqual(skill["cause"], "access")
+        self.assertIn("GitHub repository access", skill["reason"])
+
+    def test_other_source_failure_names_no_cause(self):
+        self.fixture.source_rejected = True
+        self.assertNotIn("cause", by_id(self.apply())["check"]["import"])
 
     def test_unavailable_sources_do_not_block_instruction_and_mcp(self):
         self.fixture.sources_unavailable = True

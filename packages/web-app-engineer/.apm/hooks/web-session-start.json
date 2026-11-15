@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"Check the project's documented build and test commands before changing code.\""
+          }
+        ]
+      }
+    ]
+  }
+}

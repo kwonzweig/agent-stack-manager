@@ -1,13 +1,6 @@
-# Frontend reuse plan
+# Reused frontend source
 
-The existing local server owns packages, catalog sources, and Paperclip conversion. The browser bundle is the only runtime change.
-
-1. Port Skills Manager’s theme, sidebar, workspace cards, dialogs, picker and detail sheet. The app shell loads the existing catalog API and named presets independently; use hash routes so the existing server can serve them.
-2. Keep a draft per preset. Save against its original revision. On conflict, fetch the saved version and keep unaffected changes from both sides when explicitly rebasing the draft. Test with external membership changes and overlapping metadata. Keep Instruction and comments in the detail sheet.
-3. Port the Lab’s component details, file toolbar and conversion report. Use the current report routes and statuses. Both native and Paperclip ZIP downloads must use the original API endpoints.
-4. Integrate the Catalog component, build to the server’s existing flat static directory, and run the frontend and Python tests. Check wheel contents and exercise the served UI separately.
-
-## Reused source files
+The interface reuses code from the projects below. Each table lists the original source, where it lives in ASM, and how it was adapted.
 
 [Skills Manager 1.44.0](https://github.com/xingkongliang/skills-manager/tree/v1.44.0) (MIT, see [license](public/Skills-Manager.LICENSE.txt)):
 
@@ -28,11 +21,9 @@ Agent Presets Lab (2026-11-14), dist/app.js and dist/app.css:
 |---|---|---|
 | contentsRows, .contents-* and row controls | src/components/Workspace.tsx, src/components/lab.css | Port the content list with a component name, type, source and detail affordance. Add selection to the existing row pattern, alongside the Skills Manager grid. |
 | renderSource, .source-panel, .file-toolbar and .source-code | src/components/SourceFiles.tsx, src/components/lab.css | Port the file picker, copy control, and source code view. The file endpoint gives text previews; download original file bytes in the APM ZIP. |
-| renderReport, reportRow, kindSummary, reportDetail, .summary-table, .report-* and .stage-* | src/components/PaperclipReport.tsx, src/components/lab.css | Port the grouped conversion summary, All/Needs attention filter, result rows and source/target inspector. Bind only conversion and import statuses returned by ASM. |
+| renderReport, reportRow, kindSummary, reportDetail, .summary-table and .report-* | src/components/PaperclipReport.tsx, src/components/lab.css | Port the grouped conversion summary, All/Needs attention filter, result rows and source/target inspector. Show the conversion status ASM returns for each component. |
 | contentsDetail, valuePanel, commentsSection and renderComment | src/components/ComponentDetails.tsx, src/components/lab.css | Port source links, collapsible data panels and component comments inside the Skills Manager detail sheet. Use the copied Markdown reader for the primary Instruction. |
 
 The Lab rules are scoped to these views and use the Skills Manager theme variables. Lucide icons replace the Lab's character glyphs.
 
 The catalog has its own [AITMPL source inventory](src/catalog/UPSTREAM.md).
-
-

@@ -1,6 +1,6 @@
 # Local API
 
-All JSON errors are `{ "error": "message" }`. Paths use URL-encoded package ids. Existing writes require the package `revision`; conflicts return 409. API changes are coordinated between workers.
+All JSON errors are `{ "error": "message" }`. Paths use URL-encoded package ids. Existing writes require the package `revision`; conflicts return 409. No route contacts a consumer.
 
 ## Store interface (`asm_app/store.py`)
 
@@ -20,11 +20,11 @@ PackageSummary: `id,title,description,kind` (`preset` or `stack`), `icon` (a low
 
 Package extends summary: `revision,instruction,components:[],files:[{path,content}]`.
 
-Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`. Catalog components additionally contain `type:"component"` and native `apm` creation metadata; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
+Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`; `ref` names a branch, and an empty `ref` follows the default branch. Catalog components additionally contain `type:"component"` and native `apm` creation metadata; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
 
-Create/save payload: `title,description,kind,icon,workArea,usage,instruction,componentIds`. An empty `icon` removes the stored one. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save should retain unsupported native fields unless deliberately removed. New package id derived from title, with collision rejection rather than replacement.
+Create/save payload: `title,description,kind,icon,workArea,usage,instruction,componentIds`. An empty `icon` removes the stored one. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save retains unsupported native fields unless deliberately removed. A new package id is derived from the title; a collision is rejected rather than replaced.
 
-## HTTP routes (`asm_app/server.py`, root owns)
+## HTTP routes (`asm_app/server.py`)
 
 - GET `/api/catalog` -> store.catalog()
 - GET `/api/presets` -> `{presets: store.list_packages()}`
@@ -36,20 +36,17 @@ Create/save payload: `title,description,kind,icon,workArea,usage,instruction,com
 - GET `/api/comments?presetId=&componentId=` -> `{comments:[]}`
 - POST `/api/comments` with `presetId,componentId,body,author` -> `{comment}`
 - GET `/api/consumers` -> `{consumers:[{id,name,supported}]}`
-- GET `/api/presets/{id}/paperclip` -> conversion report
+- GET `/api/presets/{id}/paperclip` -> conversion report from `convert()`
 - GET `/api/presets/{id}/paperclip/export` -> Paperclip ZIP
-- POST `/api/presets/{id}/paperclip/observe` -> report with live saved-state readback; read only on Paperclip
 
 ## Paperclip interface (`asm_app/paperclip.py`)
 
-`convert(package, *, root:Path)` -> `{consumer:"paperclip",items:[{id,name,kind,conversion:{status,reason,cause?},import:{status,reason,cause?},source,target}],summary:{total,converted,unconverted,imported,notImported},files:[{path,content}]}`.
+`convert(package, *, root:Path)` -> `{consumer:"paperclip",items:[{id,name,kind,conversion:{status,reason,cause?},source,target}],summary:{total,converted,unconverted},files:[{path,content}]}`.
 
-Conversion statuses `converted,unconverted`; import statuses `saved,missing,not_checked`. Reasons concise English. No runtime field. Every source component appears. Unsupported hooks/plugins must be unconverted, not silently flattened/dropped.
+Conversion statuses are `converted` and `unconverted`. Reasons are concise English. There is no runtime field. Every source component appears. Unsupported hooks and plugins are unconverted, not silently flattened or dropped.
 
-`cause` is present when the adapter knows why Paperclip left the component out: `unsupported` (Paperclip has no setting for this kind), `refused` (Paperclip's scan refused the skill), `access` (Paperclip could not read the source repository). Without a `cause`, a component that is not saved is a failure to look into.
+`cause` is `unsupported` when Paperclip has no setting for the component's kind. An unconverted component without a `cause` is a conversion that failed and needs attention.
 
-`export_package(report)` -> ZIP bytes.
+The files are `COMPANY.md`, `agents/<slug>/AGENTS.md`, `.paperclip.yaml` and `remote-import-plan.json`, which lists the remote skill sources (`repositoryUrl,path,ref?`) for whoever imports the package.
 
-`observe(package, *, root:Path, base_url:str, company_id:str)` -> report after readback.
-
-`import_package(package, *, root:Path, base_url:str, company_id:str, recheck:bool=False)` -> report; CLI only, explicit `--apply` and company required. `recheck` (`--recheck`) has Paperclip scan again a source whose skill it refused before. Native remote source import and paused role; no employees run. Failed components remain in report. Do not silently choose production company.
+`export_package(report)` -> ZIP bytes of those files.

@@ -24,7 +24,7 @@ On macOS/Linux, activate with `source .venv/bin/activate` instead. Open [localho
 - Source files: inspect and download the current APM package.
 - Component comments: persist local observations in ignored `.asm/` files.
 
-The initial Web app engineer and CAO packages preserve the selections used in the format comparison. Each includes a test hook and a different official marketplace plugin. Source access and target validation failures remain visible in conversion/import results.
+The initial Web app engineer and CAO packages preserve the selections used in the format comparison. Each includes a test hook and a different official marketplace plugin.
 
 `x-preset-labels` stores display metadata. APM dependencies store membership; there is no second ASM preset format. The component catalog is an index of source references and creation templates, not a second list of each preset's components.
 
@@ -32,12 +32,12 @@ The initial Web app engineer and CAO packages preserve the selections used in th
 
 | Consumer | Available |
 |---|---|
-| Paperclip | Package export, explicit CLI import, saved-state readback |
+| Paperclip | Package export |
 | Codex | Placeholder |
 | Claude Code | Placeholder |
 | CC Switch | Placeholder |
 
-The Paperclip adapter converts Instruction, GitHub skill references and stdio MCP configuration. Paperclip has no setting for agent hooks or plugins, so each is reported as unconverted with that cause. A skill that Paperclip's scan refuses is left out and reported as refused. Non-stdio or unrecognized components are also reported explicitly. A saved configuration does not establish runtime success.
+The Paperclip adapter converts Instruction, GitHub skill references and stdio MCP configuration. Paperclip has no setting for agent hooks or plugins, so each is reported as unconverted with that cause. Non-stdio or unrecognized components are also reported explicitly.
 
 Export without touching a consumer:
 
@@ -46,15 +46,7 @@ python -m asm_app export web-app-engineer --consumer paperclip --output dist/web
 python -m asm_app export web-app-engineer --consumer apm --output dist/web-app-engineer-apm.zip
 ```
 
-The Paperclip ZIP includes a native package and remote-source import plan. Paperclip's package importer alone does not execute that source-registration plan. Use the explicit CLI import to register the original skill repos before importing the role:
-
-```sh
-python -m asm_app paperclip web-app-engineer --url http://127.0.0.1:3106 --company YOUR_COMPANY_ID --apply
-```
-
-Omit `--apply` for readback only. Paperclip keeps a refusal it recorded for a skill, also after an upgrade changes its rules. Add `--recheck` to `--apply` to have it scan those sources again; the scan uses GitHub requests, so it runs only when asked. New agents are paused; this command does not start employee runs. Nonzero exit status means some components were not saved or the operation failed; the JSON result identifies them.
-
-For the dashboard's readback action, set `ASM_PAPERCLIP_URL` and `ASM_PAPERCLIP_COMPANY_ID` before starting the server. Opening the dashboard and editing/exporting a preset never installs it into a consumer. No company is selected implicitly.
+The Paperclip ZIP includes a native package and remote-source import plan. Opening the dashboard and editing/exporting a preset never installs it into a consumer.
 
 ## APM lock
 
@@ -92,4 +84,4 @@ Run the backend checks from the repository root:
 python -m unittest discover -s tests -v
 ```
 
-[Design](docs/design.md) · [Reference screens](docs/design-references.md) · [API contract](docs/api-contract.md)
+[Design](docs/design.md) · [API contract](docs/api-contract.md)

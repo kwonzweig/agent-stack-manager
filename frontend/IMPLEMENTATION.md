@@ -1,29 +1,21 @@
 # Reused frontend source
 
-The interface reuses code from the projects below. Each table lists the original source, where it lives in ASM, and how it was adapted.
+The dashboard reuses code and fonts from the projects below. Each link names the exact version reused, because the licence applies to that version. Vite publishes the licence notices from `public/` with the built dashboard.
 
-[Skills Manager 1.44.0](https://github.com/xingkongliang/skills-manager/tree/v1.44.0) (MIT, see [license](public/Skills-Manager.LICENSE.txt)):
+| Upstream | Licence | Upstream files | ASM files | Reuse and adaptation |
+| --- | --- | --- | --- | --- |
+| [Skills Manager 1.44.0](https://github.com/xingkongliang/skills-manager/tree/v1.44.0) | MIT, [notice](public/Skills-Manager.LICENSE.txt) | `src/index.css`, `tailwind.config.js`, `postcss.config.js` | same paths | Same light and dark tokens, type stack, controls, panels and geometry, plus a keyboard focus outline. |
+| Skills Manager 1.44.0 | MIT | `src/components/Layout.tsx`, `src/components/Sidebar.tsx` | `src/App.tsx`, `src/components/Sidebar.tsx` | The 220 px sidebar, scroll region, navigation and icon and count rows, with ASM's routes and package summaries; navigation collapses on narrow screens. |
+| Skills Manager 1.44.0 | MIT | `src/views/WorkspaceView.tsx` | `src/components/Workspace.tsx` | Workspace header, count, search, tags, segmented controls and card body; components replace installed skills. |
+| Skills Manager 1.44.0 | MIT | `src/components/CreatePresetDialog.tsx`, `RenamePresetDialog.tsx` | `src/components/PresetDialog.tsx` | Dialog width, inputs and action styles. Creation takes name, description and package type; the metadata edit adds work area and usage. The header icon opens the icon picker (Paperclip row below), and the choice is saved in `x-preset-labels.icon`. |
+| Skills Manager 1.44.0 | MIT | `src/components/AddSkillsSheet.tsx`, `SkillPickerRow.tsx` | `src/components/ComponentPicker.tsx` | Picker header and search, row checkbox, included-state indicator and footer; adds to a preset draft instead of a host. |
+| Skills Manager 1.44.0 | MIT | `src/components/DetailSheet.tsx` | same path | Overlay, scroll area, heading and close action, without the Tauri drag bar and with narrow browser viewports. |
+| Skills Manager 1.44.0 | MIT | `src/components/CardActionMenu.tsx`, `src/components/SkillMarkdown.tsx` | same paths | Copied. |
+| Skills Manager 1.44.0 | MIT | `src/lib/presetIcons.tsx`, `src/utils.ts` | same paths | Icon maps, inference and utility classes; the preset icon helper takes a local type instead of the Tauri one. |
+| [Paperclip at 8232456](https://github.com/paperclipai/paperclip/tree/8232456ce8426bc27c2a3498d5734bca44beba79) | MIT, [notice](https://github.com/paperclipai/paperclip/blob/8232456ce8426bc27c2a3498d5734bca44beba79/LICENSE) | [`ui/src/components/AgentIconPicker.tsx`](https://github.com/paperclipai/paperclip/blob/8232456ce8426bc27c2a3498d5734bca44beba79/ui/src/components/AgentIconPicker.tsx) | `src/components/PresetIconPicker.tsx` | The icon opens a searchable grid, and choosing an icon closes it. The icons come from Skills Manager's preset icon map. |
+| [AITMPL, claude-code-templates at 8c9a4a2](https://github.com/davila7/claude-code-templates/tree/8c9a4a2c4a12a3010a0d26eddd3c40e7cef16af1/dashboard) | MIT, [notice](public/AITMPL.LICENSE.txt) | [`ComponentGrid.tsx`, toolbar and results](https://github.com/davila7/claude-code-templates/blob/8c9a4a2c4a12a3010a0d26eddd3c40e7cef16af1/dashboard/src/components/ComponentGrid.tsx#L347-L601) and [pagination](https://github.com/davila7/claude-code-templates/blob/8c9a4a2c4a12a3010a0d26eddd3c40e7cef16af1/dashboard/src/components/ComponentGrid.tsx#L860-L897) | `src/catalog/ComponentGrid.tsx` | Type chips, search input, filter bar and panel, grid and list toggle, results header, page selection and pagination, with a page size of 24. The kind select and repository chips use the catalog API; sort is by catalog order, name or repository. |
+| AITMPL at 8c9a4a2 | MIT | [`ComponentGrid.tsx`, grid and list cards](https://github.com/davila7/claude-code-templates/blob/8c9a4a2c4a12a3010a0d26eddd3c40e7cef16af1/dashboard/src/components/ComponentGrid.tsx#L602-L796) | `src/catalog/ComponentCard.tsx` | Card and row layouts, glyph tile, mono heading, clamped description, metadata chip, entrance animation and plus icon. A second chip names the source repository and filters by it; the checkbox selects the entry and the plus opens ASM's add menu. |
+| AITMPL at 8c9a4a2 | MIT | [`global.css`](https://github.com/davila7/claude-code-templates/blob/8c9a4a2c4a12a3010a0d26eddd3c40e7cef16af1/dashboard/src/styles/global.css), [`DashboardLayout.astro` font declarations](https://github.com/davila7/claude-code-templates/blob/8c9a4a2c4a12a3010a0d26eddd3c40e7cef16af1/dashboard/src/layouts/DashboardLayout.astro#L113-L127) | `src/catalog/catalog.css` | Light and dark theme values, fonts and entrance animation, scoped to the Catalog. |
+| Geist and Geist Mono, from Google Fonts | SIL OFL 1.1, [Geist](public/Geist.OFL.txt), [Geist Mono](public/GeistMono.OFL.txt) | WOFF2 files | `src/catalog/*.woff2` | Loaded locally by the Catalog. |
 
-| Original source | ASM source | Adaptation |
-|---|---|---|
-| src/index.css, tailwind.config.js, postcss.config.js | src/index.css, tailwind.config.js, postcss.config.js | Same light/dark tokens, type stack, controls, panels and geometry. Add a keyboard focus outline. |
-| src/components/Layout.tsx and src/components/Sidebar.tsx | src/App.tsx and src/components/Sidebar.tsx | Keep the 220 px sidebar, scroll region, navigation and icon/count rows. Use the ASM routes and package summaries; collapse navigation on narrow screens. |
-| src/views/WorkspaceView.tsx | src/components/Workspace.tsx | Take the workspace header, count, search, tags, segmented controls and card body. Components replace installed skills; saved files and Paperclip use existing ASM APIs. |
-| src/components/CreatePresetDialog.tsx and RenamePresetDialog.tsx | src/components/PresetDialog.tsx | Keep the dialog width, inputs and action styles. The creation dialog handles name, description and package type; metadata edit adds supported work area and usage. The header icon opens a searchable icon grid, as Paperclip's [AgentIconPicker](https://github.com/paperclipai/paperclip/blob/master/ui/src/components/AgentIconPicker.tsx) does, and the choice is saved in `x-preset-labels.icon`. Presets without one use the original inference rules. |
-| src/components/AddSkillsSheet.tsx and SkillPickerRow.tsx | src/components/ComponentPicker.tsx | Preserve the picker header/search, row checkbox, included-state indicator and footer. Add to a preset draft rather than to a host. |
-| src/components/DetailSheet.tsx | src/components/DetailSheet.tsx | Port the workspace overlay, scroll area, heading and close action. Drop the Tauri drag bar and support narrow browser viewports. |
-| src/components/CardActionMenu.tsx, src/components/SkillMarkdown.tsx | same paths | Copy the action menu and Markdown renderer. |
-| src/lib/presetIcons.tsx, src/utils.ts | same paths | Copy icon maps and inference, and utility classes. Change the preset icon helper's input type from the Tauri type to an equivalent local shape. |
-
-Agent Presets Lab (2026-11-14), dist/app.js and dist/app.css:
-
-| Original JSX-equivalent template / CSS region | ASM source | Adaptation |
-|---|---|---|
-| contentsRows, .contents-* and row controls | src/components/Workspace.tsx, src/components/lab.css | Port the content list with a component name, type, source and detail affordance. Add selection to the existing row pattern, alongside the Skills Manager grid. |
-| renderSource, .source-panel, .file-toolbar and .source-code | src/components/SourceFiles.tsx, src/components/lab.css | Port the file picker, copy control, and source code view. The file endpoint gives text previews; download original file bytes in the APM ZIP. |
-| renderReport, reportRow, kindSummary, reportDetail, .summary-table and .report-* | src/components/PaperclipReport.tsx, src/components/lab.css | Port the grouped conversion summary, All/Needs attention filter, result rows and source/target inspector. Show the conversion status ASM returns for each component. |
-| contentsDetail, valuePanel, commentsSection and renderComment | src/components/ComponentDetails.tsx, src/components/lab.css | Port source links, collapsible data panels and component comments inside the Skills Manager detail sheet. Use the copied Markdown reader for the primary Instruction. |
-
-The Lab rules are scoped to these views and use the Skills Manager theme variables. Lucide icons replace the Lab's character glyphs.
-
-The catalog has its own [AITMPL source inventory](src/catalog/UPSTREAM.md).
+Kind icons and colours come from ASM's `src/lib/kinds.ts` instead of AITMPL's icon set, and AITMPL's Stack drawer is replaced by ASM's selection bar and add menu. AITMPL's downloads, advertising, scan results, jobs, hosted collections, sharing and install command depend on its service and are not reused.

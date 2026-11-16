@@ -1,4 +1,16 @@
-# Local API
+# Data files and local API
+
+For agents and people who edit ASM data. ASM reads and writes only these files; no route contacts a consumer.
+
+## Files
+
+- `packages/<id>/apm.yml` and its `.apm/` files: one stack or preset as an APM package; the folder name is the package id. APM `dependencies` hold the members, `x-preset-labels` holds ASM's labels: `title`, `kind` (`preset` or `stack`), `icon`, `workArea`, `usage` and `paperclip: {role, canCreateAgents}`. A repository member names a branch as `ref`, never a commit or a version.
+- `catalog/components.json`: the components that can be added to a stack or preset, and every source repository with its GitHub stars and the day they were read. It does not repeat a preset's members.
+- `catalog/consumers.json`: what each app supports per component kind (below).
+- `exports/paperclip/<id>/`: each preset's Paperclip package, generated; never edit it by hand. [paperclip.md](paperclip.md) says how to import it.
+- `.asm/`: component comments, ignored by Git.
+
+## Conventions
 
 All JSON errors are `{ "error": "message" }`. Paths use URL-encoded package ids. Existing writes require the package `revision`; conflicts return 409. No route contacts a consumer.
 

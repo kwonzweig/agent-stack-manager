@@ -203,6 +203,7 @@ class StoreTests(unittest.TestCase):
         store = Store(ROOT)
         self.assertEqual(store.get("cao")["paperclip"], {"role": "ceo", "canCreateAgents": False})
         self.assertEqual(store.get("web-app-engineer")["paperclip"], {"role": None, "canCreateAgents": False})
+        self.assertEqual(store.get("ar")["paperclip"], {"role": "general", "canCreateAgents": True})
 
     def test_save_keeps_the_paperclip_labels(self):
         package = self.create()
@@ -226,7 +227,8 @@ class StoreTests(unittest.TestCase):
     def test_migrated_fixtures_keep_instructions_and_component_types(self):
         store = Store(ROOT)
         expected = {"web-app-engineer": {"instruction": 1, "skill": 31, "mcp": 1, "hook": 1, "plugin": 1},
-                    "cao": {"instruction": 1, "skill": 4, "hook": 1, "plugin": 1}}
+                    "cao": {"instruction": 1, "skill": 4, "hook": 1, "plugin": 1},
+                    "ar": {"instruction": 1, "skill": 4}}
         for package_id, counts in expected.items():
             with self.subTest(package_id=package_id):
                 package = store.get(package_id)

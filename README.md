@@ -24,9 +24,9 @@ On macOS/Linux, activate with `source .venv/bin/activate` instead. Open [localho
 - Source files: inspect and download the current APM package.
 - Component comments: persist local observations in ignored `.asm/` files.
 
-The CAO preset holds its Instruction, four skills (`agent-operating-standards`, `find-tools`, `find-skills`, `humanizer`), the `cao-stop` hook and the `session-report` plugin. The Web app engineer preset holds its Instruction, 31 skills, the Playwright MCP server, the `web-session-start` hook and the `frontend-design` plugin. The two hooks only echo a line, and the two plugins are not there for real use: both pairs test how hooks and plugins convert.
+The CAO preset holds its Instruction, four skills (`agent-operating-standards`, `find-tools`, `find-skills`, `humanizer`), the `cao-stop` hook and the `session-report` plugin. The Web app engineer preset holds its Instruction, 31 skills, the Playwright MCP server, the `web-session-start` hook and the `frontend-design` plugin. The two hooks only echo a line, and the two plugins are not there for real use: both pairs test how hooks and plugins convert. The AI Resources preset (`ar`) holds its Instruction, three skills from their repositories (`find-tools`, `find-skills`, `agent-operating-standards`) and its own `technology-research` skill in `packages/ar/.apm/skills/`; it researches, builds and hires roles as presets in ASM.
 
-`x-preset-labels` stores display metadata and the Paperclip role (`general` when unset; CAO sets `ceo`) and whether the agent may create agents. APM dependencies store membership; there is no second ASM preset format. The component catalog is an index of source references and creation templates, not a second list of each preset's components.
+`x-preset-labels` stores display metadata and the Paperclip role (`general` when unset; CAO sets `ceo`) and whether the agent may create agents (only AI Resources does). APM dependencies store membership; there is no second ASM preset format. The component catalog is an index of source references and creation templates, not a second list of each preset's components.
 
 ## Consumers
 
@@ -39,7 +39,7 @@ The CAO preset holds its Instruction, four skills (`agent-operating-standards`, 
 
 The Paperclip export writes the Instruction as the agent's `AGENTS.md` and one skill stub per GitHub skill that follows the skill's branch. Paperclip's [company package spec](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) has no entry for MCP servers, hooks or plugins. The export writes no adapter, and Paperclip's docs do not say how an imported agent gets an MCP server, so the report asks for MCP to be set in the agent's adapter after import; hooks and plugins are left out. Each is reported with that cause, and anything else that does not convert is reported as needing attention.
 
-Every preset's Paperclip package is committed under `exports/paperclip/<id>/`: [CAO](exports/paperclip/cao), [Web app engineer](exports/paperclip/web-app-engineer). Paperclip [imports a preset from its folder's GitHub URL](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/importing-and-exporting.md#github-sources), such as `https://github.com/kwonzweig/agent-stack-manager/tree/main/exports/paperclip/cao`. Saving in the dashboard rewrites the folders; commit the changed files with Git. From the command line:
+Every preset's Paperclip package is committed under `exports/paperclip/<id>/`: [CAO](exports/paperclip/cao), [AI Resources](exports/paperclip/ar), [Web app engineer](exports/paperclip/web-app-engineer). Paperclip [imports a preset from its folder's GitHub URL](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/importing-and-exporting.md#github-sources), such as `https://github.com/kwonzweig/agent-stack-manager/tree/main/exports/paperclip/cao`. Saving in the dashboard rewrites the folders; commit the changed files with Git. From the command line:
 
 ```sh
 python -m asm_app export          # rewrite exports/paperclip/ and list what each preset leaves out

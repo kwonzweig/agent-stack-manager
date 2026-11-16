@@ -8,7 +8,7 @@ import { ValuePanel } from "./ComponentDetails";
 import { DetailSheet } from "./DetailSheet";
 import { conversionStatus, outcome } from "../lib/paperclipOutcome";
 
-const icons = { converted: CircleCheck, unsupported: Ban, unconverted: CircleX } as const;
+const icons = { converted: CircleCheck, "not-in-format": Ban, adapter: Ban, unconverted: CircleX } as const;
 function Status({ result }: { result: Result }) {
   const { id, label, tone } = conversionStatus(result);
   const Icon = icons[id];

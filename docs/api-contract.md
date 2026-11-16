@@ -18,9 +18,9 @@ All JSON errors are `{ "error": "message" }`. Paths use URL-encoded package ids.
 
 PackageSummary: `id,title,description,kind` (`preset` or `stack`), `icon` (a lowercase icon name such as `rocket`, or empty when none was chosen), `version,workArea:[],usage:[],componentCount`.
 
-Package extends summary: `revision,instruction,components:[],files:[{path,content}]`.
+Package extends summary: `revision,instruction,components:[],files:[{path,content}]` and `paperclip:{role,canCreateAgents}`, read from `x-preset-labels.paperclip` in `apm.yml`; `role` is null and `canCreateAgents` false when unset. The dashboard does not edit them yet; a save keeps them.
 
-Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`; `ref` names a branch, and an empty `ref` follows the default branch. Catalog components additionally contain `type:"component"` and native `apm` creation metadata; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
+Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`; `ref` names a branch, and an empty `ref` follows the default branch. A component stored as a file in the package also has `file`, its path inside the package (for example `.apm/skills/<name>/SKILL.md`). Catalog components additionally contain `type:"component"` and native `apm` creation metadata; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
 
 Create/save payload: `title,description,kind,icon,workArea,usage,instruction,componentIds`. An empty `icon` removes the stored one. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save retains unsupported native fields unless deliberately removed. A new package id is derived from the title; a collision is rejected rather than replaced.
 
@@ -43,10 +43,17 @@ Create/save payload: `title,description,kind,icon,workArea,usage,instruction,com
 
 `convert(package, *, root:Path)` -> `{consumer:"paperclip",items:[{id,name,kind,conversion:{status,reason,cause?},source,target}],summary:{total,converted,unconverted},files:[{path,content}]}`.
 
-Conversion statuses are `converted` and `unconverted`. Reasons are concise English. There is no runtime field. Every source component appears. Unsupported hooks and plugins are unconverted, not silently flattened or dropped.
+Conversion statuses are `converted` and `unconverted`. Reasons are concise English. There is no runtime field. Every source component appears; `target` is the written file the component went to (`agents/<id>/AGENTS.md`, `skills/<key>/SKILL.md`), or `{packageId}` for an expanded stack.
 
-`cause` is `unsupported` when Paperclip has no setting for the component's kind. An unconverted component without a `cause` is a conversion that failed and needs attention.
+`cause` names why the export leaves a component out as expected: `not-in-format` for hooks and plugins, which Paperclip's company package has no entry for, and `adapter` for MCP servers, which are set in the agent's adapter after import because the export writes no adapter. An unconverted component without a `cause` needs attention: a skill with no branch, outside GitHub, or a role that is not one of Paperclip's.
 
-The files are `COMPANY.md`, `agents/<slug>/AGENTS.md`, `.paperclip.yaml` and `remote-import-plan.json`, which lists the remote skill sources (`repositoryUrl,path,ref?`) for whoever imports the package.
+The files, named by the package id:
+
+- `COMPANY.md`: `schema: agentcompanies/v1`, `kind: company`, `slug`, `name`, `description`.
+- `agents/<id>/AGENTS.md`: `kind: agent`, `name`, `title`, `slug`, `role` and `skills`, the stub keys in member order; no `reportsTo`. The body is the Instruction.
+- `skills/<key>/SKILL.md`: one stub per skill with `key`, `name`, `description` and `metadata.sources[0] = {kind: github-dir, repo, path, trackingRef, url}`, no commit. `path` is the skill's folder, `.` for a skill at the repository root. `trackingRef` is the member's APM `ref`. A skill the preset holds itself is read from this repository, the `project.urls.Repository` of `pyproject.toml`, at `packages/<id>/.apm/skills/<name>` on `main`. The key is the folder name, or the repository name for a root skill; when two skills share it, both take `<repo>-<name>`.
+- `.paperclip.yaml`: `schemaVersion: 7` and, under `agents.<id>`, `role`, `permissions.canCreateAgents`, `runtime.heartbeat.enabled: false` and `metadata.agentStackManagerPackageId` and `metadata.agentStackManagerRevision`, a SHA-256 over the preset's files and those of its nested stacks with LF line endings (`store._export_digest`). No adapter and no budget.
+
+`role` comes from `x-preset-labels.paperclip.role`, `general` when unset; it must be one of the Paperclip `roles` in `catalog/consumers.json`, which cite Paperclip's list. `canCreateAgents` is true only where the labels set it.
 
 `export_package(report)` -> ZIP bytes of those files.

@@ -1,18 +1,19 @@
-"""Convert APM packages into a package Paperclip can import."""
+"""Convert an APM preset into a company package that Paperclip can import."""
 
 from io import BytesIO
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
+import tomllib
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import yaml
 
 
-REPOSITORY = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+", re.IGNORECASE | re.ASCII)
-MCP_NAME = re.compile(r"[a-zA-Z0-9_-]+")
-MCP_FIELDS = {"name", "transport", "registry", "command", "args"}
-PLAN_PATH = "remote-import-plan.json"
+GITHUB = re.compile(r"https://github\.com/([\w.-]+)/([\w.-]+)", re.IGNORECASE | re.ASCII)
+DEFAULT_ROLE = "general"
+# A preset's own skill is read from this repository's main branch once it is committed there.
+OWN_BRANCH = "main"
 
 
 class _PaperclipDumper(yaml.SafeDumper):
@@ -38,12 +39,36 @@ def _read_package(root, package_id):
     return Store(root).get(package_id)
 
 
+def _repository(root):
+    """This repository's GitHub URL, from `project.urls.Repository` in its pyproject.toml."""
+    try:
+        with open(Path(root) / "pyproject.toml", "rb") as file:
+            project = tomllib.load(file).get("project", {})
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    url = project.get("urls", {}).get("Repository") if isinstance(project.get("urls"), dict) else None
+    return url.rstrip("/").removesuffix(".git") if isinstance(url, str) else None
+
+
+def _roles(root):
+    """Paperclip's role list from catalog/consumers.json, or None when the file does not hold one."""
+    try:
+        data = json.loads((Path(root) / "catalog" / "consumers.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    for consumer in data.get("consumers", []):
+        if consumer.get("id") == "paperclip":
+            values = (consumer.get("roles") or {}).get("values")
+            return values if isinstance(values, list) else None
+    return None
+
+
 class _Reason(str):
     cause = None
 
 
 def _because(text, cause):
-    """A reason that also names why Paperclip leaves the component out."""
+    """A reason that also names why Paperclip leaves the component out as expected."""
     reason = _Reason(text)
     reason.cause = cause
     return reason
@@ -57,52 +82,66 @@ def _status(status, reason):
     return result
 
 
-def _native_source(component):
-    """The remote skill as Paperclip imports it. Without a ref it follows the default branch."""
+def _folder(path):
+    """A skill's folder inside its repository: `.` for the root, never an empty string."""
+    path = (path or "").strip("/")
+    if PurePosixPath(path).name.lower() == "skill.md":
+        path = str(PurePosixPath(path).parent)
+    if path in ("", "."):
+        return "."
+    if "\\" in path or any(part in ("", ".", "..") for part in path.split("/")):
+        return None
+    return path
+
+
+def _github_source(repository, path, ref):
+    """The stub source of a skill, or the reason it cannot have one."""
+    match = GITHUB.fullmatch(repository.rstrip("/").removesuffix(".git")) if isinstance(repository, str) else None
+    if not match:
+        return None, "Paperclip imports skills from GitHub only."
+    folder = _folder(path)
+    if folder is None:
+        return None, "The skill's path is not a folder inside its repository."
+    if not isinstance(ref, str) or not ref or ref == "HEAD":
+        return None, "Name the branch this skill follows."
+    repo = f"{match[1]}/{match[2]}"
+    url = f"https://github.com/{repo}/tree/{ref}" + ("" if folder == "." else f"/{folder}")
+    return {"kind": "github-dir", "repo": repo, "path": folder, "trackingRef": ref, "url": url}, None
+
+
+def _skill_source(component, owner, root):
+    file = component.get("file")
+    if file:
+        # The preset's own skill, committed in this repository under packages/<owner>/.
+        if PurePosixPath(file).name != "SKILL.md" or len(file.split("/")) < 4:
+            return None, "A skill in the package needs its own folder with a SKILL.md."
+        repository = _repository(root)
+        if not repository:
+            return None, "Set project.urls.Repository in pyproject.toml to this repository's GitHub URL."
+        return _github_source(repository, f"packages/{owner}/{file}", OWN_BRANCH)
     source = component.get("source") or {}
-    repository = source.get("repositoryUrl")
-    path, ref = source.get("path"), source.get("ref") or ""
-    if not (isinstance(repository, str) and isinstance(path, str) and isinstance(ref, str)):
-        return None
-    repository = repository.rstrip("/").removesuffix(".git")
-    if not REPOSITORY.fullmatch(repository):
-        return None
-    path = path.rstrip("/")
-    if path.startswith("/") or "\\" in path or any(part in (".", "..") for part in path.split("/")):
-        return None
-    if path.rsplit("/", 1)[-1].lower() != "skill.md":
-        path = f"{path}/SKILL.md" if path else "SKILL.md"
-    target = {"repositoryUrl": repository, "path": path}
-    if ref and ref != "HEAD":
-        target["ref"] = ref
-    return target
+    return _github_source(source.get("repositoryUrl"), source.get("path"), source.get("ref"))
 
 
-def _mcp_config(component):
-    config = component.get("configuration")
-    if (not isinstance(config, dict) or config.get("transport", "stdio") != "stdio"
-            or config.get("registry", False) is not False):
-        return None, "This exporter maps inline stdio MCP servers."
-    unmapped = sorted(set(config) - MCP_FIELDS)
-    if unmapped:
-        return None, "This exporter has no mapping for " + ", ".join(unmapped) + "."
-    name, command, args = config.get("name"), config.get("command"), config.get("args", [])
-    if (not isinstance(name, str) or not MCP_NAME.fullmatch(name) or
-            not isinstance(command, str) or not command.strip() or
-            not isinstance(args, list) or not all(isinstance(arg, str) for arg in args)):
-        return None, "A stdio MCP server needs a valid name, command and argument list."
-    return {"name": name, "transport": "stdio", "command": command, "args": args}, "Mapped to Codex CLI settings."
+def _base_key(stub):
+    folder = stub["path"]
+    return stub["repo"].split("/")[1] if folder == "." else folder.rsplit("/", 1)[-1]
 
 
 def _report(package, root):
-    items, mcp = [], {}
+    items, skills, bundle = [], [], {}
     seen = {}
-    instruction_path = f"agents/{_agent_slug(package)}/AGENTS.md"
+    instruction_path = f"agents/{package['id']}/AGENTS.md"
+
+    def remember(current):
+        bundle.setdefault(current["id"], {
+            entry["path"]: entry["content"].encode("utf-8") for entry in current.get("files", [])})
 
     def add(component, ancestry):
         kind = component["kind"]
         component_id = component["id"]
-        signature = (component_id, kind, component.get("source"), component.get("configuration"))
+        signature = (component_id, kind, component.get("source"), component.get("file"),
+                     component.get("configuration"))
         previous = seen.setdefault(component_id, [])
         primary_instruction = kind == "instruction" and component_id == "instruction" and len(ancestry) == 1
         if kind not in ("package", "instruction"):
@@ -115,34 +154,31 @@ def _report(package, root):
             if any(existing_id == item_id for existing_id, _ in previous):
                 item_id = f"{item_id}:{len(previous) + 1}"
         previous.append((item_id, signature))
-        target = None
+        target = stub = None
         if primary_instruction:
-            target, reason = instruction_path, "Written to Paperclip AGENTS.md."
+            target, reason = instruction_path, "Instruction exported as AGENTS.md."
         elif kind == "instruction":
-            reason = "This exporter maps the preset's instruction to AGENTS.md."
+            reason = "Paperclip takes one Instruction per agent; merge it into the Instruction."
         elif kind == "skill":
-            target = _native_source(component)
-            reason = ("Included in the remote skill import plan." if target else
-                      "Native import needs a GitHub repository and a skill path.")
+            stub, reason = _skill_source(component, ancestry[-1], root)
         elif kind == "mcp":
-            target, reason = _mcp_config(component)
-            if target:
-                previous_mcp = mcp.setdefault(target["name"], target)
-                if previous_mcp != target:
-                    reason = f"Conflicting settings for MCP server {target['name']}."
-                    target = None
+            reason = _because("Paperclip's company package has no MCP entry; "
+                              "set it in the agent's adapter after import.", "adapter")
         elif kind == "package":
-            reason = "Stack membership expanded."
+            reason = "Stack members exported."
         elif kind in ("hook", "plugin"):
-            reason = _because(f"Paperclip has no setting for agent {kind}s.", "unsupported")
+            reason = _because(f"Paperclip's company package has no {kind} entry.", "not-in-format")
         else:
             reason = "The Paperclip exporter has no mapping for this component."
         row = {
             "id": item_id, "name": component["name"], "kind": kind,
-            "source": component.get("source") or component.get("sourceUrl"), "target": target,
+            "source": component.get("source") or component.get("sourceUrl") or component.get("file"),
+            "target": target,
             "conversion": _status("converted" if target is not None else "unconverted", reason),
         }
         items.append(row)
+        if kind == "skill" and stub:
+            skills.append((row, stub, component))
         if kind != "package":
             return
 
@@ -157,6 +193,7 @@ def _report(package, root):
             except (ValueError, LookupError, FileNotFoundError):
                 reason = f"Local stack {package_id} could not be read."
             else:
+                remember(child)
                 for member in child["components"]:
                     if member["id"] != "instruction" or child["instruction"].strip():
                         add(member, (*ancestry, package_id))
@@ -165,60 +202,103 @@ def _report(package, root):
                 return
         row["conversion"] = _status("unconverted", reason)
 
+    remember(package)
     components = package["components"]
     if not any(component["id"] == "instruction" for component in components):
         components = [{"id": "instruction", "name": "Instruction", "kind": "instruction"}, *components]
     for component in components:
         add(component, (package["id"],))
-    return {"consumer": "paperclip", "items": items}
+    return items, _stubs(skills), bundle
 
 
-def _agent_slug(package):
-    return re.sub("[^a-z0-9]+", "-", package["title"].lower()).strip("-") or package["id"]
+def _stubs(skills):
+    """Give every distinct skill source one key, in member order, and point its rows at the stub."""
+    sources = []
+    for _, stub, component in skills:
+        if stub not in (known for known, _ in sources):
+            sources.append((stub, component))
+    counts = {}
+    for stub, _ in sources:
+        counts[_base_key(stub)] = counts.get(_base_key(stub), 0) + 1
+    keys, used = [], set()
+    for stub, _ in sources:
+        key = _base_key(stub)
+        if counts[key] > 1:
+            key = f"{stub['repo'].split('/')[1]}-{key}"
+        unique, number = key, 2
+        while unique in used:
+            unique, number = f"{key}-{number}", number + 1
+        used.add(unique)
+        keys.append(unique)
+    stubs = {}
+    for (stub, component), key in zip(sources, keys):
+        stubs[key] = (stub, component)
+    for row, stub, _ in skills:
+        key = keys[[known for known, _ in sources].index(stub)]
+        row["target"] = f"skills/{key}/SKILL.md"
+        row["conversion"] = _status("converted", f"Skill exported as skills/{key}, following {stub['trackingRef']}.")
+    return stubs
 
 
-def _extra_args(items):
-    return [argument for config in items for field in ("command", "args") for argument in
-            ("-c", f'mcp_servers.{config["name"]}.{field}={json.dumps(config[field], ensure_ascii=False)}')]
+def _role(package, root):
+    """The role written to both files, and the report row when the preset's role is not Paperclip's."""
+    labels = package.get("paperclip") or {}
+    role = labels.get("role") or DEFAULT_ROLE
+    roles = _roles(root)
+    if roles is None or role in roles:
+        return role, None
+    row = {"id": "paperclip:role", "name": "Paperclip role", "kind": "other", "source": role, "target": None,
+           "conversion": _status("unconverted", f"Role {role} is not one of Paperclip's roles, so {DEFAULT_ROLE} "
+                                                f"was written; choose one of {', '.join(roles)}.")}
+    return DEFAULT_ROLE, row
 
 
-def _native_files(package, report):
-    slug, title = _agent_slug(package), package["title"]
-    sources = [row["target"] for row in report["items"] if row["kind"] == "skill" and row["target"] is not None]
-    mcp = {row["target"]["name"]: row["target"] for row in report["items"]
-           if row["kind"] == "mcp" and row["target"] is not None}
-    args = _extra_args(mcp.values())
+def _files(package, role, stubs, bundle):
+    from .store import _export_digest
+
+    slug, title = package["id"], package["title"]
+    labels = package.get("paperclip") or {}
     config = {
-        "role": "engineer",
-        "adapter": {"type": "codex_local", "config": {"engine": "cli", "extraArgs": args} if args else {}},
-        "runtime": {"heartbeat": {"enabled": False, "wakeOnDemand": False}},
-        "permissions": {"canCreateAgents": False},
-        "budgetMonthlyCents": 0,
+        "role": role,
+        "permissions": {"canCreateAgents": labels.get("canCreateAgents") is True},
+        "runtime": {"heartbeat": {"enabled": False}},
+        "metadata": {"agentStackManagerPackageId": slug, "agentStackManagerRevision": _export_digest(bundle)},
     }
-    return {
-        "COMPANY.md": _frontmatter({"name": title, "description": package["description"]}),
+    files = {
+        "COMPANY.md": _frontmatter({"schema": "agentcompanies/v1", "kind": "company", "slug": slug,
+                                    "name": title, "description": package["description"] or title}),
         f"agents/{slug}/AGENTS.md": _frontmatter(
-            {"kind": "agent", "name": title, "title": title, "slug": slug, "role": config["role"], "skills": []},
+            {"kind": "agent", "name": title, "title": title, "slug": slug, "role": role, "skills": list(stubs)},
             _instruction(package["instruction"]),
         ),
         ".paperclip.yaml": _yaml({"schemaVersion": 7, "agents": {slug: config}}),
-        PLAN_PATH: json.dumps({"slug": slug, "sourceFormat": "APM", "remoteSources": sources},
-                              ensure_ascii=False, indent=2) + "\n",
     }
+    for key, (stub, component) in stubs.items():
+        front = {"key": key, "name": component["name"]}
+        if (component.get("description") or "").strip():
+            front["description"] = component["description"].strip()
+        front["metadata"] = {"sources": [stub]}
+        files[f"skills/{key}/SKILL.md"] = _frontmatter(front, f"Imported from {stub['url']}.")
+    return files
 
 
 def convert(package, *, root: Path):
-    """Produce a native Paperclip package and a plan listing the original remote skills."""
-    report = _report(package, root)
-    items = report["items"]
+    """Produce the Paperclip company package of a preset and the report of every component."""
+    items, stubs, bundle = _report(package, root)
+    role, role_row = _role(package, root)
+    if role_row:
+        items.append(role_row)
     converted = sum(row["conversion"]["status"] == "converted" for row in items)
-    report["summary"] = {"total": len(items), "converted": converted, "unconverted": len(items) - converted}
-    report["files"] = [{"path": path, "content": content} for path, content in _native_files(package, report).items()]
-    return report
+    return {
+        "consumer": "paperclip", "items": items,
+        "summary": {"total": len(items), "converted": converted, "unconverted": len(items) - converted},
+        "files": [{"path": path, "content": content}
+                  for path, content in _files(package, role, stubs, bundle).items()],
+    }
 
 
 def export_package(report):
-    """Return the Paperclip package as a ZIP, including its remote import plan."""
+    """Return the Paperclip package files as a ZIP."""
     output = BytesIO()
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as archive:
         for entry in report["files"]:

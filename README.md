@@ -26,7 +26,7 @@ On macOS/Linux, activate with `source .venv/bin/activate` instead. Open [localho
 
 The CAO preset holds its Instruction, four skills (`agent-operating-standards`, `find-tools`, `find-skills`, `humanizer`), the `cao-stop` hook and the `session-report` plugin. The Web app engineer preset holds its Instruction, 31 skills, the Playwright MCP server, the `web-session-start` hook and the `frontend-design` plugin. The two hooks only echo a line, and the two plugins are not there for real use: both pairs test how hooks and plugins convert.
 
-`x-preset-labels` stores display metadata. APM dependencies store membership; there is no second ASM preset format. The component catalog is an index of source references and creation templates, not a second list of each preset's components.
+`x-preset-labels` stores display metadata and the Paperclip role (`general` when unset) and whether the agent may create agents. APM dependencies store membership; there is no second ASM preset format. The component catalog is an index of source references and creation templates, not a second list of each preset's components.
 
 ## Consumers
 
@@ -37,7 +37,7 @@ The CAO preset holds its Instruction, four skills (`agent-operating-standards`, 
 | Claude Code | Placeholder |
 | CC Switch | Placeholder |
 
-The Paperclip adapter converts Instruction, GitHub skill references and stdio MCP configuration. Paperclip has no setting for agent hooks or plugins, so each is reported as unconverted with that cause. Non-stdio or unrecognized components are also reported explicitly.
+The Paperclip export writes the Instruction as the agent's `AGENTS.md` and one skill stub per GitHub skill that follows the skill's branch. Paperclip's company package has no entry for MCP servers, hooks or plugins: MCP is set in the agent's adapter after import, and hooks and plugins are left out. Each is reported with that cause, and anything else that does not convert is reported as needing attention.
 
 Export without touching a consumer:
 
@@ -46,7 +46,7 @@ python -m asm_app export web-app-engineer --consumer paperclip --output dist/web
 python -m asm_app export web-app-engineer --consumer apm --output dist/web-app-engineer-apm.zip
 ```
 
-The Paperclip ZIP includes a native package and remote-source import plan. The agent in the ZIP lists no skills. Paperclip's package importer does not read `remote-import-plan.json`, so whoever imports the package adds those skill sources in Paperclip by hand. Opening the dashboard and editing/exporting a preset never installs it into a consumer.
+The Paperclip ZIP holds `COMPANY.md`, `agents/<id>/AGENTS.md`, `.paperclip.yaml` and `skills/<key>/SKILL.md` stubs; [the API contract](docs/api-contract.md) lists their fields. Opening the dashboard and editing/exporting a preset never installs it into a consumer.
 
 ## APM lock
 

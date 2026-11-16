@@ -64,6 +64,16 @@ class ServerTests(unittest.TestCase):
         code, _, _ = self.request('/api/presets', data=b'{}')
         self.assertEqual(code, 415)
 
+    def test_early_rejection_reads_the_body_so_the_client_gets_the_answer(self):
+        # Closing a socket with unread request bytes resets the connection on Windows,
+        # so the client would see ConnectionResetError instead of the status.
+        body = b' ' * (512 * 1024)
+        for headers, status in (({'Content-Type':'application/json', 'Origin':'https://unrelated.example'}, 403),
+                                ({'Content-Type':'text/plain'}, 415)):
+            with self.subTest(status=status):
+                code, _, _ = self.request('/api/presets', data=body, headers=headers)
+                self.assertEqual(code, status)
+
     def test_rejects_invalid_json(self):
         code, _, _ = self.request('/api/presets', data=b'{', headers={'Content-Type':'application/json'})
         self.assertEqual(code, 400)

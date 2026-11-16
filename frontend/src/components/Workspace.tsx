@@ -9,7 +9,7 @@ import { KindBadge, KindIcon, KINDS, SearchField, TypeFilter } from "./Component
 import { hrefFor, PresetIcon, type Route } from "./Sidebar";
 import { PresetIconPicker } from "./PresetIconPicker";
 import { inferPresetIconKey } from "../lib/presetIcons";
-import "./lab.css";
+import "./preset.css";
 
 export type WorkspaceTab = NonNullable<Route["tab"]>;
 const tabs: { id: WorkspaceTab; label: string }[] = [
@@ -162,12 +162,12 @@ export function PresetContents({ draft, onOpen, onAdd, onRemove, busy }: {
         </button>
       </div>
     </div>}
-    {!visible.length ? <p className="asm-lab empty">No matching components.</p> :
+    {!visible.length ? <p className="asm-preset empty">No matching components.</p> :
       view === "grid" ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {visible.map(item => <WorkspaceCard key={item.id} item={item} selectable={selectMode} selected={selection.has(item.id)}
           onOpen={() => onOpen(item)} onSelect={() => toggleSelection(item.id)} onRemove={() => { if (!busy) remove([item.id]); }}
           canComment={draft.original.components.some(value => value.id === item.id)} />)}
-      </div> : <div className="asm-lab"><ul className="contents-list">
+      </div> : <div className="asm-preset"><ul className="contents-list">
         {visible.map(item => {
           const selectable = selectMode && item.id !== "instruction";
           const host = externalUrl(item.sourceUrl || item.source?.repositoryUrl)?.hostname;

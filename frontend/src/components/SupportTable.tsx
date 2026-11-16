@@ -19,7 +19,7 @@ export function SupportTable({ data, report }: { data: ConsumerData; report?: Re
   if (!data.consumers.length) return null;
   const rows = supportRows(data, report);
   const unplaced = unplacedPlugins(report?.items);
-  return <section className="asm-lab support-by-app" aria-label="Support by app">
+  return <section className="asm-preset support-by-app" aria-label="Support by app">
     <div className="section-heading"><h3>Support by app</h3></div>
     <div className="summary-box support-scroll"><table className="summary-table support-table">
       <thead><tr>

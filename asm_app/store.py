@@ -30,15 +30,19 @@ _PRIMARY = ".apm/agents/{}.agent.md"
 _KINDS = {"skill", "mcp", "hook", "plugin", "instruction", "package", "other"}
 _LISTS = (("dependencies", "apm"), ("dependencies", "mcp"), ("dependencies", "lsp"),
           ("dependencies", "hooks"), ("dependencies", "plugins"), ("hooks",), ("plugins",))
-_SKIPPED = {".git", ".asm", "apm_modules", "__pycache__", ".venv", ".env"}
+# apm.lock.yaml is written by `lock`: it records resolved commits and is not part of the preset.
+_SKIPPED = {".git", ".asm", "apm_modules", "apm.lock.yaml", "__pycache__", ".venv", ".env"}
+# Resolving a preset of many skills takes APM several minutes.
+_LOCK_SECONDS = 600
 _ICON = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 _MUTEX = threading.RLock()
+_APM_RUN = threading.Lock()
 
 
 class StoreError(ValueError):
     def __init__(self, message: str, status: int = 400):
         super().__init__(message)
-        self.status = self.status_code = status
+        self.status = status
 
 
 @dataclass
@@ -598,6 +602,8 @@ class Store:
     def save(self, identifier, payload):
         with _MUTEX:
             previous = self._snapshot(identifier)
+            if not isinstance(payload.get("revision"), str):
+                raise StoreError(f"revision is required: send the revision from GET /api/presets/{identifier}.")
             if payload.get("revision") != _revision(previous):
                 raise StoreError("This package changed. Reload it before saving.", 409)
             _, model, entries = self._package(identifier, previous, self._catalog()["items"])
@@ -805,21 +811,25 @@ class Store:
         return comment
 
     def lock(self, identifier, update=False):
+        # APM can run for minutes, so only the check holds _MUTEX; reads and saves go on meanwhile.
+        # apm.lock.yaml is not part of a save, and _APM_RUN keeps two locks from writing it at once.
         with _MUTEX:
             files = self._snapshot(identifier)
             bundle = self._bundle(identifier, files)
             for snapshot in bundle.values():
                 self._check_lock_paths(snapshot, bundle)
-            command = self._apm_command()
-            if not command:
-                return {"ok": False, "output": "Microsoft APM CLI was not found on this machine."}
+            directory = self._directory(identifier)
+        command = self._apm_command()
+        if not command:
+            return {"ok": False, "output": "Microsoft APM CLI was not found on this machine."}
+        with _APM_RUN:
             try:
                 result = subprocess.run([*command, "lock", *(["--update"] if update else [])],
-                                        cwd=self._directory(identifier), stdin=subprocess.DEVNULL,
+                                        cwd=directory, stdin=subprocess.DEVNULL,
                                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False,
-                                        timeout=60, encoding="utf-8", errors="replace")
+                                        timeout=_LOCK_SECONDS, encoding="utf-8", errors="replace")
             except subprocess.TimeoutExpired:
-                return {"ok": False, "output": "APM lock timed out after 60 seconds."}
+                return {"ok": False, "output": f"APM lock timed out after {_LOCK_SECONDS} seconds."}
             except OSError as exc:
                 return {"ok": False, "output": f"Could not start Microsoft APM CLI: {exc}"}
             return {"ok": result.returncode == 0, "output": result.stdout.strip()}

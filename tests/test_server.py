@@ -7,6 +7,7 @@ import unittest
 from zipfile import ZipFile
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from unittest.mock import patch
 
 from asm_app.server import create_server
 
@@ -85,6 +86,57 @@ class ServerTests(unittest.TestCase):
     def test_rejects_invalid_json(self):
         code, _, _ = self.request('/api/presets', data=b'{', headers={'Content-Type':'application/json'})
         self.assertEqual(code, 400)
+
+    def test_a_local_file_error_is_a_server_error(self):
+        # ASM contacts no other service, so a disk or permission error is its own failure, not a gateway's.
+        with patch('asm_app.store.Store.catalog', side_effect=PermissionError('denied')), \
+                self.assertLogs(level='ERROR'):
+            code, body, _ = self.request('/api/catalog')
+        self.assertEqual(code, 500)
+        self.assertEqual(json.loads(body), {'error':'Request failed. See the local server output.'})
+
+    def test_a_save_without_a_revision_is_a_bad_request(self):
+        (Path(self.temp.name)/'catalog').mkdir()
+        source = Path(__file__).resolve().parents[1]/'catalog/components.json'
+        (Path(self.temp.name)/'catalog/components.json').write_bytes(source.read_bytes())
+        code, body, _ = self.request('/api/presets', data=json.dumps({'title':'API example','kind':'preset'}).encode(),
+                                     headers={'Content-Type':'application/json'})
+        self.assertEqual(code, 201)
+        code, body, _ = self.request('/api/presets/'+json.loads(body)['id'], data=b'{"description":"x"}',
+                                     headers={'Content-Type':'application/json'}, method='PATCH')
+        self.assertEqual(code, 400)
+        self.assertIn('revision is required', json.loads(body)['error'])
+
+    def test_a_preset_saves_while_apm_lock_runs(self):
+        # APM can take minutes; a save from the dashboard must not wait behind it.
+        json_headers = {'Content-Type':'application/json'}
+        code, body, _ = self.request('/api/presets', data=json.dumps({'title':'Lock example'}).encode(),
+                                     headers=json_headers)
+        self.assertEqual(code, 201)
+        package = json.loads(body)
+        started, release = threading.Event(), threading.Event()
+
+        def slow_run(*args, **kwargs):
+            started.set()
+            release.wait(10)
+            return type('Result', (), {'returncode':0, 'stdout':'locked'})()
+
+        with patch('asm_app.store.Store._apm_command', return_value=['apm']), \
+                patch('asm_app.store.subprocess.run', side_effect=slow_run):
+            locking = threading.Thread(target=self.request, args=('/api/presets/'+package['id']+'/lock',),
+                                       kwargs={'data':b'{}', 'headers':json_headers})
+            locking.start()
+            self.addCleanup(locking.join)
+            self.addCleanup(release.set)
+            self.assertTrue(started.wait(5))
+            done = []
+            saving = threading.Thread(target=lambda: done.append(self.request(
+                '/api/presets/'+package['id'], method='PATCH', headers=json_headers,
+                data=json.dumps({'revision':package['revision'], 'description':'x'}).encode())[0]))
+            saving.start()
+            saving.join(2)
+            self.assertEqual(done, [200])
+            release.set()
 
     def test_static_route_does_not_expose_workspace(self):
         (Path(self.temp.name)/'secret.txt').write_text('private', encoding='utf-8')

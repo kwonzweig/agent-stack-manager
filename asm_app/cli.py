@@ -24,6 +24,7 @@ def main(argv=None):
     pc.add_argument('--url',default=os.environ.get('ASM_PAPERCLIP_URL',''))
     pc.add_argument('--company',required=True)
     pc.add_argument('--apply',action='store_true',help='Import; otherwise only read existing state.')
+    pc.add_argument('--recheck',action='store_true',help='With --apply, have Paperclip scan again the sources of skills it refused before.')
     args=parser.parse_args(argv)
     try:
         if args.command=='serve':
@@ -59,8 +60,10 @@ def main(argv=None):
             from .server import Connection, save_observation
             from .paperclip import observe,import_package
             Connection(args.url,args.company).require()
+            if args.recheck and not args.apply: raise ValueError('--recheck needs --apply.')
             action=import_package if args.apply else observe
-            result=action(store.get(args.preset),root=args.root,base_url=args.url,company_id=args.company)
+            options={'recheck':args.recheck} if args.apply else {}
+            result=action(store.get(args.preset),root=args.root,base_url=args.url,company_id=args.company,**options)
             save_observation(args.root,args.preset,Connection(args.url,args.company),result)
             print(json.dumps(result,ensure_ascii=False,indent=2))
             return 0 if not result['summary']['notImported'] else 1

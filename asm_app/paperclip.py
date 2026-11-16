@@ -516,7 +516,7 @@ def observe(package, *, root: Path, base_url: str, company_id: str):
     return _observe(_Paperclip(base_url, company_id), package, report, members)
 
 
-def _register_sources(api, report, errors):
+def _register_sources(api, report, errors, recheck=False):
     targets = defaultdict(dict)
     for row in _sources(report):
         target = row["target"]
@@ -535,6 +535,13 @@ def _register_sources(api, report, errors):
         pending = set(paths)
         try:
             if source:
+                # A stored refusal may date from an older Paperclip. A new scan costs GitHub requests, so only on request.
+                if recheck and any(entry.get("error") and entry["path"] in paths for entry in source["entries"]):
+                    try:
+                        refresh = path + "/" + quote(source["id"], safe="") + "/refresh"
+                        source = api.request(refresh, {}, "POST").get("source") or source
+                    except _PaperclipError:
+                        pass
                 selected = {entry["path"] for entry in source["entries"]
                             if entry.get("selection") in ("selected", "included") or
                             (entry.get("skillId") and entry.get("selection") != "excluded")}
@@ -651,7 +658,7 @@ def _require_current(root, revisions):
             raise ValueError(f"Package {package_id} changed before Paperclip import. Reload it and try again.")
 
 
-def import_package(package, *, root: Path, base_url: str, company_id: str):
+def import_package(package, *, root: Path, base_url: str, company_id: str, recheck: bool = False):
     """Import into the explicit company, then read back the saved configuration."""
     report, revisions, members = _report(package, root)
     _require_current(root, revisions)
@@ -660,7 +667,7 @@ def import_package(package, *, root: Path, base_url: str, company_id: str):
     try:
         api.request(api.company)
         agent = api.agent(package)
-        _register_sources(api, report, errors)
+        _register_sources(api, report, errors, recheck)
         try:
             source_skills = _resolve_skills(api, report)
         except _PaperclipError as error:

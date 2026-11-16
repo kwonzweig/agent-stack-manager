@@ -11,6 +11,8 @@ export class ApiError extends Error {
 export async function api<T>(path: string, { method = "GET", body, blob = false, signal }: {
   method?: string; body?: unknown; blob?: boolean; signal?: AbortSignal;
 } = {}): Promise<T> {
+  // ASM does not connect to a consumer: the dashboard talks only to its own local server.
+  if (!path.startsWith("/api/")) throw new Error("The dashboard requests only its own /api/ paths, not " + path + ".");
   const response = await fetch(path, {
     method, signal, cache: "no-store",
     ...(body !== undefined ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),

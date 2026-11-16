@@ -59,21 +59,19 @@ export interface Consumer {
 export interface Result {
   status: string;
   reason: string;
-  cause?: "unsupported" | "refused" | "access";
+  cause?: "unsupported";
 }
 export interface ReportItem {
   id: string;
   name: string;
   kind: Kind;
   conversion: Result;
-  import: Result;
   source: unknown;
   target: unknown;
 }
 export interface Report {
   items: ReportItem[];
   files: NativeFile[];
-  observedAt?: string;
 }
 export interface Comment {
   id: string;

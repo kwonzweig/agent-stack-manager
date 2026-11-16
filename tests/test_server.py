@@ -1,5 +1,4 @@
 import json
-import copy
 import io
 from pathlib import Path
 import tempfile
@@ -9,7 +8,7 @@ from zipfile import ZipFile
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from asm_app.server import create_server, fingerprint
+from asm_app.server import create_server
 
 
 class ServerTests(unittest.TestCase):
@@ -84,11 +83,24 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(code, 404)
         self.assertNotIn(b'private', body)
 
-    def test_missing_connection_is_actionable(self):
-        code, body, _ = self.request('/api/presets/example/paperclip/observe', data=b'{}',
-            headers={'Content-Type':'application/json'})
-        self.assertEqual(code, 400)
-        self.assertIn(b'ASM_PAPERCLIP_COMPANY_ID',body)
+    def test_conversion_report_comes_straight_from_the_conversion(self):
+        root = Path(self.temp.name)
+        source = Path(__file__).resolve().parents[1]
+        (root/'catalog').mkdir()
+        (root/'catalog/components.json').write_bytes((source/'catalog/components.json').read_bytes())
+        package = root/'packages/cao'
+        for path in (source/'packages/cao').rglob('*'):
+            if path.is_file():
+                target = package/path.relative_to(source/'packages/cao')
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(path.read_bytes())
+        code, body, _ = self.request('/api/presets/cao/paperclip')
+        self.assertEqual(code, 200)
+        report = json.loads(body)
+        self.assertEqual(set(report['summary']), {'total','converted','unconverted'})
+        self.assertTrue(all(set(row) == {'id','name','kind','source','target','conversion'} for row in report['items']))
+        code, _, _ = self.request('/api/presets/cao/paperclip/export')
+        self.assertEqual(code, 200)
 
     def test_package_path_is_not_a_filesystem_route(self):
         code, _, _ = self.request('/api/presets/%2e%2e%2fsecret')
@@ -124,18 +136,6 @@ class ServerTests(unittest.TestCase):
         code, body, _ = self.request('/api/comments?presetId='+original['id']+'&componentId='+item['id'])
         self.assertEqual(code,200)
         self.assertEqual(json.loads(body)['comments'][0]['body'],'Worked in my workspace.')
-
-
-class ObservationIdentityTests(unittest.TestCase):
-    def test_observed_skill_key_does_not_change_source_identity(self):
-        report={'sourceRevision':'first','items':[{'id':'skill','source':'repo',
-            'target':{'repositoryUrl':'repo','ref':'main','path':'SKILL.md'},
-            'conversion':{'status':'converted'}}]}
-        observed=copy.deepcopy(report)
-        observed['items'][0]['target']['key']='paperclip-assigned-key'
-        self.assertEqual(fingerprint(report),fingerprint(observed))
-        observed['sourceRevision']='edited-instruction'
-        self.assertNotEqual(fingerprint(report),fingerprint(observed))
 
 
 if __name__ == '__main__':

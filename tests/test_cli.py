@@ -18,7 +18,10 @@ class CommandTests(unittest.TestCase):
                 code = cli.main(["--root", str(ROOT), "export", "cao", "--consumer", "paperclip", "--output", str(output)])
             self.assertEqual(code, 0)
             with ZipFile(output) as archive:
-                self.assertIn("remote-import-plan.json", archive.namelist())
+                names = set(archive.namelist())
+            self.assertIn("agents/cao/AGENTS.md", names)
+            self.assertIn("skills/humanizer/SKILL.md", names)
+            self.assertNotIn("remote-import-plan.json", names)
 
     def test_there_is_no_command_that_reaches_a_consumer(self):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:

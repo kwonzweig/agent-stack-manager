@@ -199,6 +199,30 @@ class StoreTests(unittest.TestCase):
         self.store.save(package["id"], {"revision": saved["revision"], "componentIds": []})
         self.assertNotIn("hooks", yaml.safe_load(manifest.read_text()))
 
+    def test_paperclip_labels_are_read_from_preset_labels(self):
+        store = Store(ROOT)
+        self.assertEqual(store.get("cao")["paperclip"], {"role": "ceo", "canCreateAgents": False})
+        self.assertEqual(store.get("web-app-engineer")["paperclip"], {"role": None, "canCreateAgents": False})
+
+    def test_save_keeps_the_paperclip_labels(self):
+        package = self.create()
+        manifest = self.root / "packages/checkout-engineer/apm.yml"
+        data = yaml.safe_load(manifest.read_text())
+        data["x-preset-labels"]["paperclip"] = {"role": "researcher", "canCreateAgents": True}
+        manifest.write_text(yaml.safe_dump(data), encoding="utf-8")
+        package = self.store.get(package["id"])
+        self.assertEqual(package["paperclip"], {"role": "researcher", "canCreateAgents": True})
+        saved = self.store.save(package["id"], {"revision": package["revision"], "title": "Checkout lead"})
+        self.assertEqual(saved["paperclip"], {"role": "researcher", "canCreateAgents": True})
+        self.assertEqual(yaml.safe_load(manifest.read_text())["x-preset-labels"]["paperclip"],
+                         {"role": "researcher", "canCreateAgents": True})
+
+    def test_a_component_stored_in_the_package_names_its_file(self):
+        package = self.create(names=["brainstorming", "web-session-start"])
+        rows = {row["name"]: row for row in package["components"]}
+        self.assertEqual(rows["web-session-start"]["file"], ".apm/hooks/web-session-start.json")
+        self.assertNotIn("file", rows["brainstorming"])
+
     def test_migrated_fixtures_keep_instructions_and_component_types(self):
         store = Store(ROOT)
         expected = {"web-app-engineer": {"instruction": 1, "skill": 31, "mcp": 1, "hook": 1, "plugin": 1},

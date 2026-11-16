@@ -23,3 +23,5 @@ dependencies:
   mcp: []
 x-preset-labels:
   title: CAO
+  paperclip:
+    role: ceo

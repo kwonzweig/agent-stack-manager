@@ -123,6 +123,20 @@ def _revision(files):
     return digest.hexdigest()
 
 
+def _export_digest(bundle):
+    """SHA-256 over every file of a preset's bundle, keyed by package id and path, with LF line endings.
+
+    It names the preset content an export came from. Unlike `_revision`, which is one package's save
+    token, it covers the nested stacks too and gives the same value on Windows and Linux checkouts.
+    """
+    digest = hashlib.sha256()
+    for package_id, files in sorted(bundle.items()):
+        for name, data in sorted(files.items()):
+            digest.update(package_id.encode("utf-8") + b"\0" + name.encode("utf-8") + b"\0")
+            digest.update(hashlib.sha256(data.replace(b"\r\n", b"\n")).digest())
+    return digest.hexdigest()
+
+
 def _atomic_write(path, data):
     with tempfile.NamedTemporaryFile(dir=path.parent, prefix="_asm-tmp-", delete=False) as tmp:
         name = tmp.name
@@ -240,9 +254,12 @@ def _name(kind, value, source):
     return _text(_mapping(value).get("name")) or _text(value) or kind.title()
 
 
-def _component(identifier, name, kind, config, *, source=None, description="", source_url=None):
-    return {"id": identifier, "name": name, "kind": kind, "description": description,
-            "sourceUrl": source_url, "source": source, "configuration": _json_value(config)}
+def _component(identifier, name, kind, config, *, source=None, description="", source_url=None, file=None):
+    component = {"id": identifier, "name": name, "kind": kind, "description": description,
+                 "sourceUrl": source_url, "source": source, "configuration": _json_value(config)}
+    if file:
+        component["file"] = file
+    return component
 
 
 def _native_file_kind(path):
@@ -364,7 +381,7 @@ class Store:
             item = _component(entry["id"] if entry else f"{kind}:{path}", name, kind, config,
                               description=entry["description"] if entry else "",
                               source=entry.get("source") if entry else None,
-                              source_url=entry.get("sourceUrl") if entry else None)
+                              source_url=entry.get("sourceUrl") if entry else None, file=path)
             add(item, files=names)
         return entries
 
@@ -374,6 +391,7 @@ class Store:
         entries = self._entries(identifier, model, files, catalog)
         _, instruction = _instruction(files.get(_PRIMARY.format(identifier), b""))
         kind = labels.get("kind")
+        paperclip = _mapping(labels.get("paperclip"))
         package = {
             "id": identifier, "title": _text(labels.get("title")) or _text(model.get("name")) or identifier,
             "description": _text(model.get("description")), "kind": "stack" if kind == "stack" else "preset",
@@ -381,6 +399,8 @@ class Store:
             "version": str(model.get("version", "")), "componentCount": 1 + len(entries),
             **{key: [value for value in labels[key] if isinstance(value, str)]
                if isinstance(labels.get(key), list) else [] for key in ("workArea", "usage")},
+            "paperclip": {"role": _text(paperclip.get("role")) or None,
+                          "canCreateAgents": paperclip.get("canCreateAgents") is True},
             "revision": _revision(files), "instruction": instruction,
             "components": [_component("instruction", "Instruction", "instruction", instruction),
                            *(entry.item for entry in entries)],

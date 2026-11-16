@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Ban, ChevronRight, CircleCheck, CircleX, Download } from "lucide-react";
+import { Ban, ChevronRight, CircleCheck, CircleX, Download, FolderGit2 } from "lucide-react";
 import { api, downloadArchive, errorMessage, packagePath } from "../api";
 import { cn } from "../utils";
 import type { Report, ReportItem, Result } from "../types";
 import { KindBadge, KindIcon, KIND_LABELS, KINDS } from "./ComponentUI";
 import { ValuePanel } from "./ComponentDetails";
 import { DetailSheet } from "./DetailSheet";
-import { conversionStatus, outcome } from "../lib/paperclipOutcome";
+import { conversionStatus, outcome, targetFile } from "../lib/paperclipOutcome";
 
 const icons = { converted: CircleCheck, "not-in-format": Ban, adapter: Ban, unconverted: CircleX } as const;
 function Status({ result }: { result: Result }) {
@@ -56,6 +56,10 @@ export function PaperclipReport({ id, revision, dirty, heading }: {
     <div className="section-heading flex-wrap">
       {heading}
       <div className="flex flex-wrap items-center gap-2">
+        {report?.folder && (report.folder.url
+          ? <a className="app-button-secondary" href={report.folder.url} target="_blank" rel="noreferrer"
+              title="The export folder on GitHub, once it is committed"><FolderGit2 className="h-4 w-4" /> {report.folder.path}</a>
+          : <span className="inline-flex items-center gap-1.5 text-[13px] text-muted"><FolderGit2 className="h-4 w-4" /> {report.folder.path}</span>)}
         <button className="app-button-secondary" type="button" disabled={Boolean(busy) || !all.some(row => row.conversion.status === "converted")}
           onClick={download}><Download className="h-4 w-4" /> Download Paperclip package</button>
       </div>
@@ -88,7 +92,7 @@ export function PaperclipReport({ id, revision, dirty, heading }: {
               <div className="component-name"><button type="button" className="row-action" onClick={() => setItem(row)}>{row.name}</button><span className="component-kind">{KIND_LABELS[row.kind]}</span></div>
             </div>
             <Status result={row.conversion} />
-            <p className="row-reason">{row.conversion.reason}</p>
+            <p className="row-reason">{row.conversion.reason}{targetFile(row) && <> <code className="row-target">{targetFile(row)}</code></>}</p>
             <ChevronRight className="row-arrow h-4 w-4" aria-hidden="true" />
           </li>)}</ul>
         </div> : <p className="empty">{{ all: "No conversion results.", expected: "No components left out as expected.", attention: "No components need attention." }[filter]}</p>}

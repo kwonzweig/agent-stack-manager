@@ -215,10 +215,20 @@ class PaperclipTests(unittest.TestCase):
 
     def test_report_holds_the_conversion_alone(self):
         report = self.convert()
-        self.assertEqual(set(report), {"consumer", "items", "summary", "files"})
+        self.assertEqual(set(report), {"consumer", "items", "summary", "files", "folder"})
         for row in report["items"]:
             self.assertEqual(set(row), {"id", "name", "kind", "source", "target", "conversion"})
         self.assertEqual(report["summary"], {"total": 5, "converted": 2, "unconverted": 3})
+
+    def test_report_names_the_committed_export_folder(self):
+        self.assertEqual(self.convert()["folder"], {
+            "path": "exports/paperclip/test-preset",
+            "url": "https://github.com/kwonzweig/agent-stack-manager/tree/main/exports/paperclip/test-preset"})
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(self.convert(root=Path(directory))["folder"],
+                             {"path": "exports/paperclip/test-preset", "url": None})
+        self.package["kind"] = "stack"
+        self.assertIsNone(self.convert()["folder"])
 
     def test_stack_members_expand_and_cycles_are_reported(self):
         self.package["components"] = [{"id": "instruction", "name": "Instruction", "kind": "instruction"},

@@ -2,6 +2,7 @@
 
 from io import BytesIO
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import tomllib
@@ -12,6 +13,8 @@ import yaml
 
 GITHUB = re.compile(r"https://github\.com/([\w.-]+)/([\w.-]+)", re.IGNORECASE | re.ASCII)
 DEFAULT_ROLE = "general"
+# Every preset's export is committed here, one folder per package id, and Paperclip imports it by URL.
+EXPORTS = "exports/paperclip"
 # A preset's own skill is read from this repository's main branch once it is committed there.
 OWN_BRANCH = "main"
 
@@ -315,7 +318,17 @@ def convert(package, *, root: Path):
         "summary": {"total": len(items), "converted": converted, "unconverted": len(items) - converted},
         "files": [{"path": path, "content": content}
                   for path, content in _files(package, role, stubs, bundle).items()],
+        "folder": _folder_of(package, root),
     }
+
+
+def _folder_of(package, root):
+    """Where the preset's export is committed, and its GitHub page; a stack is not one agent, so none."""
+    if package.get("kind", "preset") != "preset":
+        return None
+    path = f"{EXPORTS}/{package['id']}"
+    repository = _repository(root)
+    return {"path": path, "url": f"{repository}/tree/{OWN_BRANCH}/{path}" if repository else None}
 
 
 def export_package(report):
@@ -325,3 +338,65 @@ def export_package(report):
         for entry in report["files"]:
             archive.writestr(entry["path"], entry["content"])
     return output.getvalue()
+
+
+def needs_attention(row):
+    """A component left out for a reason somebody can fix, apart from those the format leaves out."""
+    return row["conversion"]["status"] == "unconverted" and not row["conversion"].get("cause")
+
+
+def _exports(root):
+    """The export of every preset: `{id, report}`, or `{id, error}` for a package that cannot be read."""
+    from .store import Store
+
+    store = Store(root)
+    results = []
+    for identifier in store._ids():
+        try:
+            package = store.get(identifier)
+            if package["kind"] == "preset":
+                results.append({"id": identifier, "report": convert(package, root=store.root)})
+        except (ValueError, OSError) as error:
+            results.append({"id": identifier, "error": str(error)})
+    return store, results
+
+
+def _differences(store, results):
+    """Compare exports/paperclip/ on disk with the exports: the folder and its changed, missing, extra files."""
+    directory = store._checked(store.root / EXPORTS)
+    expected = {f"{result['id']}/{entry['path']}": entry["content"].encode("utf-8")
+                for result in results if "report" in result for entry in result["report"]["files"]}
+    # A package that cannot be read keeps the folder it had.
+    kept = {result["id"] for result in results if "error" in result}
+    actual = {}
+    for current, dirs, names in os.walk(directory):
+        for name in names:
+            path = Path(current) / name
+            relative = path.relative_to(directory).as_posix()
+            if relative.split("/")[0] not in kept:
+                actual[relative] = store._checked(path)
+    changed = sorted(name for name in expected.keys() & actual.keys() if actual[name].read_bytes() != expected[name])
+    return directory, expected, {"changed": changed, "missing": sorted(expected.keys() - actual.keys()),
+                                 "extra": sorted(actual.keys() - expected.keys())}
+
+
+def write_exports(root):
+    """Write exports/paperclip/<id>/ for every preset, exactly the converted files, and remove the rest."""
+    store, results = _exports(root)
+    directory, expected, differences = _differences(store, results)
+    for name in (*differences["changed"], *differences["missing"]):
+        target = directory / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(expected[name])
+    for name in differences["extra"]:
+        (directory / name).unlink()
+    for current, _, _ in os.walk(directory, topdown=False):
+        if Path(current) != directory and not any(Path(current).iterdir()):
+            Path(current).rmdir()
+    return results
+
+
+def check_exports(root):
+    """The exports and how exports/paperclip/ differs from them, writing nothing."""
+    store, results = _exports(root)
+    return results, _differences(store, results)[2]

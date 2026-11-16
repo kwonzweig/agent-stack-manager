@@ -107,6 +107,7 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.asm-lab .row-target { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--ink); }
 .asm-lab .row-arrow { color: var(--color-text-faint); justify-self: end; font-size: 18px; }
 .asm-lab .additional { margin-top: 18px; padding: 13px; }
 .asm-lab .additional h2 { margin-bottom: 8px; }

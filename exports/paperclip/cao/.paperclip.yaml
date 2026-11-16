@@ -1,0 +1,12 @@
+schemaVersion: 7
+agents:
+  cao:
+    role: ceo
+    permissions:
+      canCreateAgents: false
+    runtime:
+      heartbeat:
+        enabled: false
+    metadata:
+      agentStackManagerPackageId: cao
+      agentStackManagerRevision: 457fbc23940dc1b124175f434ac25f09a4b6cd4665723e6eabc33c4e4aadeb7c

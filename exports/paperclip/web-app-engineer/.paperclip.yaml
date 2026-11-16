@@ -1,0 +1,12 @@
+schemaVersion: 7
+agents:
+  web-app-engineer:
+    role: general
+    permissions:
+      canCreateAgents: false
+    runtime:
+      heartbeat:
+        enabled: false
+    metadata:
+      agentStackManagerPackageId: web-app-engineer
+      agentStackManagerRevision: 582476b76edeb8b67f190612d0cc94f57b93a01dfadd169f5992c00bbe7dd904

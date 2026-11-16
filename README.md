@@ -39,14 +39,14 @@ The CAO preset holds its Instruction, four skills (`agent-operating-standards`, 
 
 The Paperclip export writes the Instruction as the agent's `AGENTS.md` and one skill stub per GitHub skill that follows the skill's branch. Paperclip's [company package spec](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) has no entry for MCP servers, hooks or plugins. The export writes no adapter, and Paperclip's docs do not say how an imported agent gets an MCP server, so the report asks for MCP to be set in the agent's adapter after import; hooks and plugins are left out. Each is reported with that cause, and anything else that does not convert is reported as needing attention.
 
-Export without touching a consumer:
+Every preset's Paperclip package is committed under `exports/paperclip/<id>/`: [CAO](exports/paperclip/cao), [Web app engineer](exports/paperclip/web-app-engineer). Paperclip imports a preset from its folder's GitHub URL, such as `https://github.com/kwonzweig/agent-stack-manager/tree/main/exports/paperclip/cao`. Saving in the dashboard rewrites the folders; commit the changed files with Git. From the command line:
 
 ```sh
-python -m asm_app export web-app-engineer --consumer paperclip --output dist/web-app-engineer-paperclip.zip
-python -m asm_app export web-app-engineer --consumer apm --output dist/web-app-engineer-apm.zip
+python -m asm_app export          # rewrite exports/paperclip/ and list what each preset leaves out
+python -m asm_app export --check  # write nothing; fail if exports/paperclip/ is out of date
 ```
 
-The Paperclip ZIP holds `COMPANY.md`, `agents/<id>/AGENTS.md`, `.paperclip.yaml` and `skills/<key>/SKILL.md` stubs; [the API contract](docs/api-contract.md) lists their fields. Opening the dashboard and editing/exporting a preset never installs it into a consumer.
+Both exit with 1 when a component needs attention. A folder holds `COMPANY.md`, `agents/<id>/AGENTS.md`, `.paperclip.yaml` and `skills/<key>/SKILL.md` stubs; [the API contract](docs/api-contract.md) lists their fields. The Export tab downloads the same files as a ZIP, and Source files downloads the APM package. Nothing here installs a preset into a consumer.
 
 ## APM lock
 
@@ -82,6 +82,7 @@ Run the backend checks from the repository root:
 
 ```sh
 python -m unittest discover -s tests -v
+python -m asm_app export --check
 ```
 
 [Design](docs/design.md) · [API contract](docs/api-contract.md)

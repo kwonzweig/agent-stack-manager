@@ -208,6 +208,32 @@ class StoreTests(unittest.TestCase):
                 "ok": False, "output": "APM lock timed out after 600 seconds."})
         self.assertEqual(run.call_args.kwargs["timeout"], 600)
 
+    def test_presets_open_and_save_while_apm_lock_runs(self):
+        # APM can take minutes; the dashboard must not wait for it to read or save a preset.
+        import threading
+        package = self.create()
+        started, release = threading.Event(), threading.Event()
+
+        def slow_run(*args, **kwargs):
+            started.set()
+            release.wait(10)
+            return type("Result", (), {"returncode": 0, "stdout": "locked"})()
+
+        with patch("asm_app.store.Store._apm_command", return_value=["apm"]), \
+                patch("asm_app.store.subprocess.run", side_effect=slow_run):
+            locking = threading.Thread(target=self.store.lock, args=(package["id"],))
+            locking.start()
+            self.addCleanup(locking.join)
+            self.addCleanup(release.set)
+            self.assertTrue(started.wait(5))
+            done = []
+            reader = threading.Thread(target=lambda: done.append(self.store.save(package["id"], {
+                "revision": self.store.get(package["id"])["revision"], "description": "Saved during lock."})))
+            reader.start()
+            reader.join(2)
+            self.assertEqual([row["description"] for row in done], ["Saved during lock."])
+            release.set()
+
     def test_lock_reports_missing_cli_without_creating_output(self):
         package = self.create()
         with patch("asm_app.store.Store._apm_command", return_value=[]):

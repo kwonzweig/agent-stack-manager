@@ -36,6 +36,7 @@ _SKIPPED = {".git", ".asm", "apm_modules", "apm.lock.yaml", "__pycache__", ".ven
 _LOCK_SECONDS = 600
 _ICON = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 _MUTEX = threading.RLock()
+_APM_RUN = threading.Lock()
 
 
 class StoreError(ValueError):
@@ -810,17 +811,21 @@ class Store:
         return comment
 
     def lock(self, identifier, update=False):
+        # APM can run for minutes, so only the check holds _MUTEX; reads and saves go on meanwhile.
+        # apm.lock.yaml is not part of a save, and _APM_RUN keeps two locks from writing it at once.
         with _MUTEX:
             files = self._snapshot(identifier)
             bundle = self._bundle(identifier, files)
             for snapshot in bundle.values():
                 self._check_lock_paths(snapshot, bundle)
-            command = self._apm_command()
-            if not command:
-                return {"ok": False, "output": "Microsoft APM CLI was not found on this machine."}
+            directory = self._directory(identifier)
+        command = self._apm_command()
+        if not command:
+            return {"ok": False, "output": "Microsoft APM CLI was not found on this machine."}
+        with _APM_RUN:
             try:
                 result = subprocess.run([*command, "lock", *(["--update"] if update else [])],
-                                        cwd=self._directory(identifier), stdin=subprocess.DEVNULL,
+                                        cwd=directory, stdin=subprocess.DEVNULL,
                                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False,
                                         timeout=_LOCK_SECONDS, encoding="utf-8", errors="replace")
             except subprocess.TimeoutExpired:

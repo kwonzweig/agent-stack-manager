@@ -153,8 +153,8 @@ class Handler(BaseHTTPRequestHandler):
                     if suffix == '/lock':
                         if not isinstance(data.get('update',False),bool):
                             raise ValueError('update must be a boolean.')
-                        with self.server.io_lock:
-                            return self.send(200,self.server.store.lock(pid,data.get('update',False)))
+                        # No io_lock: APM can run for minutes, and the store guards its own check step.
+                        return self.send(200,self.server.store.lock(pid,data.get('update',False)))
             if self.command in ('GET','HEAD') and not path.startswith('/api/'):
                 relative = 'index.html' if path=='/' else unquote(path).lstrip('/')
                 target = (WEB/relative).resolve()

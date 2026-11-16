@@ -77,6 +77,11 @@ class ServerTests(unittest.TestCase):
                 code, _, _ = self.request('/api/presets', data=body, headers=headers)
                 self.assertEqual(code, status)
 
+    def test_a_port_already_in_use_is_refused(self):
+        # On Windows SO_REUSEADDR lets a second server bind a listening port and take some of its requests.
+        with self.assertRaises(OSError):
+            create_server(Path(self.temp.name), port=self.server.server_port).server_close()
+
     def test_rejects_invalid_json(self):
         code, _, _ = self.request('/api/presets', data=b'{', headers={'Content-Type':'application/json'})
         self.assertEqual(code, 400)

@@ -58,23 +58,27 @@ The two hooks only echo a line, and the two plugins are there to show how an exp
 
 ## Run
 
-Python 3.11 or newer:
+Python 3.11 or newer. ASM installs into a virtual environment in the clone; on Debian or Ubuntu run `sudo apt install python3-venv` first.
 
 ```sh
 git clone https://github.com/kwonzweig/agent-stack-manager
 cd agent-stack-manager
+python3 -m venv .venv      # Windows: py -m venv .venv
+. .venv/bin/activate       # Windows: .venv\Scripts\activate
 python -m pip install -e .
 python -m asm_app serve
 ```
 
-Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome (`--port` picks another). The dashboard edits the files in your clone: browse the Catalog with each repository's GitHub stars, add components to a stack or preset, edit a preset, and read its Export tab.
+Every `python` command in this README runs in the clone with `.venv` active; activate it again in a new terminal. If PowerShell says running scripts is disabled, use Command Prompt.
+
+Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has that port, `serve` stops with an error; `--port 4320` picks another. The dashboard edits the files in your clone: browse the Catalog with each repository's GitHub stars, add components to a stack or preset, edit a preset, and read its Export tab.
 
 ## APM lock
 
 The optional APM CLI resolves a package's dependencies into `apm.lock.yaml` without deploying anything into an app's folders. The lockfile records the commit each branch [resolved to](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/lockfile-spec.md) when it ran; the presets and the Paperclip exports keep naming branches.
 
 ```sh
-python -m pip install -e '.[apm]'
+python -m pip install -e ".[apm]"
 python -m asm_app lock web-app-engineer   # --update resolves again from upstream
 ```
 
@@ -83,7 +87,10 @@ python -m asm_app lock web-app-engineer   # --update resolves again from upstrea
 ```sh
 python -m unittest discover -s tests
 python -m asm_app export --check
-cd frontend && npm ci && npm test && npm run build
+cd frontend
+npm ci
+npm test
+npm run build
 ```
 
 The built dashboard is committed in `asm_app/web/`, so running it needs no Node.js; rebuild it with Node.js 22.12 or newer and commit it with the source. The data files and the local API are in [docs/api-contract.md](docs/api-contract.md); reused frontend code and its licences are in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md).

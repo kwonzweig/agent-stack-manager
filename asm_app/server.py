@@ -4,6 +4,7 @@ import json
 import logging
 import mimetypes
 from pathlib import Path
+import os
 import re
 import threading
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -21,6 +22,9 @@ def package_id(value):
 
 class DashboardServer(ThreadingHTTPServer):
     daemon_threads = True
+    # SO_REUSEADDR on Windows lets a second server bind a port another one listens on, so a busy port
+    # would serve the other program without an error. Elsewhere it only allows a quick restart.
+    allow_reuse_address = os.name != 'nt'
 
     def __init__(self, address, root):
         self.root = Path(root).resolve()

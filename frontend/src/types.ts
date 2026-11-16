@@ -40,6 +40,8 @@ export interface Component {
   sourceUrl?: string | null;
   source?: Source | null;
   configuration?: unknown;
+  /** The file inside the package, for a component stored there. */
+  file?: string;
 }
 export interface NativeFile {
   path: string;
@@ -50,6 +52,7 @@ export interface Package extends PackageSummary {
   instruction: string;
   components: Component[];
   files: NativeFile[];
+  paperclip: { role: string | null; canCreateAgents: boolean };
 }
 export interface Consumer {
   id: string;
@@ -59,7 +62,7 @@ export interface Consumer {
 export interface Result {
   status: string;
   reason: string;
-  cause?: "unsupported";
+  cause?: "not-in-format" | "adapter";
 }
 export interface ReportItem {
   id: string;

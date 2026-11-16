@@ -1,0 +1,13 @@
+{
+  "consumers": [
+    {
+      "id": "paperclip",
+      "name": "Paperclip",
+      "export": true,
+      "roles": {
+        "values": ["ceo", "cto", "cmo", "cfo", "security", "engineer", "designer", "pm", "qa", "devops", "researcher", "general"],
+        "doc": "https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/constants.ts"
+      }
+    }
+  ]
+}

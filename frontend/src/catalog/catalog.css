@@ -128,11 +128,6 @@
   display: none;
 }
 
-.aitmpl-stack-dialog::backdrop {
-  background: rgb(0 0 0 / 60%);
-  backdrop-filter: blur(4px);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .aitmpl-catalog .animate-fade-in-up {
     animation: none;
@@ -146,19 +141,4 @@
 
 .aitmpl-stack-accent:hover {
   background: linear-gradient(to bottom right, rgb(213 116 85 / 90%), rgb(213 116 85 / 70%));
-}
-
-.aitmpl-stack-dialog[open] {
-  animation: aitmpl-stack-slide 300ms ease-out;
-}
-
-@keyframes aitmpl-stack-slide {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .aitmpl-stack-dialog[open] {
-    animation: none;
-  }
 }

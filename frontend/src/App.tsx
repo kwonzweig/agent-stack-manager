@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, Plug2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { api, ApiError, catalogMember, errorMessage, packagePath } from "./api";
 import type { CatalogItem, Component, Consumer, Package, PackageKind, PackageSummary } from "./types";
-import { createDraft, isDirty, makePayload, overlappingChanges, rebaseDraft, type Draft } from "./draft";
+import { createDraft, isDirty, makePayload, overlappingChanges, rebaseDraft, withMembers, type Draft } from "./draft";
 import CatalogPage from "./catalog/CatalogPage";
 import { hrefFor, Sidebar, type Route } from "./components/Sidebar";
 import { Modal, PresetDialog } from "./components/PresetDialog";
@@ -11,6 +11,7 @@ import { ComponentPicker } from "./components/ComponentPicker";
 import { ComponentDetails } from "./components/ComponentDetails";
 import { PaperclipReport } from "./components/PaperclipReport";
 import { PresetExport } from "./components/PresetExport";
+import { PresetList } from "./components/PresetList";
 import { SourceFiles } from "./components/SourceFiles";
 
 interface CatalogData {
@@ -56,7 +57,7 @@ function readRoute(): Route {
     if (tab === "export" || tab === "paperclip") return { view, id, tab: "export", consumer: params.get("consumer") || (tab === "paperclip" ? "paperclip" : undefined) };
     return { view, id, tab: "components" };
   }
-  return { view: view === "consumers" ? "consumers" : "catalog" };
+  return { view: "catalog" };
 }
 
 function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
@@ -85,9 +86,7 @@ export function App() {
   const [notice, setNotice] = useState("");
   const timer = useRef<number | undefined>(undefined);
   const main = useRef<HTMLElement>(null);
-  const preferred = presets.data.presets.find(p => p.kind === "preset") || presets.data.presets[0];
-  const routeId = route.view === "presets" ? route.id || preferred?.id : undefined;
-  const [lastPreset, setLastPreset] = useState<string>();
+  const routeId = route.view === "presets" ? route.id : undefined;
   const draft = routeId && Object.hasOwn(drafts, routeId) ? drafts[routeId] : undefined;
   const activeSave = routeId && Object.hasOwn(saveErrors, routeId) ? saveErrors[routeId] : undefined;
   const activeLoadError = routeId && Object.hasOwn(loadErrors, routeId) ? loadErrors[routeId] : "";
@@ -128,7 +127,6 @@ export function App() {
 
   useEffect(() => {
     if (!routeId) return;
-    setLastPreset(routeId);
     if (!draft) void getPackage(routeId).catch(() => {});
   }, [routeId, draft, getPackage]);
 
@@ -139,6 +137,7 @@ export function App() {
     setRoute(next);
   }
   const openPreset = (id: string) => navigate({ view: "presets", id });
+  const createPreset = () => setOverlay({ type: "create", selected: [], kind: "preset" });
   const pickerItems = catalog.data.items.filter(item => item.type !== "preset").map(catalogMember)
     .filter(item => item.id !== "package:" + routeId && item.id !== "instruction");
   const currentItems = new Map(pickerItems.map(item => [item.id, item]));
@@ -148,18 +147,23 @@ export function App() {
   function updateDraft(id: string, update: (draft: Draft) => Draft) {
     setDrafts(prev => Object.hasOwn(prev, id) ? { ...prev, [id]: update(prev[id]) } : prev);
   }
-  function addMembers(id: string, items: Component[], pkg?: Package) {
-    setDrafts(prev => {
-      const before = Object.hasOwn(prev, id) ? prev[id] : pkg && createDraft(pkg);
-      if (!before) return prev;
+  function addMembers(id: string, items: Component[]) {
+    updateDraft(id, before => {
       const existing = new Set(before.members.map(item => item.id));
-      return { ...prev, [id]: { ...before, members: [...before.members, ...items.filter(item => !existing.has(item.id))] } };
+      return { ...before, members: [...before.members, ...items.filter(item => !existing.has(item.id))] };
     });
   }
-  async function addToPreset(id: string, componentIds: string[]) {
-    const pkg = Object.hasOwn(drafts, id) ? undefined : await getPackage(id);
-    addMembers(id, chosen(componentIds).filter(item => item.id !== "package:" + id), pkg);
-    openPreset(id);
+  // Catalog adds save straight onto the latest saved version; an open draft keeps its own unsaved edits.
+  async function addToPackage(id: string, componentIds: string[]) {
+    const { added, draft: next } = withMembers(await api<Package>(packagePath(id)), chosen(componentIds));
+    if (!added.length) {
+      feedback((componentIds.length === 1 ? "Already in " : "All already in ") + next.original.title + ".");
+      return;
+    }
+    const pkg = await api<Package>(packagePath(id), { method: "PATCH", body: makePayload(next) });
+    setDrafts(prev => Object.hasOwn(prev, id) ? { ...prev, [id]: rebaseDraft(prev[id], pkg) } : prev);
+    showSaved(pkg);
+    feedback("Added " + (added.length === 1 ? added[0].name : added.length + " components") + " to " + pkg.title + ".");
   }
   function feedback(message: string) {
     setNotice(message);
@@ -171,6 +175,9 @@ export function App() {
       const current = Object.hasOwn(prev, pkg.id) ? prev[pkg.id] : undefined;
       return { ...prev, [pkg.id]: current && snapshot && current !== snapshot ? rebaseDraft(current, pkg, snapshot) : createDraft(pkg) };
     });
+    showSaved(pkg);
+  }
+  function showSaved(pkg: Package) {
     // Keep the newly saved title/count visible while reloading catalog sources.
     presets.setCurrent(prev => ({ ...prev, data: { presets: [...prev.data.presets.filter(item => item.id !== pkg.id), pkg].sort((a, b) => a.id.localeCompare(b.id)) } }));
     void presets.refresh(); void catalog.refresh();
@@ -192,8 +199,8 @@ export function App() {
   }
 
   return <div className="relative flex h-full w-full flex-col overflow-hidden bg-background text-primary md:flex-row">
-    <Sidebar route={routeId ? { ...route, id: routeId } : route} presets={presets.data.presets} onNavigate={navigate}
-      onCreate={() => setOverlay({ type: "create", selected: [], kind: "preset" })} theme={theme}
+    <Sidebar route={route} presets={presets.data.presets} onNavigate={navigate}
+      onCreate={createPreset} theme={theme}
       onTheme={() => setTheme(value => value === "light" ? "dark" : "light")} />
     <main ref={main} inert={overlay?.type === "component"} className="min-h-0 min-w-0 flex-1 overflow-y-auto" id="main">
       {presets.error && <div className="mx-auto max-w-[1240px] px-5 pt-5"><ErrorBox message={presets.error} onRetry={presets.refresh} /></div>}
@@ -202,29 +209,12 @@ export function App() {
         onOpenItem={item => setOverlay({ type: "component", item: catalogMember(item) })}
         onOpenPreset={openPreset}
         onCreatePreset={(selected, kind = "preset") => setOverlay({ type: "create", selected, kind })}
-        onAddToPreset={addToPreset} isLoading={catalog.loading} error={catalog.error} onRetry={catalog.refresh}
+        onAdd={addToPackage} isLoading={catalog.loading} error={catalog.error} onRetry={catalog.refresh}
       /> : <div className="mx-auto flex min-h-full max-w-[1240px] flex-col gap-4 px-5 pb-5 pt-5">
-        {route.view === "consumers" ? <section className="app-page">
-          <header className="app-page-header"><h1 className="app-page-title">Consumers</h1></header>
-          {consumers.loading ? <p className="text-[13px] text-muted" role="status">Loading consumers…</p> :
-            consumers.error ? <ErrorBox message={consumers.error} onRetry={consumers.refresh} /> :
-            <ul className="app-panel divide-y divide-border-subtle">
-              {consumers.data.consumers.map(consumer => <li key={consumer.id} className="flex flex-wrap items-center gap-3 px-3.5 py-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-border-subtle bg-surface-hover text-muted"><Plug2 className="h-4 w-4" /></span>
-                <div className="min-w-0 flex-1"><h2 className="text-[14px] font-semibold text-primary">{consumer.name}</h2>
-                  <p className="text-[12px] text-muted">{consumer.supported ? "Conversion and import status" : "Not implemented"}</p>
-                </div>
-                {consumer.supported && preferred && <button type="button" className="app-button-secondary" onClick={() =>
-                  navigate({ view: "presets", id: lastPreset && presets.data.presets.some(p => p.id === lastPreset) ? lastPreset : preferred.id, tab: "export", consumer: consumer.id })}>
-                  Open preset report <ArrowRight className="h-4 w-4" />
-                </button>}
-              </li>)}
-            </ul>}
-        </section> : !draft ? routeId ? activeLoadError ?
+        {!routeId ? <PresetList presets={presets.data.presets} loading={presets.loading} onNavigate={navigate} onCreate={createPreset} />
+          : !draft ? activeLoadError ?
           <ErrorBox message={activeLoadError} onRetry={() => { void getPackage(routeId).catch(() => {}); }} /> :
-          <p role="status" className="text-[13px] text-muted">Loading preset…</p> : presets.loading ?
-          <p role="status" className="text-[13px] text-muted">Loading presets…</p> :
-          <p className="text-[13px] text-muted">No presets yet.</p> : <div className="app-page" key={draft.original.id}>
+          <p role="status" className="text-[13px] text-muted">Loading preset…</p> : <div className="app-page" key={draft.original.id}>
             <WorkspaceHeader draft={draft} route={{ ...route, id: draft.original.id }} onNavigate={navigate}
               onEdit={() => setOverlay({ type: "edit", id: draft.original.id })}
               onIcon={icon => updateDraft(draft.original.id, before => ({ ...before, icon }))}

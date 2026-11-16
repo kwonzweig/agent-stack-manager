@@ -46,7 +46,7 @@ python -m asm_app export web-app-engineer --consumer paperclip --output dist/web
 python -m asm_app export web-app-engineer --consumer apm --output dist/web-app-engineer-apm.zip
 ```
 
-The Paperclip ZIP includes a native package and remote-source import plan. Opening the dashboard and editing/exporting a preset never installs it into a consumer.
+The Paperclip ZIP includes a native package and remote-source import plan. The agent in the ZIP lists no skills. Paperclip's package importer does not read `remote-import-plan.json`, so whoever imports the package adds those skill sources in Paperclip by hand. Opening the dashboard and editing/exporting a preset never installs it into a consumer.
 
 ## APM lock
 

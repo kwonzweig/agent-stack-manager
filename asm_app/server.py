@@ -64,8 +64,19 @@ class Handler(BaseHTTPRequestHandler):
         if self.command != 'HEAD':
             self.wfile.write(body)
 
+    def discard_body(self):
+        # A socket closed with unread request bytes resets the connection on Windows, and the
+        # client then sees the reset instead of the answer.
+        try:
+            length = int(self.headers.get('Content-Length','0'))
+        except ValueError:
+            return
+        if 0 < length <= MAX_BODY:
+            self.rfile.read(length)
+
     def body(self):
         if self.headers.get('Content-Type','').split(';')[0].strip() != 'application/json':
+            self.discard_body()
             self.send(415, {'error':'Use application/json.'})
             return None
         length = int(self.headers.get('Content-Length','0'))
@@ -92,6 +103,7 @@ class Handler(BaseHTTPRequestHandler):
     def dispatch(self):
         try:
             if not self.allowed_request():
+                self.discard_body()
                 return self.send(403, {'error':'Request origin is not allowed.'})
             parsed = urlsplit(self.path)
             path = parsed.path

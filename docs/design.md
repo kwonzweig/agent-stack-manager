@@ -12,7 +12,7 @@ The dashboard runs locally. The UI uses Skills Manager's theme, icons, sidebar, 
 - Editing writes real package files and checks a content revision to avoid overwriting another editor. Downloads contain the current native package files.
 - The Paperclip conversion runs by itself when a preset opens. It emits a native Paperclip package and `remote-import-plan.json`, the list of remote skill sources for whoever imports the package. Every component has an explicit converted or unconverted outcome with its reason. No runtime success badge.
 - Remote first. Where a consumer supports importing from a remote, it imports each component from its source repository and follows that repository's default branch with its own update. Only where a consumer cannot import from a remote does it get a snapshot. A preset and the catalog name a source by repository, path and branch, never by a commit or a version.
-- The snapshot fallback is not built yet. Paperclip, the one supported consumer, imports skills from their remote.
+- The snapshot fallback is not built yet. Paperclip, the one supported consumer, can import a skill from its remote repository.
 - ASM makes what a consumer supports work and does not implement what the consumer does not officially support. A kind Paperclip has no setting for (hooks, plugins) is unconverted with the cause `unsupported`. The dashboard shows it as left out as expected, apart from conversions that failed and need attention.
 - Codex, Claude Code and CC Switch show an unimplemented state and perform no configuration writes.
 - Comments live in ignored `.asm/` runtime files. Presets remain reviewable through Git.

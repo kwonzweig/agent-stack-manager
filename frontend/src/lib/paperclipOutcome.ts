@@ -12,6 +12,11 @@ export function outcome(item: ReportItem): Outcome {
   return expectedCauses.has(item.conversion.cause ?? "") ? "expected" : "attention";
 }
 
+// The file in the export folder a component went to; an expanded stack's target names a package, not a file.
+export function targetFile(item: ReportItem): string | null {
+  return typeof item.target === "string" ? item.target : null;
+}
+
 export type ConversionStatus = "converted" | "not-in-format" | "adapter" | "unconverted";
 export type Tone = "good" | "bad" | "neutral";
 

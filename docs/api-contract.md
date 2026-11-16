@@ -10,8 +10,8 @@ All JSON errors are `{ "error": "message" }`. Paths use URL-encoded package ids.
 - `list_packages()` -> list of PackageSummary
 - `get(id)` -> Package
 - `create(payload)` -> Package
-- `save(id,payload)` -> Package (requires revision)
-- `export(id)` -> bytes (ZIP)
+- `save(id,payload)` -> Package (requires revision). Create and save then rewrite `exports/paperclip/` (`write_exports`), every preset, since a saved stack changes the export of each preset that includes it.
+- `export(id)` -> bytes (ZIP of the native package, the dashboard's download)
 - `comments(id,component_id)` -> list
 - `add_comment(id,component_id,payload)` -> comment
 - `lock(id,update=False)` -> `{ok,output}`; bounded fixed APM invocation, no shell.
@@ -31,17 +31,17 @@ Create/save payload: `title,description,kind,icon,workArea,usage,instruction,com
 - GET `/api/presets/{id}` -> Package
 - POST `/api/presets` -> Package
 - PATCH `/api/presets/{id}` -> Package
-- GET `/api/presets/{id}/export` -> native ZIP
+- GET `/api/presets/{id}/export` -> native ZIP, the dashboard's download
 - POST `/api/presets/{id}/lock` -> store.lock(id, update)
 - GET `/api/comments?presetId=&componentId=` -> `{comments:[]}`
 - POST `/api/comments` with `presetId,componentId,body,author` -> `{comment}`
 - GET `/api/consumers` -> `{consumers:[{id,name,supported}]}`
 - GET `/api/presets/{id}/paperclip` -> conversion report from `convert()`
-- GET `/api/presets/{id}/paperclip/export` -> Paperclip ZIP
+- GET `/api/presets/{id}/paperclip/export` -> the same files as `exports/paperclip/{id}/`, as a ZIP
 
 ## Paperclip interface (`asm_app/paperclip.py`)
 
-`convert(package, *, root:Path)` -> `{consumer:"paperclip",items:[{id,name,kind,conversion:{status,reason,cause?},source,target}],summary:{total,converted,unconverted},files:[{path,content}]}`.
+`convert(package, *, root:Path)` -> `{consumer:"paperclip",items:[{id,name,kind,conversion:{status,reason,cause?},source,target}],summary:{total,converted,unconverted},files:[{path,content}],folder:{path,url}}`. `folder` is where the export is committed, `exports/paperclip/<id>`, with its GitHub page on `main` (null without `project.urls.Repository`); it is null for a stack, which is not one agent and is not exported.
 
 Conversion statuses are `converted` and `unconverted`. Reasons are concise English. There is no runtime field. Every source component appears; `target` is the written file the component went to (`agents/<id>/AGENTS.md`, `skills/<key>/SKILL.md`), or `{packageId}` for an expanded stack.
 
@@ -57,3 +57,10 @@ The files, named by the package id:
 `role` comes from `x-preset-labels.paperclip.role`, `general` when unset; it must be one of the Paperclip `roles` in `catalog/consumers.json`, which cite Paperclip's list. `canCreateAgents` is true only where the labels set it.
 
 `export_package(report)` -> ZIP bytes of those files.
+
+`write_exports(root)` writes `exports/paperclip/<id>/` for every package of kind `preset`, exactly the files `convert` gives, with LF line endings, and removes every other file there, so a deleted preset or skill loses its export. A package that cannot be read keeps the folder it had and is reported with its error. `check_exports(root)` writes nothing and returns the same results with the `changed`, `missing` and `extra` files.
+
+## Export command (`asm_app/cli.py`)
+
+- `python -m asm_app export` runs `write_exports` and prints, per preset, its folder and one line per component not exported, in the report's reason; it exits 1 if any needs attention.
+- `python -m asm_app export --check` writes nothing, prints the same report and each changed, missing or extra file, and exits 1 if any needs attention or `exports/paperclip/` differs. CI runs it.

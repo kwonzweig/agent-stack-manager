@@ -527,6 +527,9 @@ class Store:
                 _atomic_write(target, data)
         for path in (previous or {}).keys() - files.keys():
             self._checked(directory / path).unlink()
+        # A saved stack changes the export of every preset that includes it, so every preset is rewritten.
+        from .paperclip import write_exports
+        write_exports(self.root)
         return result
 
     @staticmethod

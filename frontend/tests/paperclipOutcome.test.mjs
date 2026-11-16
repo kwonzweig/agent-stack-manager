@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { outcome, conversionStatus } from "../src/lib/paperclipOutcome.ts";
+import { outcome, conversionStatus, targetFile } from "../src/lib/paperclipOutcome.ts";
 
 const item = conversion => ({
   id: "x", name: "x", kind: "skill", source: null, target: null, conversion: { reason: "", ...conversion },
@@ -29,4 +29,11 @@ test("each conversion result has its own word and tone", () => {
   assert.deepEqual(shown({ status: "unconverted", cause: "not-in-format" }), ["Not in Paperclip's format", "neutral"]);
   assert.deepEqual(shown({ status: "unconverted", cause: "adapter" }), ["Set in the adapter", "neutral"]);
   assert.deepEqual(shown({ status: "unconverted" }), ["Unconverted", "bad"]);
+});
+
+test("a component's target file is shown, an expanded stack's package is not", () => {
+  const row = target => ({ ...item({ status: "converted" }), target });
+  assert.equal(targetFile(row("agents/cao/AGENTS.md")), "agents/cao/AGENTS.md");
+  assert.equal(targetFile(row({ packageId: "base" })), null);
+  assert.equal(targetFile(row(null)), null);
 });

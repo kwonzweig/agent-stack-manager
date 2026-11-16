@@ -75,6 +75,8 @@ export interface ReportItem {
 export interface Report {
   items: ReportItem[];
   files: NativeFile[];
+  // Where the preset's export is committed, and its GitHub page; null for a stack.
+  folder: { path: string; url: string | null } | null;
 }
 export interface Comment {
   id: string;

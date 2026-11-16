@@ -93,4 +93,4 @@ npm test
 npm run build
 ```
 
-The built dashboard is committed in `asm_app/web/`, so running it needs no Node.js; rebuild it with Node.js 22.12 or newer and commit it with the source. The data files and the local API are in [docs/api-contract.md](docs/api-contract.md); reused frontend code and its licences are in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md).
+The built dashboard is committed in `asm_app/web/`, so running it needs no Node.js; rebuild it with Node.js 22.12 or newer and commit it with the source. Get Node.js from [nodejs.org/download](https://nodejs.org/en/download); a Linux distribution's own package may be older. The data files and the local API are in [docs/api-contract.md](docs/api-contract.md); reused frontend code and its licences are in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md).

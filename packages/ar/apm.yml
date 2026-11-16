@@ -1,6 +1,7 @@
 name: ar
 version: 0.1.0
-description: Research, build and hire the agent stacks the company needs, through Agent Stack Manager.
+description: Research, build and hire the agent stacks the company needs, through
+  Agent Stack Manager.
 targets:
 - claude
 - codex

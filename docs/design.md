@@ -7,7 +7,7 @@ The dashboard runs locally. The UI uses Skills Manager's theme, icons, sidebar, 
 ## Data and behavior
 
 - `packages/<id>/apm.yml` plus native `.apm/` files store stack/preset content. `x-preset-labels` holds title, icon, workArea, usage, catalog kind and the Paperclip `role` and `canCreateAgents`. APM dependencies hold membership.
-- `catalog/components.json` indexes reusable component sources and creation templates. It does not duplicate a preset's membership. Catalog also reads stack/preset packages directly.
+- `catalog/components.json` indexes reusable component sources and creation templates, and lists every source repository with its GitHub stars and the day they were read from its page. A git component's source is its APM value; only a component without git stores `source`. It does not duplicate a preset's membership. Catalog also reads stack/preset packages directly.
 - `catalog/consumers.json` holds data about the apps ASM exports to: for Paperclip, its list of agent roles with the page that publishes it.
 - Python reuses the existing Python APM conversion work and APM CLI. The local HTTP server serves a prebuilt React bundle from `asm_app/web/`; frontend source lives in `frontend/`. Filesystem access runs on this machine, not a hosted Worker.
 - Editing writes real package files and checks a content revision to avoid overwriting another editor. Downloads contain the current native package files.

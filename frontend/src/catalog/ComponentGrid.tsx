@@ -5,14 +5,14 @@ import type { CatalogItem, PackageKind, PackageSummary } from '../types';
 import { KIND_STYLES } from '../lib/kinds';
 import Checkbox from './Checkbox';
 import ComponentCard from './ComponentCard';
-import { itemName, itemRepository, repositoryLabel } from './catalogItem';
+import { byStars, itemName, itemRepository, repositoryLabel } from './catalogItem';
 
 const ITEMS_PER_PAGE = 24;
 const CATALOG_TYPES = { all: 'All', component: 'Components', stack: 'Stacks', preset: 'Presets' };
 type CatalogType = keyof typeof CATALOG_TYPES;
 type Category = 'all' | CatalogItem['kind'];
-type Sort = 'catalog' | 'name' | 'repository';
-const SORTS = [['catalog', 'Catalog order'], ['name', 'Alphabetical'], ['repository', 'Repository']] as const;
+type Sort = 'catalog' | 'name' | 'repository' | 'stars';
+const SORTS = [['catalog', 'Catalog order'], ['name', 'Alphabetical'], ['repository', 'Repository'], ['stars', 'Stars']] as const;
 
 interface Props {
   items: CatalogItem[];
@@ -94,6 +94,7 @@ export default function ComponentGrid({
       );
     }
     if (sortBy === 'name') return [...results].sort((a, b) => itemName(a).localeCompare(itemName(b)));
+    if (sortBy === 'stars') return byStars(results);
     // Entries without a source repository go last; catalog order holds within each repository.
     if (sortBy === 'repository') {
       const key = (item: CatalogItem) => itemRepository(item) ? repositoryLabel(itemRepository(item)).toLowerCase() : '￿';
@@ -312,7 +313,7 @@ export default function ComponentGrid({
                 <label className="text-[11px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-3 block">
                   Sort by
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {SORTS.map(([value, label]) => (
                     <button
                       key={value}

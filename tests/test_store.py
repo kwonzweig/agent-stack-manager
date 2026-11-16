@@ -244,6 +244,57 @@ class StoreTests(unittest.TestCase):
                      if item.get("file") == ".apm/skills/plain-notes/SKILL.md")
         self.assertEqual((skill["name"], skill["description"]), ("plain-notes", ""))
 
+    def write_catalog(self, change):
+        manifest = self.root / "catalog/components.json"
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        change(data)
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+
+    def test_catalog_derives_source_and_link_of_a_git_component(self):
+        stored = json.loads((ROOT / "catalog/components.json").read_text(encoding="utf-8"))
+        row = next(row for row in stored["items"] if row["name"] == "react-start")
+        self.assertNotIn("source", row)
+        self.assertNotIn("sourceUrl", row)
+        item = self.catalog["react-start"]
+        self.assertEqual(item["source"], {
+            "repositoryUrl": "https://github.com/TanStack/router",
+            "path": "packages/react-start/skills/react-start/SKILL.md",
+            "ref": "main",
+        })
+        self.assertEqual(item["sourceUrl"],
+                         "https://github.com/TanStack/router/blob/main/packages/react-start/skills/react-start/SKILL.md")
+
+    def test_catalog_keeps_the_stored_source_of_a_component_without_git(self):
+        item = self.catalog["frontend-design"]
+        self.assertEqual(item["source"]["repositoryUrl"], "https://github.com/anthropics/claude-plugins-official")
+        self.assertTrue(item["sourceUrl"].startswith("https://github.com/anthropics/claude-plugins-official/"))
+
+    def test_catalog_items_carry_their_repositorys_stars(self):
+        stored = json.loads((ROOT / "catalog/components.json").read_text(encoding="utf-8"))
+        row = next(row for row in stored["repositories"] if row["url"] == "https://github.com/obra/superpowers")
+        item = self.catalog["brainstorming"]
+        self.assertEqual((item["stars"], item["starsCheckedOn"]), (row["stars"], row["starsCheckedOn"]))
+        self.assertNotIn("stars", self.catalog["web-session-start"])
+
+    def test_catalog_refuses_a_repository_without_a_star_count(self):
+        bad_rows = ({"stars": None}, {"stars": -1}, {"stars": True}, {"stars": "318k"}, {"stars": 1.5},
+                    {"starsCheckedOn": None}, {"starsCheckedOn": "yesterday"}, {"starsCheckedOn": "2026-13-01"})
+        for bad in bad_rows:
+            with self.subTest(row=bad):
+                self.write_catalog(lambda data: data["repositories"][0].update(bad))
+                with self.assertRaisesRegex(StoreError, "stars|starsCheckedOn"):
+                    self.store.catalog()
+                self.setUp()
+        self.write_catalog(lambda data: data["repositories"][0].pop("stars"))
+        with self.assertRaisesRegex(StoreError, "stars"):
+            self.store.catalog()
+
+    def test_catalog_refuses_a_component_whose_repository_has_no_row(self):
+        self.write_catalog(lambda data: data.update(repositories=[
+            row for row in data["repositories"] if row["url"] != "https://github.com/obra/superpowers"]))
+        with self.assertRaisesRegex(StoreError, "https://github.com/obra/superpowers"):
+            self.store.catalog()
+
     def test_migrated_fixtures_keep_instructions_and_component_types(self):
         store = Store(ROOT)
         expected = {"web-app-engineer": {"instruction": 1, "skill": 31, "mcp": 1, "hook": 1, "plugin": 1},

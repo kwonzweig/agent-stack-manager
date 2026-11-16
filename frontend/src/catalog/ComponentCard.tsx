@@ -1,12 +1,12 @@
 // Grid and list cards from AITMPL dashboard/src/components/ComponentGrid.tsx (MIT).
 import { useState } from 'react';
-import { FolderGit2 } from 'lucide-react';
+import { FolderGit2, Star } from 'lucide-react';
 import type { CatalogItem, PackageKind, PackageSummary } from '../types';
 import { KIND_STYLES } from '../lib/kinds';
 import { KindIcon } from '../components/ComponentUI';
 import AddToMenu from './AddToMenu';
 import Checkbox from './Checkbox';
-import { itemName, itemRepository, repositoryLabel } from './catalogItem';
+import { itemName, itemRepository, repositoryLabel, starsLabel, starsTitle } from './catalogItem';
 
 interface Props {
   item: CatalogItem;
@@ -44,6 +44,13 @@ export default function ComponentCard({ item, index, viewMode, selected, targets
           <FolderGit2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">{repositoryLabel(repository)}</span>
         </button>
+      )}
+      {item.stars !== undefined && (
+        <span className="inline-flex shrink-0 items-center gap-1 font-mono text-[11px] tabular-nums text-[var(--color-text-secondary)]"
+          title={starsTitle(item)} aria-label={starsTitle(item)}>
+          <Star className="h-3.5 w-3.5" aria-hidden="true" />
+          {starsLabel(item.stars)}
+        </span>
       )}
     </>
   );

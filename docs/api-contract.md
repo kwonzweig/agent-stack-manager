@@ -6,7 +6,7 @@ All JSON errors are `{ "error": "message" }`. Paths use URL-encoded package ids.
 
 `Store(root: Path)` where root contains `packages/`, `catalog/`, and ignored `.asm/`.
 
-- `catalog()` -> `{items: [Component or PackageSummary], sources: [{name,url}]}`
+- `catalog()` -> `{items: [Component or PackageSummary], sources: [{name,url}]}`. It refuses a `catalog/components.json` whose `repositories` row lacks `stars` (a non-negative integer read from the repository's GitHub page) or `starsCheckedOn` (`YYYY-MM-DD`), or whose item comes from a repository with no row.
 - `list_packages()` -> list of PackageSummary
 - `get(id)` -> Package
 - `create(payload)` -> Package
@@ -20,7 +20,7 @@ PackageSummary: `id,title,description,kind` (`preset` or `stack`), `icon` (a low
 
 Package extends summary: `revision,instruction,components:[],files:[{path,content}]` and `paperclip:{role,canCreateAgents}`, read from `x-preset-labels.paperclip` in `apm.yml`; `role` is null and `canCreateAgents` false when unset. The dashboard does not edit them yet; a save keeps them.
 
-Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`; `ref` names a branch, and an empty `ref` follows the default branch. A component stored as a file in the package also has `file`, its path inside the package (for example `.apm/skills/<name>/SKILL.md`). Catalog components additionally contain `type:"component"` and native `apm` creation metadata; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
+Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`; `ref` names a branch, and an empty `ref` follows the default branch. A component stored as a file in the package also has `file`, its path inside the package (for example `.apm/skills/<name>/SKILL.md`). Catalog components additionally contain `type:"component"` and native `apm` creation metadata, and, when they come from a repository, its `stars` and `starsCheckedOn`. A catalog row with an APM `git` value stores no `source` or `sourceUrl`; `catalog()` derives both from that value, and only rows without `git` (marketplace plugins, MCP servers) store them; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
 
 Create/save payload: `title,description,kind,icon,workArea,usage,instruction,componentIds`. An empty `icon` removes the stored one. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save retains unsupported native fields unless deliberately removed. A new package id is derived from the title; a collision is rejected rather than replaced.
 

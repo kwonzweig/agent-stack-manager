@@ -116,6 +116,10 @@ class ServerTests(unittest.TestCase):
                 headers={'Content-Type':'application/json'}, method=method)
         _, body, _ = self.request('/api/catalog')
         item = next(x for x in json.loads(body)['items'] if x['name']=='brainstorming')
+        # The stored row names only its APM value; the API fills what the Catalog reads.
+        self.assertEqual(item['source']['repositoryUrl'], 'https://github.com/obra/superpowers')
+        self.assertEqual(item['sourceUrl'], 'https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md')
+        self.assertIsInstance(item['stars'], int)
         code, body, _ = write('/api/presets', {'title':'API example','kind':'preset',
             'description':'Example','instruction':'Original','componentIds':[item['id']]})
         self.assertEqual(code,201)

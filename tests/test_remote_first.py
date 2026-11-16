@@ -1,6 +1,7 @@
 import json
 import re
 import unittest
+from datetime import date
 from pathlib import Path
 
 import yaml
@@ -42,6 +43,73 @@ class RemoteFirstTests(unittest.TestCase):
                     self.assertEqual(row["source"]["ref"], BRANCH)
                 if row.get("sourceUrl") and "/blob/" in row["sourceUrl"]:
                     self.assertEqual(row["sourceUrl"].split("/blob/", 1)[1].split("/", 1)[0], BRANCH)
+
+
+def repository(url):
+    return url.rstrip("/").removesuffix(".git").casefold()
+
+
+def catalog():
+    return json.loads((ROOT / "catalog" / "components.json").read_text(encoding="utf-8"))
+
+
+def git_value(row):
+    value = row["apm"].get("value")
+    return value if isinstance(value, dict) and isinstance(value.get("git"), str) else None
+
+
+def item_repository(row):
+    """The repository a catalog item comes from: its APM git value, or the source stored for an item without one."""
+    if value := git_value(row):
+        return repository(value["git"])
+    source = row.get("source") or {}
+    return repository(source["repositoryUrl"]) if source.get("repositoryUrl") else None
+
+
+class CatalogRepositoryTests(unittest.TestCase):
+    def test_every_repository_member_of_a_preset_is_a_catalog_item(self):
+        rows = catalog()["items"]
+        known = {(repository(value["git"]), value.get("path", ""), value.get("ref", ""))
+                 for row in rows if (value := git_value(row))}
+        plugins = {(row["apm"]["value"].get("marketplace"), row["apm"]["value"].get("name"))
+                   for row in rows if row["kind"] == "plugin"}
+        for manifest in sorted(ROOT.glob("packages/*/apm.yml")):
+            dependencies = yaml.safe_load(manifest.read_text(encoding="utf-8")).get("dependencies") or {}
+            for entry in dependencies.get("apm") or []:
+                if not isinstance(entry, dict):
+                    continue
+                with self.subTest(manifest=manifest.parent.name, entry=entry.get("path") or entry.get("git") or entry.get("name")):
+                    if "git" in entry:
+                        self.assertIn((repository(entry["git"]), entry.get("path", ""), entry.get("ref", "")), known)
+                    elif "marketplace" in entry:
+                        self.assertIn((entry["marketplace"], entry.get("name")), plugins)
+
+    def test_every_item_repository_has_one_row_and_every_row_is_used(self):
+        data = catalog()
+        rows = [repository(row["url"]) for row in data["repositories"]]
+        self.assertEqual(len(rows), len(set(rows)), "a repository is listed twice")
+        used = {found for row in data["items"] if (found := item_repository(row))}
+        self.assertEqual(sorted(used - set(rows)), [], "items whose repository has no row")
+        self.assertEqual(sorted(set(rows) - used), [], "rows no item uses")
+
+    def test_every_repository_row_holds_a_star_count_and_the_day_it_was_read(self):
+        for row in catalog()["repositories"]:
+            with self.subTest(repository=row.get("url")):
+                self.assertEqual(set(row), {"url", "stars", "starsCheckedOn"})
+                self.assertRegex(row["url"], r"^https://github\.com/[\w.-]+/[\w.-]+$")
+                self.assertIs(type(row["stars"]), int)
+                self.assertGreaterEqual(row["stars"], 0)
+                self.assertEqual(date.fromisoformat(row["starsCheckedOn"]).isoformat(), row["starsCheckedOn"])
+
+    def test_source_is_stored_only_for_items_without_git(self):
+        # A git item's source and link are derived from its APM value, so it has one location.
+        for row in catalog()["items"]:
+            with self.subTest(component=row["id"]):
+                if git_value(row):
+                    self.assertNotIn("source", row)
+                    self.assertNotIn("sourceUrl", row)
+                else:
+                    self.assertIn("source", row)
 
 
 if __name__ == "__main__":

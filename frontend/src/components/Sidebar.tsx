@@ -4,18 +4,22 @@ import { getPresetIconOption } from "../lib/presetIcons";
 import { cn } from "../utils";
 import type { PackageSummary } from "../types";
 
-export type Route = { view: "catalog" | "consumers" | "presets"; id?: string; tab?: "contents" | "paperclip" | "source" };
-export function hrefFor({ view, id, tab }: Route) {
+export type Route = {
+  view: "catalog" | "consumers" | "presets"; id?: string;
+  tab?: "components" | "export" | "source"; consumer?: string;
+};
+export function hrefFor({ view, id, tab, consumer }: Route) {
   const params = new URLSearchParams({ view });
   if (id) params.set("preset", id);
-  if (tab && tab !== "contents") params.set("tab", tab);
+  if (tab && tab !== "components") params.set("tab", tab);
+  if (tab === "export" && consumer) params.set("consumer", consumer);
   return "#" + params;
 }
 
-export function PresetIcon({ title, description, active, className }: {
-  title: string; description?: string; active?: boolean; className?: string;
+export function PresetIcon({ title, description, icon, active, className }: {
+  title: string; description?: string; icon?: string; active?: boolean; className?: string;
 }) {
-  const option = getPresetIconOption({ name: title, description });
+  const option = getPresetIconOption({ name: title, description, icon });
   const Icon = option.icon;
   return <span className={cn("flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-[4px] border",
     active ? option.activeClass + " " + option.colorClass : "border-border bg-surface text-muted",
@@ -72,7 +76,7 @@ export function Sidebar({ route, presets, onNavigate, onCreate, theme, onTheme }
             title={preset.description || preset.title}
             className={cn("group flex min-w-0 items-center gap-2 rounded-md px-2.5 py-[7px] text-left text-[14px] leading-5 transition-colors",
               active ? "bg-surface-active font-medium text-primary" : "text-tertiary hover:bg-surface-hover hover:text-secondary")}>
-            <PresetIcon title={preset.title} description={preset.description} active={active} />
+            <PresetIcon title={preset.title} description={preset.description} icon={preset.icon} active={active} />
             <span className="flex-1 truncate">{preset.title}</span>
             <span className={cn("ml-auto min-w-[18px] rounded-full px-1.5 text-center text-[12px] font-medium leading-[18px] tabular-nums",
               active ? "bg-accent-bg text-accent" : "bg-surface-hover text-muted")}>{preset.componentCount}</span>

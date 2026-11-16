@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronRight, CircleCheck, CircleMinus, CircleX, Download, RefreshCw } from "lucide-react";
 import { api, downloadArchive, errorMessage, packagePath } from "../api";
 import { cn } from "../utils";
@@ -21,7 +21,9 @@ function needsAttention(item: ReportItem) {
   return item.conversion.status === "unconverted" || item.import.status === "missing";
 }
 
-export function PaperclipReport({ id, revision, dirty }: { id: string; revision: string; dirty: boolean }) {
+export function PaperclipReport({ id, revision, dirty, heading }: {
+  id: string; revision: string; dirty: boolean; heading: ReactNode;
+}) {
   const [report, setReport] = useState<Report>();
   const [filter, setFilter] = useState<"all" | "attention">("all");
   const [error, setError] = useState("");
@@ -63,8 +65,8 @@ export function PaperclipReport({ id, revision, dirty }: { id: string; revision:
     return metrics(rows).map((count, index) => <td className={cn("number", count && index > 0 && (index === 2 ? "count-bad" : "count-good"))} key={index}>{count}</td>);
   }
   return <section className="asm-lab" aria-label="Paperclip conversion report">
-    <div className="section-heading">
-      <h2>Paperclip</h2>
+    <div className="section-heading flex-wrap">
+      {heading}
       <div className="flex flex-wrap items-center gap-2">
         <button className="app-button-secondary" type="button" disabled={Boolean(busy)} onClick={() => void load()}><RefreshCw className="h-4 w-4" /> Convert</button>
         <button className="app-button-secondary" type="button" disabled={Boolean(busy)} onClick={() => void load(true)}><RefreshCw className="h-4 w-4" /> Refresh import status</button>

@@ -31,6 +31,7 @@ _KINDS = {"skill", "mcp", "hook", "plugin", "instruction", "package", "other"}
 _LISTS = (("dependencies", "apm"), ("dependencies", "mcp"), ("dependencies", "lsp"),
           ("dependencies", "hooks"), ("dependencies", "plugins"), ("hooks",), ("plugins",))
 _SKIPPED = {".git", ".asm", "apm_modules", "__pycache__", ".venv", ".env"}
+_ICON = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 _MUTEX = threading.RLock()
 
 
@@ -375,6 +376,7 @@ class Store:
         package = {
             "id": identifier, "title": _text(labels.get("title")) or _text(model.get("name")) or identifier,
             "description": _text(model.get("description")), "kind": "stack" if kind == "stack" else "preset",
+            "icon": _text(labels.get("icon")),
             "version": str(model.get("version", "")), "componentCount": 1 + len(entries),
             **{key: [value for value in labels[key] if isinstance(value, str)]
                if isinstance(labels.get(key), list) else [] for key in ("workArea", "usage")},
@@ -403,7 +405,7 @@ class Store:
             for identifier in self._ids():
                 package = self.get(identifier)
                 summaries.append({key: package[key] for key in (
-                    "id", "title", "description", "kind", "version", "workArea", "usage", "componentCount")})
+                    "id", "title", "description", "kind", "icon", "version", "workArea", "usage", "componentCount")})
             return summaries
 
     def catalog(self):
@@ -461,6 +463,14 @@ class Store:
             if payload["kind"] not in ("stack", "preset"):
                 raise StoreError("Kind must be stack or preset.")
             labels["kind"] = payload["kind"]
+        if "icon" in payload:
+            icon = payload["icon"]
+            if not isinstance(icon, str) or icon and not _ICON.fullmatch(icon) or len(icon) > 40:
+                raise StoreError("icon must be an icon name such as rocket or folder-git-2.")
+            if icon:
+                labels["icon"] = icon
+            else:
+                labels.pop("icon", None)
         for field in ("workArea", "usage"):
             if field in payload:
                 labels[field] = self._strings(payload[field], field)

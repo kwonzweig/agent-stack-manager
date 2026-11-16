@@ -1,7 +1,8 @@
 // Adapted from AITMPL dashboard/src/components/CartSidebar.tsx (MIT).
 import { useRef, useState } from 'react';
 import type { CatalogItem, PackageKind, PackageSummary } from '../types';
-import { TYPE_CONFIG } from './icons';
+import { KIND_STYLES } from '../lib/kinds';
+import { KindIcon } from '../components/ComponentUI';
 import { itemName } from './catalogItem';
 
 interface Props {
@@ -129,17 +130,15 @@ export default function CartSidebar({ selected, presets, onRemove, onClear, onCr
             ) : (
               <div className="px-3 py-4">
                 {Array.from(cart).map(([type, items], idx, arr) => {
-                  const config = TYPE_CONFIG[type];
+                  const config = KIND_STYLES[type];
                   const isLast = idx === arr.length - 1;
                   return (
                     <div key={type} className={!isLast ? 'mb-4 pb-3 border-b border-[var(--color-border)]' : 'mb-2'}>
                       {/* Folder row */}
                       <div className="flex items-center gap-2.5 py-2 px-3 rounded-lg bg-[var(--color-surface-1)] border border-[var(--color-border)] mb-2 shadow-sm">
-                        <svg aria-hidden="true" className="w-4 h-4 shrink-0" style={{ color: config?.color ?? 'var(--color-text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                        </svg>
+                        <KindIcon kind={type} className="w-4 h-4 shrink-0" style={{ color: config?.color ?? 'var(--color-text-tertiary)' }} />
                         <span className="text-[13px] font-semibold text-[var(--color-text-primary)]">
-                          {config?.label ?? type}
+                          {config?.plural ?? type}
                         </span>
                         <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-surface-3)] text-[var(--color-text-tertiary)] font-semibold tabular-nums border border-[var(--color-border)]">
                           {items.length}

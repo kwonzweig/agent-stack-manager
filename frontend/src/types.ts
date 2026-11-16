@@ -10,6 +10,7 @@ export interface PackageSummary {
   title: string;
   description: string;
   kind: PackageKind;
+  icon: string;
   version: string;
   workArea: string[];
   usage: string[];

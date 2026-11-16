@@ -1,0 +1,12 @@
+schemaVersion: 7
+agents:
+  ar:
+    role: general
+    permissions:
+      canCreateAgents: true
+    runtime:
+      heartbeat:
+        enabled: false
+    metadata:
+      agentStackManagerPackageId: ar
+      agentStackManagerRevision: 118aff91dc8ef7301caa54fdd7b48638877407e75da6ddaf3c0bfee218796038

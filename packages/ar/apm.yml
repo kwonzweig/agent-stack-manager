@@ -1,0 +1,25 @@
+name: ar
+version: 0.1.0
+description: Research, build and hire the agent stacks the company needs, through Agent Stack Manager.
+targets:
+- claude
+- codex
+dependencies:
+  apm:
+  - git: https://github.com/kwonzweig/there-is-a-tool-for-that.git
+    ref: main
+    path: skills/find-tools
+  - git: https://github.com/vercel-labs/skills.git
+    ref: main
+    path: skills/find-skills
+  - git: https://github.com/kwonzweig/agent-operating-standards.git
+    ref: main
+    path: skills/agent-operating-standards
+  mcp: []
+x-preset-labels:
+  title: AI Resources
+  kind: preset
+  icon: search
+  paperclip:
+    role: general
+    canCreateAgents: true

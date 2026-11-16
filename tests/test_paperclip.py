@@ -286,6 +286,23 @@ class PaperclipTests(unittest.TestCase):
         self.assertIsNone(items["check"]["target"].get("key"))
         self.assertEqual(self.fixture.assignments, [])
 
+    def test_skill_that_follows_the_default_branch_converts(self):
+        for source in ({"repositoryUrl": REPO, "path": PATH, "ref": ""},
+                       {"repositoryUrl": REPO, "path": PATH, "ref": "HEAD"},
+                       {"repositoryUrl": REPO, "path": PATH},
+                       {"repositoryUrl": REPO, "path": PATH, "ref": "main"}):
+            with self.subTest(ref=source.get("ref")):
+                self.package["components"][1]["source"] = source
+                report = paperclip.convert(self.package, root=ROOT)
+                check = by_id(report)["check"]
+                self.assertEqual(check["conversion"]["status"], "converted")
+                plan = json.loads(next(entry["content"] for entry in report["files"]
+                                       if entry["path"] == "remote-import-plan.json"))
+                expected = {"repositoryUrl": REPO, "path": PATH}
+                if source.get("ref") == "main":
+                    expected["ref"] = "main"
+                self.assertEqual(plan["remoteSources"], [expected])
+
     def test_hook_and_plugin_name_paperclip_as_the_reason(self):
         items = by_id(paperclip.convert(self.package, root=ROOT))
         for item_id, kind in (("stop", "hook"), ("design", "plugin")):

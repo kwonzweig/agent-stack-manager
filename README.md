@@ -1,73 +1,96 @@
 # Agent Stack Manager
 
-A local catalog and editor for APM stacks and agent presets. Select components, save an APM package, and see what converts for each consumer.
+Agent skills, stacks and presets kept in one place as Microsoft APM packages, with a local dashboard and automatic export to Paperclip.
 
-## Run
+![The Export tab of the Web app engineer preset: what each app supports, and the Paperclip conversion](docs/screenshot.png)
 
-Python 3.11 or newer is required. From this checkout:
+## Why
 
-```powershell
-python -m venv .venv
-.venv/Scripts/Activate.ps1
-python -m pip install -e .
-python -m asm_app serve
-```
+Agent stacks change fast. Following them needs one central place to keep and organize skills, and to say what each agent is made of. Agent Stack Manager (ASM) is that place: an agent stack centralization effort.
 
-On macOS/Linux, activate with `source .venv/bin/activate` instead. Open [localhost:4319](http://127.0.0.1:4319). The server binds to loopback.
+It works in three units:
 
-## Packages
+- **Agent config component**: one Instruction, Skill, MCP server, Hook or Plugin, with its source repository when it comes from one.
+- **Stack**: components that are used together.
+- **Agent preset**: one role. Its Instruction, its components and the stacks it includes, more than a list of skills.
 
-`packages/` contains the editable APM packages. Changes from the dashboard write to their `apm.yml` and native `.apm/` files. Review and commit them with Git.
+Every stack and preset is a [Microsoft APM](https://github.com/microsoft/apm) package in `packages/`, the common language. ASM keeps its own labels (title, icon, Paperclip role) under `x-preset-labels` in `apm.yml`; there is no second preset format. The aim is that ASM exports each preset from APM into the formats apps such as Paperclip and CC Switch read, and imports their formats back into APM.
 
-- Catalog: search components, stacks and presets with each source repository's GitHub stars, sorted by catalog order, name, repository or stars. Add a component to a preset or stack from its + menu, or select several and add them together.
-- Presets: create and edit title, description, icon, workArea, usage, the Paperclip role and whether the agent may create agents, Instruction and component membership.
-- Export: see what Paperclip, Claude Code, Codex and CC Switch each support for the preset's components, and the Paperclip conversion report.
-- Source files: inspect and download the current APM package.
-- Component comments: persist local observations in ignored `.asm/` files.
+## What each app supports
 
-The CAO preset holds its Instruction, four skills (`agent-operating-standards`, `find-tools`, `find-skills`, `humanizer`), the `cao-stop` hook and the `session-report` plugin. The Web app engineer preset holds its Instruction, 31 skills, the Playwright MCP server, the `web-session-start` hook and the `frontend-design` plugin. The two hooks only echo a line, and the two plugins are not there for real use: both pairs test how hooks and plugins convert. The AI Resources preset (`ar`) holds its Instruction, three skills from their repositories (`find-tools`, `find-skills`, `agent-operating-standards`) and its own `technology-research` skill in `packages/ar/.apm/skills/`; it researches, builds and hires roles as presets in ASM.
+| Component | Paperclip | Claude Code | Codex | CC Switch (Claude Code · Codex) |
+| --- | --- | --- | --- | --- |
+| Instruction | [AGENTS.md](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) | [CLAUDE.md](https://code.claude.com/docs/en/memory) | [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) | [Prompts: CLAUDE.md · AGENTS.md](https://github.com/farion1231/cc-switch#supported-features-by-tool) |
+| Skill | [Skills](https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/skills-store.md) | [Skills](https://code.claude.com/docs/en/skills) | [Skills](https://learn.chatgpt.com/docs/build-skills) | [Skills · Skills](https://github.com/farion1231/cc-switch#supported-features-by-tool) |
+| MCP | [Not documented](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) | [MCP servers](https://code.claude.com/docs/en/mcp) | [MCP servers](https://learn.chatgpt.com/docs/extend/mcp) | [MCP · MCP](https://github.com/farion1231/cc-switch#supported-features-by-tool) |
+| Hook | [Not documented](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) | [Hooks](https://code.claude.com/docs/en/hooks) | [Hooks](https://learn.chatgpt.com/docs/hooks) | [Not managed](https://github.com/farion1231/cc-switch) |
+| Claude Code plugin | [Not documented](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) | [Plugins](https://code.claude.com/docs/en/plugins) | [Not documented](https://developers.openai.com/codex/plugins/build/) | [Not managed](https://github.com/farion1231/cc-switch) |
+| Codex plugin | [Not documented](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) | [Not documented](https://code.claude.com/docs/en/plugins) | [Plugins](https://developers.openai.com/codex/plugins/build/) | [Not managed](https://github.com/farion1231/cc-switch) |
 
-`x-preset-labels` stores display metadata and the Paperclip role (`general` when unset; CAO sets `ceo`) and whether the agent may create agents (only AI Resources does). APM dependencies store membership; there is no second ASM preset format. The component catalog is an index of source references and creation templates, not a second list of each preset's components.
+Each cell is the app's own term, linked to the page that says so; "Not documented" means that page says nothing on it. The table is [`catalog/consumers.json`](catalog/consumers.json), and the dashboard's Export tab shows it for each preset with its counts. What an app does not take, or an export leaves out, stays in the APM package, so the same preset serves the next app.
 
-## Consumers
+## Export
 
-| Consumer | Available |
-|---|---|
-| Paperclip | Package export |
-| Codex | Placeholder |
-| Claude Code | Placeholder |
-| CC Switch | Placeholder |
-
-`catalog/consumers.json` records what each of them supports per component kind, in the app's own term, with the page that says so; the Export tab shows it next to the preset's own components.
-
-The Paperclip export writes the Instruction as the agent's `AGENTS.md` and one skill stub per GitHub skill that follows the skill's branch. Paperclip's [company package spec](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) has no entry for MCP servers, hooks or plugins. The export writes no adapter, and Paperclip's docs do not say how an imported agent gets an MCP server, so the report asks for MCP to be set in the agent's adapter after import; hooks and plugins are left out. Each is reported with that cause, and anything else that does not convert is reported as needing attention.
-
-Every preset's Paperclip package is committed under `exports/paperclip/<id>/`: [CAO](exports/paperclip/cao), [AI Resources](exports/paperclip/ar), [Web app engineer](exports/paperclip/web-app-engineer). Paperclip [imports a preset from its folder's GitHub URL](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/importing-and-exporting.md#github-sources), such as `https://github.com/kwonzweig/agent-stack-manager/tree/main/exports/paperclip/cao`. Saving in the dashboard rewrites the folders; commit the changed files with Git. From the command line:
+Saving a preset or stack writes its `apm.yml` in `packages/` and converts every preset for Paperclip, rewriting only the files in `exports/paperclip/<id>/` whose content changed; `git status` shows both, and you commit them with Git. Every component is accounted for: exported, left out as expected (with the reason), or needs attention. Import a folder by hand as [docs/paperclip.md](docs/paperclip.md) describes.
 
 ```sh
 python -m asm_app export          # rewrite exports/paperclip/ and list what each preset leaves out
 python -m asm_app export --check  # write nothing; fail if exports/paperclip/ is out of date
 ```
 
-Both exit with 1 when a component needs attention. A folder holds `COMPANY.md`, `agents/<id>/AGENTS.md`, `.paperclip.yaml` and `skills/<key>/SKILL.md` stubs; [the API contract](docs/api-contract.md) lists their fields. The Export tab downloads the same files as a ZIP, and Source files downloads the APM package. Nothing here installs a preset into a consumer.
+Not built yet: export for Claude Code, Codex and CC Switch, and importing their formats back into APM.
+
+## Presets in this repo
+
+- **CAO** ([package](packages/cao), [export](exports/paperclip/cao)): takes the human's request and delegates it. Four skills, the `session-report` plugin and the `cao-stop` hook.
+- **AI Resources** ([package](packages/ar), [export](exports/paperclip/ar)): researches, builds and hires roles as presets in ASM. Three skills from their repositories and its own `technology-research`.
+- **Web app engineer** ([package](packages/web-app-engineer), [export](exports/paperclip/web-app-engineer)): builds and reviews web apps. 31 skills, the Playwright MCP server, the `frontend-design` plugin and the `web-session-start` hook.
+
+The two hooks only echo a line, and the two plugins are there to show how an export reports a hook and a plugin.
+
+## What ASM is not
+
+- Not connected to any app: it reads nothing from one, imports nothing into one, and does not know whether an import succeeded.
+- Not an agent runner: no button starts an agent or research.
+- Not a version pin: a component from a repository follows its branch, never a commit, so an app that tracks the branch gets its updates.
+- Not a workaround: it does not make an app take what the app's docs do not support.
+- Not hosted: the dashboard runs on your machine, on loopback.
+
+## Run
+
+Python 3.11 or newer. ASM installs into a virtual environment in the clone.
+
+```sh
+sudo apt install python3-venv   # Debian or Ubuntu only
+git clone https://github.com/kwonzweig/agent-stack-manager
+cd agent-stack-manager
+python3 -m venv .venv      # Windows: py -m venv .venv
+. .venv/bin/activate       # Windows: .venv\Scripts\activate
+python -m pip install -e .
+python -m asm_app serve
+```
+
+Every `python` command in this README runs in the clone with `.venv` active; activate it again in a new terminal. If PowerShell says running scripts is disabled, use Command Prompt.
+
+Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has that port, `serve` stops with `Address already in use` (`WinError 10048` on Windows); pick another port with `python -m asm_app serve --port 4320`. The dashboard edits the files in your clone: browse the Catalog with each repository's GitHub stars, add components to a stack or preset, edit a preset, and read its Export tab. Edits stay in the page until you press **Save changes** at the top of the preset. To save from a script instead, use the local API on the dashboard's address, described in [docs/api-contract.md](docs/api-contract.md): `GET /api/presets/cao` returns the preset with its `revision`, and `PATCH /api/presets/cao` with `Content-Type: application/json` and the body `{"revision": "<that revision>", "description": "New text"}` changes only the description.
 
 ## APM lock
 
-Microsoft APM is optional. Install the pinned CLI into the same Python environment:
+The optional APM CLI resolves a package's dependencies into `apm.lock.yaml` without deploying anything into an app's folders. The lockfile records the commit each branch [resolved to](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/lockfile-spec.md) when it ran; the presets and the Paperclip exports keep naming branches.
 
 ```sh
-python -m pip install -e '.[apm]'
-python -m asm_app lock web-app-engineer
+python -m pip install -e ".[apm]"
+python -m asm_app lock web-app-engineer   # --update resolves again from upstream
 ```
-
-This resolves dependencies and writes `apm.lock.yaml` without deploying into host agent directories. Use `--update` to request upstream resolution. A lock operation can fail if a referenced source is inaccessible. The app reports the command result; it does not install missing host tools.
 
 ## Development
 
-The React frontend is in `frontend/`. Its production build is included in
-`asm_app/web/`, so running the Python app does not require Node.js.
+```sh
+python -m unittest discover -s tests
+python -m asm_app export --check
+```
 
-To change the frontend, use Node.js 22.12 or newer:
+The built dashboard is committed in `asm_app/web/`, so running it needs no Node.js. To change the dashboard, rebuild it with Node.js 22.12 or newer and commit it with the source:
 
 ```sh
 cd frontend
@@ -76,16 +99,4 @@ npm test
 npm run build
 ```
 
-Reload the local dashboard after building. UI source and compiled files belong
-in the same commit. The interface reuses Skills Manager and Claude Code
-Templates components; source versions and adaptations are recorded in
-`frontend/IMPLEMENTATION.md` and the bundled license notices.
-
-Run the backend checks from the repository root:
-
-```sh
-python -m unittest discover -s tests -v
-python -m asm_app export --check
-```
-
-[Design](docs/design.md) · [API contract](docs/api-contract.md)
+Get Node.js from [nodejs.org/download](https://nodejs.org/en/download); a Linux distribution's own package may be older. The data files and the local API are in [docs/api-contract.md](docs/api-contract.md); reused frontend code and its licences are in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md).

@@ -369,5 +369,30 @@ class StoreTests(unittest.TestCase):
                 self.assertEqual(actual, counts)
 
 
+class CommittedPackageTests(unittest.TestCase):
+    def test_a_save_of_a_committed_package_changes_only_the_edited_line_of_its_apm_yml(self):
+        # A save rewrites the whole apm.yml in the store's own layout; a committed file in another
+        # layout would show lines in the Git diff that the user never edited.
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        for path in [*ROOT.glob("packages/**/*"), *ROOT.glob("catalog/*")]:
+            if path.is_file():
+                target = root / path.relative_to(ROOT)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(path.read_bytes())
+        store = Store(root)
+        for manifest in sorted(ROOT.glob("packages/*/apm.yml")):
+            package_id = manifest.parent.name
+            with self.subTest(package_id):
+                package = store.get(package_id)
+                store.save(package_id, {"revision": package["revision"], "title": "Edited title"})
+                original = manifest.read_text(encoding="utf-8").splitlines()
+                saved = (root / "packages" / package_id / "apm.yml").read_text(encoding="utf-8").splitlines()
+                self.assertEqual(len(saved), len(original))
+                changed = [line for old, line in zip(original, saved) if old != line]
+                self.assertEqual(changed, ["  title: Edited title"])
+
+
 if __name__ == "__main__":
     unittest.main()

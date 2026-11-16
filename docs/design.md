@@ -2,7 +2,7 @@
 
 Agent Stack Manager browses components, composes reusable stacks and agent presets, and exports them for consumers. APM packages in `packages/` are canonical. There is no separate ASM preset schema.
 
-The first release is a local dashboard. The UI uses Skills Manager's theme, icons, sidebar, workspace cards, dialogs and detail sheet. Catalog adapts AITMPL's component grid and selection drawer. The Lab's component details, source files and conversion results remain part of the preset reader. The same Web app engineer and CAO definitions from the comparison are retained. Historical prototype sites remain separate.
+The first release is a local dashboard. The UI uses Skills Manager's theme, icons, sidebar, workspace cards, dialogs and detail sheet. Catalog adapts AITMPL's component grid; a per-card add menu and a selection bar replace its Stack drawer. The Lab's component details, source files and conversion results remain part of the preset reader. The same Web app engineer and CAO definitions from the comparison are retained. Historical prototype sites remain separate.
 
 ## Data and behavior
 

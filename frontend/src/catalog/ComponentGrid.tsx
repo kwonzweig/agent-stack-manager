@@ -1,28 +1,48 @@
 // Adapted from AITMPL dashboard/src/components/ComponentGrid.tsx (MIT).
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CatalogItem } from '../types';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { FolderGit2 } from 'lucide-react';
+import type { CatalogItem, PackageKind, PackageSummary } from '../types';
 import { KIND_STYLES } from '../lib/kinds';
+import Checkbox from './Checkbox';
 import ComponentCard from './ComponentCard';
-import { itemName } from './catalogItem';
+import { itemName, itemRepository, repositoryLabel } from './catalogItem';
 
 const ITEMS_PER_PAGE = 24;
 const CATALOG_TYPES = { all: 'All', component: 'Components', stack: 'Stacks', preset: 'Presets' };
 type CatalogType = keyof typeof CATALOG_TYPES;
 type Category = 'all' | CatalogItem['kind'];
-type Sort = 'catalog' | 'name';
+type Sort = 'catalog' | 'name' | 'repository';
+const SORTS = [['catalog', 'Catalog order'], ['name', 'Alphabetical'], ['repository', 'Repository']] as const;
 
 interface Props {
   items: CatalogItem[];
   selection: ReadonlySet<string>;
+  onlySelected: boolean;
+  targets: PackageSummary[];
   isLoading?: boolean;
   error?: string | null;
   onRetry?: () => void;
   onOpen: (item: CatalogItem) => void;
-  onToggle: (item: CatalogItem) => void;
-  onSetMany: (items: CatalogItem[], add: boolean) => void;
+  onSelect: (items: CatalogItem[], selected: boolean) => void;
+  onAdd: (packageId: string, componentIds: string[]) => Promise<void>;
+  onCreate: (componentIds: string[], kind: PackageKind) => void;
 }
 
-export default function ComponentGrid({ items, selection, isLoading, error, onRetry, onOpen, onToggle, onSetMany }: Props) {
+const selectable = (item: CatalogItem) => item.type !== 'preset';
+
+// Checked when every entry is selected, mixed when only some are.
+function SelectAll({ items, selection, label, onSelect }: {
+  items: CatalogItem[]; selection: ReadonlySet<string>; label: string; onSelect: Props['onSelect'];
+}) {
+  const count = items.filter((item) => selection.has(item.id)).length;
+  if (!items.length) return null;
+  return <Checkbox checked={count === items.length} mixed={count > 0 && count < items.length} label={label}
+    onChange={(checked) => onSelect(items, checked)} />;
+}
+
+export default function ComponentGrid({
+  items, selection, onlySelected, targets, isLoading, error, onRetry, onOpen, onSelect, onAdd, onCreate,
+}: Props) {
   const [activeType, setActiveType] = useState<CatalogType>('all');
   const [category, setCategory] = useState<Category>('all');
   const [search, setSearch] = useState('');
@@ -46,6 +66,7 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
     window.addEventListener('keydown', focusSearch);
     return () => window.removeEventListener('keydown', focusSearch);
   }, []);
+  useEffect(() => setPage(1), [onlySelected]);
 
   const typeComponents = useMemo(
     () => items.filter((item) => activeType === 'all' || item.type === activeType),
@@ -58,6 +79,7 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
 
   const filtered = useMemo(() => {
     let results = typeComponents;
+    if (onlySelected) results = results.filter((item) => selection.has(item.id));
     if (category !== 'all') results = results.filter((item) => item.kind === category);
     if (selectedRepositories.length) {
       results = results.filter((item) => selectedRepositories.includes(item.source?.repositoryUrl ?? ''));
@@ -71,14 +93,19 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
         ].some((value) => value?.toLowerCase().includes(query)),
       );
     }
-    return sortBy === 'name' ? [...results].sort((a, b) => itemName(a).localeCompare(itemName(b))) : results;
-  }, [typeComponents, category, selectedRepositories, search, sortBy]);
+    if (sortBy === 'name') return [...results].sort((a, b) => itemName(a).localeCompare(itemName(b)));
+    // Entries without a source repository go last; catalog order holds within each repository.
+    if (sortBy === 'repository') {
+      const key = (item: CatalogItem) => itemRepository(item) ? repositoryLabel(itemRepository(item)).toLowerCase() : '￿';
+      return [...results].sort((a, b) => key(a).localeCompare(key(b)));
+    }
+    return results;
+  }, [typeComponents, onlySelected, selection, category, selectedRepositories, search, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
   const paged = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-  const selectableOnPage = paged.filter((item) => item.type !== 'preset');
-  const pageInStack = selectableOnPage.length > 0 && selectableOnPage.every((item) => selection.has(item.id));
+  const selectableOnPage = paged.filter(selectable);
   const resultLabel = {
     all: ['result', 'results'],
     component: ['component', 'components'],
@@ -91,6 +118,12 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
     setSelectedRepositories((previous) => previous.includes(repository)
       ? previous.filter((value) => value !== repository)
       : [...previous, repository]);
+    setPage(1);
+  }
+
+  function showRepository(repository: string) {
+    setSelectedRepositories([repository]);
+    setShowFilters(true);
     setPage(1);
   }
 
@@ -265,8 +298,7 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
               onChange={(e) => { setSortBy(e.target.value as Sort); setPage(1); }}
               className="font-mono bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded text-[13px] text-[var(--color-text-secondary)] font-medium px-3 py-2 pr-9 outline-none focus:border-[var(--color-accent)] cursor-pointer transition-all appearance-none hover:border-[var(--color-accent)] hover:text-[var(--color-text-primary)] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%237d8590%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
             >
-              <option value="catalog">Catalog order</option>
-              <option value="name">Alphabetical</option>
+              {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </div>
         </div>
@@ -281,7 +313,7 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
                   Sort by
                 </label>
                 <div className="flex gap-2">
-                  {([['catalog', 'Catalog order'], ['name', 'Alphabetical']] as const).map(([value, label]) => (
+                  {SORTS.map(([value, label]) => (
                     <button
                       key={value}
                       onClick={() => { setSortBy(value); setPage(1); }}
@@ -356,18 +388,11 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
             )}
           </div>
 
-          {/* Quick Actions */}
           {selectableOnPage.length > 0 && (
-            <div className="flex items-center gap-2 sm:ml-4">
-              <button
-                onClick={() => onSetMany(selectableOnPage, !pageInStack)}
-                className="text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)] hover:border-[var(--color-border-hover)] transition-all active:scale-95"
-                title={pageInStack ? 'Remove the components on this page from your stack' : 'Add all visible components to stack'}
-                aria-pressed={pageInStack}
-              >
-                {pageInStack ? '− Remove Page from Stack' : '+ Add Page to Stack'}
-              </button>
-            </div>
+            <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--color-text-secondary)] sm:ml-4">
+              <SelectAll items={selectableOnPage} selection={selection} label="Select this page" onSelect={onSelect} />
+              Select this page
+            </label>
           )}
         </div>
 
@@ -383,17 +408,41 @@ export default function ComponentGrid({ items, selection, isLoading, error, onRe
         ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 px-4 sm:px-6 pb-6"
         : "flex flex-col gap-4 px-4 sm:px-6 pb-6"
       }>
-        {paged.map((item, index) => (
-          <ComponentCard
-            key={item.id}
-            item={item}
-            index={index}
-            viewMode={viewMode}
-            inCart={selection.has(item.id)}
-            onOpen={onOpen}
-            onToggle={onToggle}
-          />
-        ))}
+        {paged.map((item, index) => {
+          const repository = itemRepository(item);
+          const group = sortBy === 'repository' && (index === 0 || itemRepository(paged[index - 1]) !== repository)
+            ? filtered.filter((entry) => itemRepository(entry) === repository) : undefined;
+          const groupName = repository ? repositoryLabel(repository) : 'No source repository';
+          return (
+            <Fragment key={item.id}>
+              {group && (
+                <div className={'col-span-full flex items-center gap-2.5 ' + (index ? 'pt-3' : '')}>
+                  <SelectAll items={group.filter(selectable)} selection={selection} onSelect={onSelect}
+                    label={'Select all ' + group.filter(selectable).length + ' from ' + groupName} />
+                  <FolderGit2 className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)]" aria-hidden="true" />
+                  <h2 className="min-w-0 truncate font-mono text-[13px] font-semibold text-[var(--color-text-primary)]">
+                    {/^https?:\/\//i.test(repository)
+                      ? <a className="hover:text-[var(--color-accent)] hover:underline" href={repository} target="_blank" rel="noreferrer">{groupName}</a>
+                      : groupName}
+                  </h2>
+                  <span className="text-[12px] tabular-nums text-[var(--color-text-tertiary)]">{group.length}</span>
+                </div>
+              )}
+              <ComponentCard
+                item={item}
+                index={index}
+                viewMode={viewMode}
+                selected={selection.has(item.id)}
+                targets={targets}
+                onOpen={onOpen}
+                onSelect={(entry, checked) => onSelect([entry], checked)}
+                onAdd={onAdd}
+                onCreate={onCreate}
+                onRepository={sortBy === 'repository' ? undefined : showRepository}
+              />
+            </Fragment>
+          );
+        })}
       </div>
 
       {paged.length === 0 && (

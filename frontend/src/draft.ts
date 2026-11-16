@@ -22,6 +22,14 @@ export function createDraft(pkg: Package): Draft {
     members: components.filter(item => item.id !== "instruction") };
 }
 
+// The saved package plus the given components it lacks; a package never contains itself.
+export function withMembers(pkg: Package, items: Component[]) {
+  const base = createDraft(pkg);
+  const ids = new Set([...base.members.map(item => item.id), "package:" + pkg.id]);
+  const added = items.filter(item => !ids.has(item.id) && ids.add(item.id));
+  return { added, draft: { ...base, members: [...base.members, ...added] } };
+}
+
 export function makePayload({ original, members, title, description, kind, icon, workArea, usage, instruction }: Draft) {
   return { revision: original.revision, title, description, kind, icon, workArea, usage, instruction,
     componentIds: members.map(item => item.id) };

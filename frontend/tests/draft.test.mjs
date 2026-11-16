@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDraft, makePayload, rebaseDraft } from "../src/draft.ts";
+import { createDraft, makePayload, rebaseDraft, withMembers } from "../src/draft.ts";
 
 const component = (id) => ({ id, name: id, kind: "skill" });
 const saved = (revision, fields = {}, members = ["a", "b"]) => ({
@@ -46,4 +46,20 @@ test("edits made during a save rebase against the submitted snapshot", () => {
   const editedDuringSave = { ...submitting, instruction: "" };
   const latest = saved("new", { instruction: "Text being saved" });
   assert.equal(rebaseDraft(editedDuringSave, latest, submitting).instruction, "");
+});
+
+test("adding from Catalog saves only new members onto the saved version", () => {
+  const { added, draft } = withMembers(saved("current"), ["b", "c", "c"].map(component).concat({ id: "package:example", name: "Example", kind: "package" }));
+  assert.deepEqual(added.map(item => item.id), ["c"]);
+  assert.deepEqual(makePayload(draft), {
+    revision: "current", title: "Example", description: "", kind: "preset", icon: "",
+    workArea: [], usage: [], instruction: "", componentIds: ["a", "b", "c"],
+  });
+});
+
+test("an open draft keeps its unsaved edits after a Catalog add is saved", () => {
+  const open = { ...createDraft(saved("old")), instruction: "Unsaved text", members: ["a"].map(component) };
+  const rebased = rebaseDraft(open, saved("new", {}, ["a", "b", "c"]));
+  assert.equal(rebased.instruction, "Unsaved text");
+  assert.deepEqual(makePayload(rebased).componentIds, ["a", "c"]);
 });

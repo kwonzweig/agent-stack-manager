@@ -25,18 +25,19 @@ All four image files were visually inspected and their SHA-256 hashes matched th
 
 ## Layout for ASM
 
-Use one quiet dark desktop shell for both tasks. The rail links to Catalog and Presets, with named presets listed below when the sidebar has room. Use AITMPL's type-led browse structure within Catalog and CC Switch's compact selected row and trailing icon actions inside Presets. Make the Catalog selection directly visible at desktop widths where a third column fits. Its placement and grouping come from AITMPL's Stack drawer. At narrower widths the selection count opens an end drawer, as in the reference.
+Use one quiet dark desktop shell for both tasks. The rail links to Catalog and Presets, with named presets listed below when the sidebar has room. Use AITMPL's type-led browse structure within Catalog and CC Switch's compact selected row and trailing icon actions inside Presets. Each Catalog card has a checkbox for selecting several entries and a + menu that adds one entry straight to a named preset or stack. A selection bar at the bottom of the viewport carries the count and the same destinations.
 
 ```text
 Catalog             Components   Stacks   Presets
                     [Search catalog…      ] [Category ▾] [Grid | List]
-Agent Stack         ┌─────────────┬──────────────┐ ┌──────────────────┐
-Manager             │ ◇ Skill   + │ ⧉ Stack    ✓ │ │ Selection       1│
-                    │ Name        │ Name         │ │ Stacks           │
-  Catalog           │ Description │ Description  │ │   Name          ×│
-  Presets           ├─────────────┼──────────────┤ │                  │
-                    │ ◇ Skill   + │ ◇ Skill    + │ │ [Create preset]  │
-                    └─────────────┴──────────────┘ └──────────────────┘
+Agent Stack         ┌────────────────┬─────────────────┐
+Manager             │ ☐ ◇ Skill    + │ ☑ ⧉ Stack     + │
+                    │   Name         │   Name          │
+  Catalog           │   owner/repo   │   Description   │
+  Presets           ├────────────────┼─────────────────┤
+                    │ ☐ ◇ Skill    + │ ☐ ◇ Skill     + │
+                    └────────────────┴─────────────────┘
+                       [1 selected  Show selected  Add to…  ×]
 
 Presets        [Search presets…]   + │ Preset name                [check]
               ┌───────────────────┐ │ Details   Source files   Paperclip
@@ -50,20 +51,20 @@ Presets        [Search presets…]   + │ Preset name                [check]
 ### Catalog
 
 - Put Components, Stacks and Presets under the page title. Keep the search, meaningful filter and view switch in a single toolbar at desktop widths. Show the matching count beside the results. The grid lets users scan names and descriptions. The list gives source or category its own cell when users need that information side by side.
-- Give each card a type glyph, a readable name and up to two lines of author-provided description. The name opens details and source. Separate the plus/check button so it works from the keyboard and stays visible on touch. Place a source link or category on its own line when relevant. Put a real GitHub link beside a pinned file path in details.
-- Use the same selection across Catalog tabs, grouped by type. Explicitly identify the APM dependency before it enters a preset. A component backed by a whole-repo dependency can open that repo or containing stack before staging it. Where the current model supports a component-level dependency, show the selected subpath in the detail. Preserve provenance when several discovery paths resolve to one package.
-- Place an explicit Create preset action in the selection footer. When browsing from an existing preset editor, use the named destination in the returned state. Browsing a preset opens its details. If duplication is supported, it is a distinct action from adding an item to a selection.
+- Give each card a type glyph, a readable name and up to two lines of author-provided description. The name opens details and source. Give the card a selection checkbox and a separate + button that lists the saved presets and stacks and adds the entry to the chosen one. Both work from the keyboard and stay visible on touch. Show the source repository on the card; choosing it filters Catalog to that repository. Place a source link or category on its own line when relevant. Put a real GitHub link beside a pinned file path in details.
+- Keep one selection across Catalog tabs and filters. Repository order groups entries under their repository, each group with a checkbox for all of it. Explicitly identify the APM dependency before it enters a preset. A component backed by a whole-repo dependency can open that repo or containing stack before staging it. Where the current model supports a component-level dependency, show the selected subpath in the detail. Preserve provenance when several discovery paths resolve to one package.
+- The selection bar offers the saved presets and stacks, New preset and New stack. When browsing from an existing preset editor, use the named destination in the returned state. Browsing a preset opens its details. If duplication is supported, it is a distinct action from adding an item to a selection.
 
 ### Presets
 
 - Use a compact searchable list of named presets with explicit selected styling, a page-level create action and aligned row-end actions. Keep project names and descriptions as real data. The editor owns the preset name, description, role Instruction and selected stack membership. List selected stacks at the same visual level, with source refs available from their detail.
 - Keep manifest and instruction files in Source files, with paths in a compact list and readable plain-text previews. Show the files from the selected preset and use specific download names. Treat this view as the way to inspect the actual APM inputs.
-- Put conversion and import in the Paperclip section of the active preset. Show results with columns for component or stack, result and actionable reason. Label exported and imported results distinctly and pair status words with a glyph. Give any other consumer its own simple availability entry only when the existing implementation exposes it.
+- Put conversion and import in the Paperclip section of the active preset. Show results with columns for component or stack, result and actionable reason. Label exported and imported results distinctly and pair status words with a glyph. The Export tab lists only the consumers the server supports; the README records the others' availability.
 
 ### Visual and responsive details
 
 Use Geist for the application and Geist Mono for paths and source previews. Suggested dark tokens are canvas `#101215`, panels `#171A1F`, borders `#30363E`, primary text `#ECEFF3`, secondary text `#A8B1BD` and selection accent `#7EB6FF`. Use readable semantic colors for imported, warning and failure states. Component type glyphs may differ by color and shape. Keep 34–40 px controls, a 6–8 px radius, 14–16 px card gaps and 132–148 px catalog cards. Reserve grid cards for discovery and use row dividers for management.
 
-At about 1200 px, show a roughly 200 px navigation rail and a 300 px selection panel when space permits. Give central cards a minimum width around 240 px and allow the grid to fit two or three columns. Below that, use a selection drawer and let filters wrap. At phone widths, use one column, switch between named presets through a picker or navigation sheet, and keep the selection launcher within easy reach. Icon buttons need accessible names, hover or focus tooltips and visible focus. Close any drawer with Escape and return focus to its opener.
+At about 1200 px, show a roughly 200 px navigation rail. Give central cards a minimum width around 240 px and allow the grid to fit two or three columns. Below that, let filters wrap. At phone widths, use one column, switch between named presets through a picker or navigation sheet, and keep the selection bar on one line within easy reach. Icon buttons need accessible names, hover or focus tooltips and visible focus. Close any drawer or menu with Escape and return focus to its opener.
 
-The desktop selection rail and shared dark theme are ASM design choices. The reference screenshots provide navigation and control patterns. Catalog and editor density should give most of the viewport to real catalog entries and preset data.
+The selection bar and shared dark theme are ASM design choices. The reference screenshots provide navigation and control patterns. Catalog and editor density should give most of the viewport to real catalog entries and preset data.

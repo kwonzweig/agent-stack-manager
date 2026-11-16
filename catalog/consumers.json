@@ -40,7 +40,7 @@
         "skill": {"value": "yes", "name": "Skills", "doc": "https://learn.chatgpt.com/docs/build-skills"},
         "mcp": {"value": "yes", "name": "MCP servers", "note": "Set in config.toml.", "doc": "https://learn.chatgpt.com/docs/extend/mcp"},
         "hook": {"value": "yes", "name": "Hooks", "note": "Configured in hooks.json or config.toml under .codex/.", "doc": "https://learn.chatgpt.com/docs/hooks"},
-        "claude-code-plugin": {"value": "no", "name": "Converted to .codex-plugin/plugin.json", "note": "OpenAI's plugin portal converts a Claude Code plugin's .claude-plugin/plugin.json into .codex-plugin/plugin.json on submission; lifecycle hooks are removed first, and Claude marketplace listings and approvals don't transfer.", "doc": "https://developers.openai.com/plugins/guides/submit-claude-plugin"},
+        "claude-code-plugin": {"value": "not-documented", "note": "OpenAI says it accepts Claude-compatible plugin manifests, but neither this page nor its guide to submitting a Claude Code plugin says Codex loads a plugin whose only manifest is .claude-plugin/plugin.json. That guide covers OpenAI's plugin directory: the author removes lifecycle hooks, and the portal converts the manifest to .codex-plugin/plugin.json on upload.", "doc": "https://developers.openai.com/codex/plugins/build/"},
         "codex-plugin": {"value": "yes", "name": "Plugins", "note": "A root plugin.json, with .codex-plugin/plugin.json still read as a fallback.", "doc": "https://developers.openai.com/codex/plugins/build/"}
       }
     },

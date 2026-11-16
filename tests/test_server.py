@@ -33,11 +33,15 @@ class ServerTests(unittest.TestCase):
         except HTTPError as error:
             return error.code, error.read(), error.headers
 
-    def test_only_paperclip_is_supported(self):
+    def test_consumers_are_served_from_the_catalog_file(self):
+        source = Path(__file__).resolve().parents[1] / 'catalog/consumers.json'
+        (Path(self.temp.name) / 'catalog').mkdir()
+        (Path(self.temp.name) / 'catalog/consumers.json').write_bytes(source.read_bytes())
         code, body, _ = self.request('/api/consumers')
         self.assertEqual(code, 200)
+        self.assertEqual(json.loads(body), json.loads(source.read_text(encoding='utf-8')))
         consumers = json.loads(body)['consumers']
-        self.assertEqual([x['id'] for x in consumers if x['supported']], ['paperclip'])
+        self.assertEqual([x['id'] for x in consumers if x['export']], ['paperclip'])
 
     def test_rejects_cross_origin_write_before_loading_store(self):
         code, _, _ = self.request('/api/presets', data=b'{}', headers={
@@ -98,7 +102,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(code, 200)
         report = json.loads(body)
         self.assertEqual(set(report['summary']), {'total','converted','unconverted'})
-        self.assertTrue(all(set(row) == {'id','name','kind','source','target','conversion'} for row in report['items']))
+        self.assertTrue(all(set(row) == {'id','name','kind','supportKind','source','target','conversion'} for row in report['items']))
         code, _, _ = self.request('/api/presets/cao/paperclip/export')
         self.assertEqual(code, 200)
 

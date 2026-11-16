@@ -12,17 +12,18 @@ All JSON errors are `{ "error": "message" }`. Paths use URL-encoded package ids.
 - `create(payload)` -> Package
 - `save(id,payload)` -> Package (requires revision). Create and save then rewrite `exports/paperclip/` (`write_exports`), every preset, since a saved stack changes the export of each preset that includes it.
 - `export(id)` -> bytes (ZIP of the native package, the dashboard's download)
+- `consumers()` -> `catalog/consumers.json` (below), or no consumers when the file is missing.
 - `comments(id,component_id)` -> list
 - `add_comment(id,component_id,payload)` -> comment
 - `lock(id,update=False)` -> `{ok,output}`; bounded fixed APM invocation, no shell.
 
 PackageSummary: `id,title,description,kind` (`preset` or `stack`), `icon` (a lowercase icon name such as `rocket`, or empty when none was chosen), `version,workArea:[],usage:[],componentCount`.
 
-Package extends summary: `revision,instruction,components:[],files:[{path,content}]` and `paperclip:{role,canCreateAgents}`, read from `x-preset-labels.paperclip` in `apm.yml`; `role` is null and `canCreateAgents` false when unset. The dashboard does not edit them yet; a save keeps them.
+Package extends summary: `revision,instruction,components:[],files:[{path,content}]` and `paperclip:{role,canCreateAgents}`, read from `x-preset-labels.paperclip` in `apm.yml`; `role` is null and `canCreateAgents` false when unset. The preset details dialog edits them.
 
 Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`; `ref` names a branch, and an empty `ref` follows the default branch. A component stored as a file in the package also has `file`, its path inside the package (for example `.apm/skills/<name>/SKILL.md`). Catalog components additionally contain `type:"component"` and native `apm` creation metadata, and, when they come from a repository, its `stars` and `starsCheckedOn`. A catalog row with an APM `git` value stores no `source` or `sourceUrl`; `catalog()` derives both from that value, and only rows without `git` (marketplace plugins, MCP servers) store them; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
 
-Create/save payload: `title,description,kind,icon,workArea,usage,instruction,componentIds`. An empty `icon` removes the stored one. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save retains unsupported native fields unless deliberately removed. A new package id is derived from the title; a collision is rejected rather than replaced.
+Create/save payload: `title,description,kind,icon,workArea,usage,instruction,paperclip,componentIds`. An empty `icon` removes the stored one. `paperclip` is `{role,canCreateAgents}`: `role` empty, null or one of the Paperclip `roles` in `catalog/consumers.json` (a role already stored is kept even when it is not in the list, so other edits still save), `canCreateAgents` a boolean; anything else is a 400. An empty role and `canCreateAgents: false` remove their keys from `x-preset-labels.paperclip`, and an empty block is removed. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save retains unsupported native fields unless deliberately removed. A new package id is derived from the title; a collision is rejected rather than replaced.
 
 ## HTTP routes (`asm_app/server.py`)
 
@@ -35,13 +36,15 @@ Create/save payload: `title,description,kind,icon,workArea,usage,instruction,com
 - POST `/api/presets/{id}/lock` -> store.lock(id, update)
 - GET `/api/comments?presetId=&componentId=` -> `{comments:[]}`
 - POST `/api/comments` with `presetId,componentId,body,author` -> `{comment}`
-- GET `/api/consumers` -> `{consumers:[{id,name,supported}]}`
+- GET `/api/consumers` -> store.consumers()
 - GET `/api/presets/{id}/paperclip` -> conversion report from `convert()`
 - GET `/api/presets/{id}/paperclip/export` -> the same files as `exports/paperclip/{id}/`, as a ZIP
 
 ## Paperclip interface (`asm_app/paperclip.py`)
 
-`convert(package, *, root:Path)` -> `{consumer:"paperclip",items:[{id,name,kind,conversion:{status,reason,cause?},source,target}],summary:{total,converted,unconverted},files:[{path,content}],folder:{path,url}}`. `folder` is where the export is committed, `exports/paperclip/<id>`, with its GitHub page on `main` (null without `project.urls.Repository`); it is null for a stack, which is not one agent and is not exported.
+`convert(package, *, root:Path)` -> `{consumer:"paperclip",items:[{id,name,kind,supportKind,conversion:{status,reason,cause?},source,target}],summary:{total,converted,unconverted},files:[{path,content}],folder:{path,url}}`. `folder` is where the export is committed, `exports/paperclip/<id>`, with its GitHub page on `main` (null without `project.urls.Repository`); it is null for a stack, which is not one agent and is not exported.
+
+`supportKind` is the support table row the component counts in (a `kinds` value of `catalog/consumers.json`): its kind, or for a plugin `claude-code-plugin` or `codex-plugin` by the `.claude-plugin/` or `.codex-plugin/` folder its source names; null for a stack, a plugin that names neither, and the role row.
 
 Conversion statuses are `converted` and `unconverted`. Reasons are concise English. There is no runtime field. Every source component appears; `target` is the written file the component went to (`agents/<id>/AGENTS.md`, `skills/<key>/SKILL.md`), or `{packageId}` for an expanded stack.
 
@@ -64,3 +67,9 @@ The files, named by the package id:
 
 - `python -m asm_app export` runs `write_exports` and prints, per preset, its folder and one line per component not exported, in the report's reason; it exits 1 if any needs attention.
 - `python -m asm_app export --check` writes nothing, prints the same report and each changed, missing or extra file, and exits 1 if any needs attention or `exports/paperclip/` differs. CI runs it.
+
+## Consumer support (`catalog/consumers.json`)
+
+`{kinds, consumers}`. `kinds` is `instruction, skill, mcp, hook, claude-code-plugin, codex-plugin`: the component kinds with Plugin split by the manifest each app reads. Each consumer has `id`, `name`, `export` (true only for Paperclip, the one app ASM exports to), optional `tools` (for CC Switch, the tools of its own table that its column covers), optional `roles: {values, doc}` (Paperclip's agent roles and the page that lists them) and `support`, one cell per kind in that order: `{value, name?, note?, doc}`. `value` is `yes`, `no` or `not-documented` (the app's page on that format says nothing); `name` is the app's own term, required for `yes`; `note` is hover text; `doc` is the https page that says so. The store refuses a file with a missing kind, another value, or a cell without `doc`.
+
+The Export tab shows the cells as a table, one row per kind with this preset's count. Paperclip's cell for a kind the preset has comes from the conversion report instead.

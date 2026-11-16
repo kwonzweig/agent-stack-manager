@@ -253,8 +253,10 @@ class StoreTests(unittest.TestCase):
         for value in ({"role": "agent", "canCreateAgents": False}, {"role": "general", "canCreateAgents": "yes"},
                       {"role": 3}, {"role": "general", "adapter": "codex_local"}, ["general"]):
             with self.subTest(value=value):
+                # The current revision, so a payload wrongly accepted earlier cannot fail this one with 409.
+                revision = self.store.get(package["id"])["revision"]
                 with self.assertRaises(StoreError) as caught:
-                    self.store.save(package["id"], {"revision": package["revision"], "paperclip": value})
+                    self.store.save(package["id"], {"revision": revision, "paperclip": value})
                 self.assertEqual(caught.exception.status, 400)
         self.assertEqual(self.store.get(package["id"])["paperclip"], {"role": None, "canCreateAgents": False})
 

@@ -33,7 +33,9 @@ export function SupportTable({ data, report }: { data: ConsumerData; report?: Re
       </tr>)}</tbody>
     </table></div>
     {unplaced.length > 0 && <p role="alert" className="mt-2 text-[12px] text-danger">
-      Needs attention: no plugin row counts {unplaced.map(row => row.name).join(", ")}; name a .claude-plugin or .codex-plugin manifest in the source.
+      Needs attention: {unplaced.map(row => row.name).join(", ")} {unplaced.length === 1 ? "is" : "are"} in
+      neither plugin row, because {unplaced.length === 1 ? "its source names" : "their sources name"} no
+      .claude-plugin/ or .codex-plugin/ manifest.
     </p>}
   </section>;
 }

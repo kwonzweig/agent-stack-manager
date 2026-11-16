@@ -53,6 +53,10 @@ def main(argv=None):
     lock.add_argument('preset')
     lock.add_argument('--update',action='store_true')
     args=parser.parse_args(argv)
+    packages=args.root.resolve()/'packages'
+    if args.command in ('serve','export') and not packages.is_dir():
+        print(f'{packages} is not a folder. Run in a clone of the repo, or name one with --root <clone>.')
+        return 2
     try:
         if args.command=='serve':
             from .server import create_server

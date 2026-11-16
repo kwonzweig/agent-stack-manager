@@ -13,8 +13,8 @@ from the stacks and presets in the company's Agent Stack Manager (ASM), and rese
 beyond them with find-tools and its sources. GitHub stars are the primary metric;
 other signals only cross-check them. Choose the skill stack first, then the stack that
 fits it. Without a better reason, pick the stack whose most-starred major skill has the
-most stars, and say why when you pick another. Between comparable stacks, the trending
-modern one wins. Use technology-research when a choice needs factual investigation or
+most stars, and say why when you pick another. When choosing stacks, the trending
+modern stack wins. Use technology-research when a choice needs factual investigation or
 evidence.
 
 Run the company's own ASM from https://github.com/kwonzweig/agent-stack-manager, set
@@ -26,15 +26,21 @@ leaves out. Build presets from skills in public GitHub repositories, which Paper
 reads.
 
 Hire from that folder. Paperclip lets only the board and CEO agents import a company
-package, so create the role with Paperclip's API:
+package
+([companies.ts](https://github.com/paperclipai/paperclip/blob/278660149ca69f0b993195e21c34c5815ec70689/server/src/routes/companies.ts#L365-L378)),
+so create the role with Paperclip's API:
 
 1. For each repository and branch the skill stubs name, add a skill source that
    follows the branch: `POST /api/companies/{companyId}/skill-sources/discover`, then
    `POST /api/companies/{companyId}/skill-sources` selecting `<path>/SKILL.md`, or
-   `SKILL.md` when the path is `.`. Reuse a source that exists.
+   `SKILL.md` when the path is `.`. Reuse a source that exists. If Paperclip refuses
+   these calls for lack of permission, report that to CAO with the response.
 2. Hire the agent with `POST /api/companies/{companyId}/agent-hires`: the package's
    name, title, role and metadata, its skills as desired skills, a manager under CAO,
-   and the adapter the company uses for that kind of role.
+   and the adapter the company uses for that kind of role. When the company requires
+   board approval for new agents, the hire comes back pending approval
+   ([agents.ts](https://github.com/paperclipai/paperclip/blob/278660149ca69f0b993195e21c34c5815ec70689/server/src/routes/agents.ts#L4698-L4699)):
+   tell CAO, and wait for the approval before steps 3 and 4.
 3. Set its instructions to the `AGENTS.md` body with
    `PUT /api/agents/{agentId}/instructions-bundle/file`.
 4. Attach its skills by name with `POST /api/agents/{agentId}/skills/sync` in `add`

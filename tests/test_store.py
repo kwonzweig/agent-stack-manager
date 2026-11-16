@@ -224,6 +224,26 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(rows["web-session-start"]["file"], ".apm/hooks/web-session-start.json")
         self.assertNotIn("file", rows["brainstorming"])
 
+    def test_a_presets_own_skill_is_named_from_its_skill_md(self):
+        package = Store(ROOT).get("ar")
+        skill = next(item for item in package["components"]
+                     if item.get("file") == ".apm/skills/technology-research/SKILL.md")
+        front = yaml.safe_load((ROOT / "packages/ar/.apm/skills/technology-research/SKILL.md")
+                               .read_text(encoding="utf-8").split("---")[1])
+        self.assertEqual((skill["name"], skill["description"]), ("technology-research", front["description"]))
+        from asm_app import paperclip
+        row = next(row for row in paperclip.convert(package, root=ROOT)["items"] if row["id"] == skill["id"])
+        self.assertEqual(row["name"], "technology-research")
+
+    def test_a_presets_own_skill_without_a_name_takes_its_folder_name(self):
+        package = self.create()
+        skill_file = self.root / "packages" / package["id"] / ".apm/skills/plain-notes/SKILL.md"
+        skill_file.parent.mkdir(parents=True)
+        skill_file.write_text("No front matter.\n", encoding="utf-8")
+        skill = next(item for item in self.store.get(package["id"])["components"]
+                     if item.get("file") == ".apm/skills/plain-notes/SKILL.md")
+        self.assertEqual((skill["name"], skill["description"]), ("plain-notes", ""))
+
     def test_migrated_fixtures_keep_instructions_and_component_types(self):
         store = Store(ROOT)
         expected = {"web-app-engineer": {"instruction": 1, "skill": 31, "mcp": 1, "hook": 1, "plugin": 1},

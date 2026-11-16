@@ -1,5 +1,4 @@
-/* Agent Presets Lab app.css: scoped report, contents, source and inspector rules.
-   Their geometry is retained, while paint uses the Skills Manager theme. */
+/* Report, contents, source and inspector rules, scoped to .asm-lab; colours come from the Skills Manager theme. */
 .asm-lab {
   --line: var(--color-border-subtle);
   --ink: var(--color-text-primary);

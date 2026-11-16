@@ -3,7 +3,6 @@ import { Copy, Download } from "lucide-react";
 import { downloadArchive, errorMessage } from "../api";
 import type { NativeFile } from "../types";
 
-// File picker, code viewer and copy action adapted from Agent Presets Lab's renderSource().
 export function SourceFiles({ files, id, dirty }: { files: NativeFile[]; id: string; dirty: boolean }) {
   const [path, setPath] = useState("");
   const [status, setStatus] = useState("");

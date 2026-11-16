@@ -153,8 +153,8 @@ class Handler(BaseHTTPRequestHandler):
                     if suffix == '/lock':
                         if not isinstance(data.get('update',False),bool):
                             raise ValueError('update must be a boolean.')
-                        with self.server.io_lock:
-                            return self.send(200,self.server.store.lock(pid,data.get('update',False)))
+                        # No io_lock: APM can run for minutes, and the store guards its own check step.
+                        return self.send(200,self.server.store.lock(pid,data.get('update',False)))
             if self.command in ('GET','HEAD') and not path.startswith('/api/'):
                 relative = 'index.html' if path=='/' else unquote(path).lstrip('/')
                 target = (WEB/relative).resolve()
@@ -166,9 +166,6 @@ class Handler(BaseHTTPRequestHandler):
             self.send(getattr(error,'status',400), {'error':str(error)})
         except FileNotFoundError:
             self.send(404,{'error':'Package or file not found.'})
-        except (ConnectionError,TimeoutError,OSError) as error:
-            logging.exception('Local service request failed')
-            self.send(502,{'error':'The local service could not complete the request.'})
         except Exception:
             logging.exception('Dashboard request failed')
             self.send(500,{'error':'Request failed. See the local server output.'})

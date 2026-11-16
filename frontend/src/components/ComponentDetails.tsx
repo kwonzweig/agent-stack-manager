@@ -51,7 +51,7 @@ function Comments({ presetId, componentId }: { presetId: string; componentId: st
     } catch (error) { setPostError(errorMessage(error)); }
     finally { setPosting(false); }
   }
-  return <section className="asm-lab inspector-section comments" aria-label="Comments">
+  return <section className="asm-preset inspector-section comments" aria-label="Comments">
     <h3 className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Comments</h3>
     <div className="comment-list" aria-live="polite">
       {loading ? <p>Loading comments…</p> : loadError ? <p role="alert">{loadError} <button type="button" onClick={() => setAttempt(v => v + 1)} className="underline">Retry</button></p> :
@@ -79,7 +79,7 @@ export function ComponentDetails({ item, presetId, onClose, instruction, onInstr
   const sourceUrl = externalUrl(item.sourceUrl || item.source?.repositoryUrl);
   return <DetailSheet open title={item.name} description={item.id !== "instruction" ? item.description : undefined}
     meta={<KindBadge kind={item.kind} />} onClose={onClose}>
-    <div className="asm-lab mx-auto max-w-[1240px] space-y-5">
+    <div className="asm-preset mx-auto max-w-[1240px] space-y-5">
       {item.id === "instruction" && onInstruction ? <section aria-label="Instruction">
         <div className="section-heading">
           <h3 className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted" /> Instruction</h3>

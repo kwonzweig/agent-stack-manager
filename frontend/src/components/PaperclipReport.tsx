@@ -60,7 +60,7 @@ export function PaperclipReport({ id, conversion, dirty, heading }: {
   function cells(rows: ReportItem[]) {
     return metrics(rows).map((count, index) => <td className={cn("number", count > 0 && countTones[index])} key={index}>{count}</td>);
   }
-  return <section className="asm-lab" aria-label="Paperclip conversion report">
+  return <section className="asm-preset" aria-label="Paperclip conversion report">
     <div className="section-heading flex-wrap">
       {heading}
       <div className="flex flex-wrap items-center gap-2">
@@ -107,7 +107,7 @@ export function PaperclipReport({ id, conversion, dirty, heading }: {
       </section>
     </>}
     {item && <DetailSheet open title={item.name} meta={<KindBadge kind={item.kind} />} onClose={() => setItem(undefined)}>
-      <div className="asm-lab space-y-4">
+      <div className="asm-preset space-y-4">
         <section className="conversion-detail">
           <h3>Conversion<Status result={item.conversion} /></h3>
           <p>{item.conversion.reason}</p>

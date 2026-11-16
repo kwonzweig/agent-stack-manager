@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 .asm/
 apm_modules/
+apm.lock.yaml
 dist/
 .env
 node_modules/

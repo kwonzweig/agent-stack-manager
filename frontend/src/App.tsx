@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { api, ApiError, catalogMember, errorMessage, packagePath } from "./api";
-import type { CatalogItem, Component, Consumer, Package, PackageKind, PackageSummary } from "./types";
+import type { CatalogItem, Component, ConsumerData, Package, PackageKind, PackageSummary } from "./types";
 import { createDraft, isDirty, makePayload, overlappingChanges, rebaseDraft, withMembers, type Draft } from "./draft";
 import CatalogPage from "./catalog/CatalogPage";
 import { hrefFor, Sidebar, type Route } from "./components/Sidebar";
@@ -9,8 +9,7 @@ import { Modal, PresetDialog } from "./components/PresetDialog";
 import { WorkspaceHeader, PresetContents } from "./components/Workspace";
 import { ComponentPicker } from "./components/ComponentPicker";
 import { ComponentDetails } from "./components/ComponentDetails";
-import { PaperclipReport } from "./components/PaperclipReport";
-import { PresetExport } from "./components/PresetExport";
+import { PresetExportTab } from "./components/PresetExport";
 import { PresetList } from "./components/PresetList";
 import { SourceFiles } from "./components/SourceFiles";
 
@@ -72,7 +71,7 @@ export function App() {
   const [theme, setTheme] = useState<"light" | "dark">(() => localStorage.getItem("asm:theme") === "dark" ? "dark" : "light");
   const presets = useList("/api/presets", { presets: [] as PackageSummary[] });
   const catalog = useList("/api/catalog", defaultCatalog);
-  const consumers = useList("/api/consumers", { consumers: [] as Consumer[] });
+  const consumers = useList<ConsumerData>("/api/consumers", { kinds: [], consumers: [] });
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [loadErrors, setLoadErrors] = useState<Record<string, string>>({});
   const pendingLoads = useRef(new Map<string, Promise<Package>>());
@@ -223,11 +222,9 @@ export function App() {
               <ErrorBox message={activeSave.message} />
               {activeSave.conflict && <button type="button" className="app-button-secondary" onClick={() => setOverlay({ type: "conflict", id: draft.original.id })}>Review saved version</button>}
             </div>}
-            {route.tab === "export" ? <PresetExport consumers={consumers.data.consumers.filter(consumer => consumer.supported)}
-                loading={consumers.loading} error={consumers.error} onRetry={consumers.refresh}
-                route={{ ...route, id: draft.original.id }} onNavigate={navigate}
-                render={(consumer, tabs) => consumer === "paperclip" ? <PaperclipReport heading={tabs}
-                  id={draft.original.id} revision={draft.original.revision} dirty={isDirty(draft)} /> : null} />
+            {route.tab === "export" ? <PresetExportTab id={draft.original.id} revision={draft.original.revision}
+                dirty={isDirty(draft)} data={consumers.data} loading={consumers.loading} error={consumers.error}
+                onRetry={consumers.refresh} route={{ ...route, id: draft.original.id }} onNavigate={navigate} />
               : route.tab === "source" ? <SourceFiles id={draft.original.id} files={draft.original.files} dirty={isDirty(draft)} />
               : <PresetContents draft={draft} busy={activeLoading}
                 onOpen={item => setOverlay({ type: "component", item, id: draft.original.id })}
@@ -242,6 +239,7 @@ export function App() {
         recordSave(pkg); openPreset(pkg.id); feedback("Created " + pkg.title + ".");
       }} />}
     {overlay?.type === "edit" && drafts[overlay.id] && <PresetDialog initial={drafts[overlay.id]} onClose={closeOverlay}
+      roles={consumers.data.consumers.find(consumer => consumer.id === "paperclip")?.roles?.values}
       onSave={fields => updateDraft(overlay.id, before => ({ ...before, ...fields }))} />}
     {overlay?.type === "picker" && drafts[overlay.id] && <ComponentPicker items={pickerItems}
       existing={new Set(drafts[overlay.id].members.map(item => item.id))} onClose={closeOverlay}
@@ -279,7 +277,7 @@ function ConflictDialog({ draft, onClose, onResolve }: { draft: Draft; onClose: 
     }).catch(err => { if (!pending.signal.aborted) setError(errorMessage(err)); });
     return () => pending.abort();
   }, [id, attempt]);
-  const fieldNames = { title: "Name", description: "Description", kind: "Type", icon: "Icon", workArea: "Work area", usage: "Usage", instruction: "Instruction" };
+  const fieldNames = { title: "Name", description: "Description", kind: "Type", icon: "Icon", workArea: "Work area", usage: "Usage", instruction: "Instruction", paperclip: "Paperclip" };
   return <Modal title="Review saved version" onClose={onClose}>
     {error ? <ErrorBox message={error} onRetry={() => setAttempt(v => v + 1)} /> : latest ?
       <div className="space-y-3 text-[13px] text-secondary">

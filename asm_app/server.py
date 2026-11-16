@@ -9,12 +9,6 @@ import threading
 from urllib.parse import parse_qs, unquote, urlsplit
 
 WEB = Path(__file__).parent / 'web'
-CONSUMERS = [
-    {'id':'paperclip','name':'Paperclip','supported':True},
-    {'id':'codex','name':'Codex','supported':False},
-    {'id':'claudeCode','name':'Claude Code','supported':False},
-    {'id':'ccswitch','name':'CC Switch','supported':False},
-]
 MAX_BODY = 1024 * 1024
 
 
@@ -114,7 +108,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if self.command in ('GET','HEAD'):
                 if path == '/api/consumers':
-                    return self.send(200, {'consumers':CONSUMERS})
+                    return self.send(200, self.server.store.consumers())
                 if path == '/api/catalog':
                     return self.send(200, self.server.store.catalog())
                 if path == '/api/presets':

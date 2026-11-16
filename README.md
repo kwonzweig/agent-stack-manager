@@ -20,7 +20,8 @@ On macOS/Linux, activate with `source .venv/bin/activate` instead. Open [localho
 `packages/` contains the editable APM packages. Changes from the dashboard write to their `apm.yml` and native `.apm/` files. Review and commit them with Git.
 
 - Catalog: search components, stacks and presets with each source repository's GitHub stars, sorted by catalog order, name, repository or stars. Add a component to a preset or stack from its + menu, or select several and add them together.
-- Presets: create and edit title, description, icon, workArea, usage, Instruction and component membership.
+- Presets: create and edit title, description, icon, workArea, usage, the Paperclip role and whether the agent may create agents, Instruction and component membership.
+- Export: see what Paperclip, Claude Code, Codex and CC Switch each support for the preset's components, and the Paperclip conversion report.
 - Source files: inspect and download the current APM package.
 - Component comments: persist local observations in ignored `.asm/` files.
 
@@ -36,6 +37,8 @@ The CAO preset holds its Instruction, four skills (`agent-operating-standards`, 
 | Codex | Placeholder |
 | Claude Code | Placeholder |
 | CC Switch | Placeholder |
+
+`catalog/consumers.json` records what each of them supports per component kind, in the app's own term, with the page that says so; the Export tab shows it next to the preset's own components.
 
 The Paperclip export writes the Instruction as the agent's `AGENTS.md` and one skill stub per GitHub skill that follows the skill's branch. Paperclip's [company package spec](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) has no entry for MCP servers, hooks or plugins. The export writes no adapter, and Paperclip's docs do not say how an imported agent gets an MCP server, so the report asks for MCP to be set in the agent's adapter after import; hooks and plugins are left out. Each is reported with that cause, and anything else that does not convert is reported as needing attention.
 

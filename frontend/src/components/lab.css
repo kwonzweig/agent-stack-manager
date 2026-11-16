@@ -232,3 +232,15 @@
 }
 
 
+
+.asm-lab.support-by-app { margin-bottom: 21px; }
+.asm-lab .support-scroll { overflow-x: auto; }
+.asm-lab .support-table { min-width: 720px; }
+.asm-lab .support-table th:first-child { width: 22%; }
+.asm-lab .support-count { color: var(--faint); font-weight: 500; }
+.asm-lab .support-cell { display: inline-flex; align-items: center; gap: 5px; }
+.asm-lab .support-good { color: var(--ink); }
+.asm-lab .support-neutral { color: var(--muted); }
+.asm-lab .support-bad { color: var(--red); }
+.asm-lab .support-info { color: var(--color-text-faint); }
+.asm-lab .support-info:hover, .asm-lab .support-info:focus-visible { color: var(--blue); }

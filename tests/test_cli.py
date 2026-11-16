@@ -1,9 +1,7 @@
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import redirect_stderr
 import io
 from pathlib import Path
-import tempfile
 import unittest
-from zipfile import ZipFile
 
 from asm_app import cli
 
@@ -11,17 +9,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CommandTests(unittest.TestCase):
-    def test_export_writes_the_paperclip_package(self):
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory) / "cao-paperclip.zip"
-            with redirect_stdout(io.StringIO()):
-                code = cli.main(["--root", str(ROOT), "export", "cao", "--consumer", "paperclip", "--output", str(output)])
-            self.assertEqual(code, 0)
-            with ZipFile(output) as archive:
-                names = set(archive.namelist())
-            self.assertIn("agents/cao/AGENTS.md", names)
-            self.assertIn("skills/humanizer/SKILL.md", names)
-            self.assertNotIn("remote-import-plan.json", names)
+    def test_export_takes_no_preset_or_output(self):
+        # Every preset is exported to exports/paperclip/<id>/; the dashboard downloads ZIPs.
+        for args in (["export", "cao"], ["export", "--output", "cao.zip"], ["export", "--consumer", "apm"]):
+            with self.subTest(args=args), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                cli.main(["--root", str(ROOT), *args])
+            self.assertEqual(error.exception.code, 2)
 
     def test_there_is_no_command_that_reaches_a_consumer(self):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:

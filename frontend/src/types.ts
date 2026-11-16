@@ -27,6 +27,9 @@ export interface CatalogItem {
   source?: Source | null;
   configuration?: unknown;
   componentCount?: number;
+  /** GitHub stars of the source repository and the day they were read; absent without a repository. */
+  stars?: number;
+  starsCheckedOn?: string;
   version?: string;
   packageId?: string;
   workArea?: string[];

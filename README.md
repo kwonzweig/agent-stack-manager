@@ -19,7 +19,7 @@ On macOS/Linux, activate with `source .venv/bin/activate` instead. Open [localho
 
 `packages/` contains the editable APM packages. Changes from the dashboard write to their `apm.yml` and native `.apm/` files. Review and commit them with Git.
 
-- Catalog: search components, stacks and presets, optionally grouped by source repository. Add a component to a preset or stack from its + menu, or select several and add them together.
+- Catalog: search components, stacks and presets with each source repository's GitHub stars, sorted by catalog order, name, repository or stars. Add a component to a preset or stack from its + menu, or select several and add them together.
 - Presets: create and edit title, description, icon, workArea, usage, Instruction and component membership.
 - Source files: inspect and download the current APM package.
 - Component comments: persist local observations in ignored `.asm/` files.

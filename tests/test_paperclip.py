@@ -295,6 +295,31 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual((source["path"], source["url"]), (".", "https://github.com/blader/humanizer/tree/main"))
         self.assertNotIn("engineer", written(report)[".paperclip.yaml"])
 
+    def test_ar_exports_its_skills_and_may_create_agents(self):
+        report = paperclip.convert(Store(ROOT).get("ar"), root=ROOT)
+        self.assertEqual([row["id"] for row in report["items"] if paperclip.needs_attention(row)], [])
+        front, body, extension = agent(report, "ar")
+        self.assertEqual((front["slug"], front["name"]), ("ar", "AI Resources"))
+        self.assertEqual(front["skills"], ["find-tools", "find-skills", "agent-operating-standards",
+                                           "technology-research"])
+        self.assertTrue(body)
+        self.assertEqual(extension["permissions"], {"canCreateAgents": True})
+        self.assertEqual(extension["role"], front["role"])
+        stub, _ = frontmatter(written(report)["skills/technology-research/SKILL.md"])
+        self.assertEqual(stub["metadata"]["sources"], [{
+            "kind": "github-dir", "repo": "kwonzweig/agent-stack-manager",
+            "path": "packages/ar/.apm/skills/technology-research", "trackingRef": "main",
+            "url": "https://github.com/kwonzweig/agent-stack-manager/tree/main/packages/ar/.apm/skills/technology-research"}])
+        self.assertEqual(stub["name"], "technology-research")
+        self.assertTrue(stub["description"])
+
+    def test_only_ar_may_create_agents(self):
+        store = Store(ROOT)
+        allowed = {row["id"] for row in store.list_packages() if row["kind"] == "preset"
+                   and agent(paperclip.convert(store.get(row["id"]), root=ROOT), row["id"])[2]
+                   ["permissions"]["canCreateAgents"]}
+        self.assertEqual(allowed, {"ar"})
+
     def test_presets_own_skill_tracks_this_repositorys_main(self):
         (self.root / "pyproject.toml").write_text(
             '[project]\nname = "x"\n\n[project.urls]\nRepository = "https://github.com/example/stack-repo"\n',

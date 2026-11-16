@@ -157,6 +157,20 @@ def _instruction(data):
     return "", "".join(lines).strip("\r\n")
 
 
+def _skill_labels(path, data):
+    """A native skill's name and description from its SKILL.md front matter; the name falls back to its folder."""
+    front = {}
+    head, _ = _instruction(data)
+    if head:
+        try:
+            front = yaml.safe_load("\n".join(head.splitlines()[1:-1]))
+        except yaml.YAMLError:
+            front = {}
+        front = front if isinstance(front, dict) else {}
+    own = lambda field: front[field].strip() if isinstance(front.get(field), str) else ""
+    return own("name") or PurePosixPath(path).parent.name, own("description")
+
+
 def _sibling(value):
     value = _mapping(value).get("path") if isinstance(value, dict) and "git" not in value else value
     found = _SIBLING.fullmatch(value) if isinstance(value, str) else None
@@ -376,10 +390,14 @@ class Store:
                 if path == skill_file:
                     names = tuple(name for name in files if name.startswith(f"{skill_root}/"))
             entry = by_path.get(path)
-            name = entry["name"] if entry else PurePosixPath(path).stem
+            name, description = PurePosixPath(path).stem, ""
+            if entry:
+                name, description = entry["name"], entry["description"]
+            elif kind == "skill" and PurePosixPath(path).name == "SKILL.md":
+                name, description = _skill_labels(path, data)
             config = _file_content(path, data)
             item = _component(entry["id"] if entry else f"{kind}:{path}", name, kind, config,
-                              description=entry["description"] if entry else "",
+                              description=description,
                               source=entry.get("source") if entry else None,
                               source_url=entry.get("sourceUrl") if entry else None, file=path)
             add(item, files=names)

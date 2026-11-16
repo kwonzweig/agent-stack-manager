@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { X } from 'lucide-react';
 import type { CatalogItem, PackageKind, PackageSummary } from '../types';
-import CartSidebar from './CartSidebar';
+import AddToMenu from './AddToMenu';
 import ComponentGrid from './ComponentGrid';
 import './catalog.css';
 
@@ -14,77 +15,31 @@ export interface CatalogPageProps {
   onOpenItem: (item: CatalogItem) => void;
   onOpenPreset: (id: string) => void;
   onCreatePreset: (componentIds: string[], kind?: PackageKind) => void;
-  onAddToPreset: (id: string, componentIds: string[]) => Promise<void>;
-}
-
-const STORAGE_KEY = 'asm.catalog.stack';
-
-function readSelection(value: string | null): Set<string> {
-  try {
-    const ids: unknown = JSON.parse(value ?? '[]');
-    return new Set(Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function getSavedSelection() {
-  try {
-    return readSelection(localStorage.getItem(STORAGE_KEY));
-  } catch {
-    return new Set<string>();
-  }
+  onAdd: (packageId: string, componentIds: string[]) => Promise<void>;
 }
 
 export default function CatalogPage({
-  items, presets, sources, isLoading, error, onRetry, onOpenItem, onOpenPreset, onCreatePreset, onAddToPreset,
+  items, presets, sources, isLoading, error, onRetry, onOpenItem, onOpenPreset, onCreatePreset, onAdd,
 }: CatalogPageProps) {
-  const [selection, setSelection] = useState(getSavedSelection);
-  const remoteSelection = useRef<ReadonlySet<string> | null>(null);
-  const byId = new Map(items.map((item) => [item.id, item]));
-  const selected = [...selection].flatMap((id) => {
-    const item = byId.get(id);
-    return item && item.type !== 'preset' ? [item] : [];
-  });
+  const [selection, setSelection] = useState<ReadonlySet<string>>(() => new Set());
+  const [onlySelected, setOnlySelected] = useState(false);
+  const selectedIds = items.filter((item) => selection.has(item.id) && item.type !== 'preset').map((item) => item.id);
 
-  useEffect(() => {
-    if (selection === remoteSelection.current) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...selection]));
-    } catch {
-      // The current stack stays available when browser storage is disabled.
-    }
-  }, [selection]);
-
-  useEffect(() => {
-    const sync = (event: StorageEvent) => {
-      if (event.key !== STORAGE_KEY && event.key !== null) return;
-      const next = readSelection(event.newValue);
-      remoteSelection.current = next;
-      setSelection(next);
-    };
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, []);
-
-  function toggleItem(item: CatalogItem) {
-    if (item.type === 'preset') return;
+  function select(changed: CatalogItem[], selected: boolean) {
     setSelection((previous) => {
       const next = new Set(previous);
-      if (!next.delete(item.id)) next.add(item.id);
-      return next;
-    });
-  }
-
-  function setMany(visibleItems: CatalogItem[], add: boolean) {
-    setSelection((previous) => {
-      const next = new Set(previous);
-      for (const item of visibleItems) {
-        if (add) next.add(item.id);
+      for (const item of changed) {
+        if (item.type === 'preset') continue;
+        if (selected) next.add(item.id);
         else next.delete(item.id);
       }
       return next;
     });
+  }
+
+  function clear() {
+    setSelection(new Set());
+    setOnlySelected(false);
   }
 
   function openItem(item: CatalogItem) {
@@ -92,19 +47,20 @@ export default function CatalogPage({
     else onOpenItem(item);
   }
 
-  const presetOptions = presets.filter((preset) => preset.kind === 'preset');
-
   return (
-    <section className="aitmpl-catalog min-h-full pb-16" aria-label="Catalog">
+    <section className="aitmpl-catalog min-h-full pb-24" aria-label="Catalog">
       <ComponentGrid
         items={items}
         selection={selection}
+        onlySelected={onlySelected && selectedIds.length > 0}
+        targets={presets}
         isLoading={isLoading}
         error={error}
         onRetry={onRetry}
         onOpen={openItem}
-        onToggle={toggleItem}
-        onSetMany={setMany}
+        onSelect={select}
+        onAdd={onAdd}
+        onCreate={onCreatePreset}
       />
       {sources.length > 0 && (
         <details className="mx-4 sm:mx-6 text-[12px] text-[var(--color-text-secondary)]">
@@ -120,14 +76,34 @@ export default function CatalogPage({
           </ul>
         </details>
       )}
-      <CartSidebar
-        selected={selected}
-        presets={presetOptions}
-        onRemove={toggleItem}
-        onClear={() => setSelection(new Set())}
-        onCreate={onCreatePreset}
-        onAdd={onAddToPreset}
-      />
+      {selectedIds.length > 0 && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 md:left-[220px]">
+          <div role="region" aria-label="Selected components"
+            className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-0)] py-2 pl-3.5 pr-1.5 shadow-lg">
+            <span className="text-[13px] font-semibold tabular-nums text-[var(--color-text-primary)]">{selectedIds.length} selected</span>
+            <button type="button" aria-pressed={onlySelected} onClick={() => setOnlySelected((value) => !value)}
+              className={'rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors ' + (onlySelected
+                ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]')}>
+              Show selected
+            </button>
+            <AddToMenu
+              label={'Add ' + selectedIds.length + ' selected to a preset or stack'}
+              targets={presets}
+              placement="above"
+              onAdd={async (packageId) => { await onAdd(packageId, selectedIds); clear(); }}
+              onCreate={(kind) => onCreatePreset(selectedIds, kind)}
+              triggerClassName="aitmpl-stack-accent flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white"
+            >
+              Add to…
+            </AddToMenu>
+            <button type="button" onClick={clear} aria-label="Clear selection" title="Clear selection"
+              className="rounded-lg p-1.5 text-[var(--color-text-tertiary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]">
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

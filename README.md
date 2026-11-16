@@ -24,7 +24,7 @@ On macOS/Linux, activate with `source .venv/bin/activate` instead. Open [localho
 - Source files: inspect and download the current APM package.
 - Component comments: persist local observations in ignored `.asm/` files.
 
-The initial Web app engineer and CAO packages preserve the selections used in the format comparison. Each includes a test hook and a different official marketplace plugin.
+The CAO preset holds its Instruction, four skills (`agent-operating-standards`, `find-tools`, `find-skills`, `humanizer`), the `cao-stop` hook and the `session-report` plugin. The Web app engineer preset holds its Instruction, 31 skills, the Playwright MCP server, the `web-session-start` hook and the `frontend-design` plugin. The two hooks only echo a line, and the two plugins are not there for real use: both pairs test how hooks and plugins convert.
 
 `x-preset-labels` stores display metadata. APM dependencies store membership; there is no second ASM preset format. The component catalog is an index of source references and creation templates, not a second list of each preset's components.
 

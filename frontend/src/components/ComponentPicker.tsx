@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Check, Plus, X } from "lucide-react";
 import { cn } from "../utils";
 import type { Component, Kind } from "../types";
-import { KIND_LABELS, KINDS, SearchField, TypeFilter } from "./ComponentUI";
+import { KIND_LABELS, KindIcon, KINDS, SearchField, TypeFilter } from "./ComponentUI";
 
 // From Skills Manager's AddSkillsSheet and SkillPickerRow.
 export function ComponentPicker({ items, existing, onClose, onAdd, error, loading, onRetry }: {
@@ -56,7 +56,9 @@ export function ComponentPicker({ items, existing, onClose, onAdd, error, loadin
               <span className="min-w-0 flex-1">
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="truncate text-[13px] font-medium text-primary">{item.name}</span>
-                  <span className="shrink-0 rounded-full bg-surface-hover px-1.5 py-0.5 text-[11px] font-medium text-muted">{KIND_LABELS[item.kind]}</span>
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-hover px-1.5 py-0.5 text-[11px] font-medium text-muted">
+                    <KindIcon kind={item.kind} className="h-3 w-3" />{KIND_LABELS[item.kind]}
+                  </span>
                 </span>
                 {item.description && <span className="mt-0.5 block truncate text-[12px] text-muted">{item.description}</span>}
               </span>

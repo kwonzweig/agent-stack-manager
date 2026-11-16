@@ -10,6 +10,7 @@ import { WorkspaceHeader, PresetContents } from "./components/Workspace";
 import { ComponentPicker } from "./components/ComponentPicker";
 import { ComponentDetails } from "./components/ComponentDetails";
 import { PaperclipReport } from "./components/PaperclipReport";
+import { PresetExport } from "./components/PresetExport";
 import { SourceFiles } from "./components/SourceFiles";
 
 interface CatalogData {
@@ -49,7 +50,11 @@ function readRoute(): Route {
     const tab = params.get("tab");
     let legacyId: string | undefined;
     try { legacyId = hash.startsWith("presets/") ? decodeURIComponent(hash.slice(8)) : undefined; } catch {}
-    return { view, id: params.get("preset") || legacyId, tab: tab === "source" || tab === "paperclip" ? tab : "contents" };
+    const id = params.get("preset") || legacyId;
+    if (tab === "source") return { view, id, tab };
+    // "paperclip" is the tab's name before Export held one tab per consumer.
+    if (tab === "export" || tab === "paperclip") return { view, id, tab: "export", consumer: params.get("consumer") || (tab === "paperclip" ? "paperclip" : undefined) };
+    return { view, id, tab: "components" };
   }
   return { view: view === "consumers" ? "consumers" : "catalog" };
 }
@@ -104,7 +109,7 @@ export function App() {
     document.documentElement.style.colorScheme = theme;
     localStorage.setItem("asm:theme", theme);
   }, [theme]);
-  useEffect(() => { main.current?.scrollTo(0, 0); }, [route.view, routeId, route.tab]);
+  useEffect(() => { main.current?.scrollTo(0, 0); }, [route.view, routeId, route.tab, route.consumer]);
 
   const getPackage = useCallback((id: string) => {
     const existing = pendingLoads.current.get(id);
@@ -210,7 +215,7 @@ export function App() {
                   <p className="text-[12px] text-muted">{consumer.supported ? "Conversion and import status" : "Not implemented"}</p>
                 </div>
                 {consumer.supported && preferred && <button type="button" className="app-button-secondary" onClick={() =>
-                  navigate({ view: "presets", id: lastPreset && presets.data.presets.some(p => p.id === lastPreset) ? lastPreset : preferred.id, tab: "paperclip" })}>
+                  navigate({ view: "presets", id: lastPreset && presets.data.presets.some(p => p.id === lastPreset) ? lastPreset : preferred.id, tab: "export", consumer: consumer.id })}>
                   Open preset report <ArrowRight className="h-4 w-4" />
                 </button>}
               </li>)}
@@ -221,12 +226,18 @@ export function App() {
           <p role="status" className="text-[13px] text-muted">Loading presets…</p> :
           <p className="text-[13px] text-muted">No presets yet.</p> : <div className="app-page" key={draft.original.id}>
             <WorkspaceHeader draft={draft} route={{ ...route, id: draft.original.id }} onNavigate={navigate}
-              onEdit={() => setOverlay({ type: "edit", id: draft.original.id })} onSave={() => void save(draft.original.id)} saving={activeLoading} />
+              onEdit={() => setOverlay({ type: "edit", id: draft.original.id })}
+              onIcon={icon => updateDraft(draft.original.id, before => ({ ...before, icon }))}
+              onSave={() => void save(draft.original.id)} saving={activeLoading} />
             {activeSave?.message && <div className="space-y-2">
               <ErrorBox message={activeSave.message} />
               {activeSave.conflict && <button type="button" className="app-button-secondary" onClick={() => setOverlay({ type: "conflict", id: draft.original.id })}>Review saved version</button>}
             </div>}
-            {route.tab === "paperclip" ? <PaperclipReport id={draft.original.id} revision={draft.original.revision} dirty={isDirty(draft)} />
+            {route.tab === "export" ? <PresetExport consumers={consumers.data.consumers.filter(consumer => consumer.supported)}
+                loading={consumers.loading} error={consumers.error} onRetry={consumers.refresh}
+                route={{ ...route, id: draft.original.id }} onNavigate={navigate}
+                render={(consumer, tabs) => consumer === "paperclip" ? <PaperclipReport heading={tabs}
+                  id={draft.original.id} revision={draft.original.revision} dirty={isDirty(draft)} /> : null} />
               : route.tab === "source" ? <SourceFiles id={draft.original.id} files={draft.original.files} dirty={isDirty(draft)} />
               : <PresetContents draft={draft} busy={activeLoading}
                 onOpen={item => setOverlay({ type: "component", item, id: draft.original.id })}
@@ -278,7 +289,7 @@ function ConflictDialog({ draft, onClose, onResolve }: { draft: Draft; onClose: 
     }).catch(err => { if (!pending.signal.aborted) setError(errorMessage(err)); });
     return () => pending.abort();
   }, [id, attempt]);
-  const fieldNames = { title: "Name", description: "Description", kind: "Type", workArea: "Work area", usage: "Usage", instruction: "Instruction" };
+  const fieldNames = { title: "Name", description: "Description", kind: "Type", icon: "Icon", workArea: "Work area", usage: "Usage", instruction: "Instruction" };
   return <Modal title="Review saved version" onClose={onClose}>
     {error ? <ErrorBox message={error} onRetry={() => setAttempt(v => v + 1)} /> : latest ?
       <div className="space-y-3 text-[13px] text-secondary">

@@ -7,11 +7,13 @@ import { cn } from "../utils";
 import { CardActionMenu } from "./CardActionMenu";
 import { KindBadge, KindIcon, KINDS, SearchField, TypeFilter } from "./ComponentUI";
 import { hrefFor, PresetIcon, type Route } from "./Sidebar";
+import { PresetIconPicker } from "./PresetIconPicker";
+import { inferPresetIconKey } from "../lib/presetIcons";
 import "./lab.css";
 
 export type WorkspaceTab = NonNullable<Route["tab"]>;
 const tabs: { id: WorkspaceTab; label: string }[] = [
-  { id: "contents", label: "Contents" }, { id: "paperclip", label: "Paperclip" }, { id: "source", label: "Source files" },
+  { id: "components", label: "Components" }, { id: "export", label: "Export" }, { id: "source", label: "Source files" },
 ];
 
 // Grid layout extracted from Skills Manager's WorkspaceView.
@@ -55,21 +57,26 @@ function CheckItem({ item, selected, onSelect }: { item: Component; selected: bo
   </button>;
 }
 
-export function WorkspaceHeader({ draft, route, onNavigate, onEdit, onSave, saving }: {
+export function WorkspaceHeader({ draft, route, onNavigate, onEdit, onIcon, onSave, saving }: {
   draft: Draft; route: Route; onNavigate: (route: Route) => void;
-  onEdit: () => void; onSave: () => void; saving: boolean;
+  onEdit: () => void; onIcon: (icon: string) => void; onSave: () => void; saving: boolean;
 }) {
   const dirty = isDirty(draft);
   return <header className="app-page-header flex flex-col gap-2.5 pb-3">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
-        <h1 className="app-page-title flex flex-wrap items-center gap-2.5">
-          <PresetIcon title={draft.title} description={draft.description} active className="h-7 w-7 rounded-lg [&>svg]:h-4 [&>svg]:w-4" />
-          <span className="min-w-0 break-words">{draft.title}</span>
-          <span className="app-badge" aria-label={`${draft.members.length + 1} components`}>{draft.members.length + 1}</span>
-          <button type="button" className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-secondary"
-            aria-label="Edit preset details" title="Edit preset details" onClick={onEdit} disabled={saving}><Pencil className="h-3.5 w-3.5" /></button>
-        </h1>
+        <div className="flex items-center gap-2.5">
+          <PresetIconPicker label="Change preset icon" disabled={saving} onChange={onIcon}
+            value={inferPresetIconKey({ name: draft.title, description: draft.description, icon: draft.icon })}>
+            <PresetIcon title={draft.title} description={draft.description} icon={draft.icon} active className="h-7 w-7 rounded-lg [&>svg]:h-4 [&>svg]:w-4" />
+          </PresetIconPicker>
+          <h1 className="app-page-title flex min-w-0 flex-wrap items-center gap-2.5">
+            <span className="min-w-0 break-words">{draft.title}</span>
+            <span className="app-badge" aria-label={`${draft.members.length + 1} components`}>{draft.members.length + 1}</span>
+            <button type="button" className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-secondary"
+              aria-label="Edit preset details" title="Edit preset details" onClick={onEdit} disabled={saving}><Pencil className="h-3.5 w-3.5" /></button>
+          </h1>
+        </div>
         {draft.description && <p className="app-page-subtitle break-words">{draft.description}</p>}
         {(draft.workArea.length > 0 || draft.usage.length > 0 || draft.kind === "stack") && <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {draft.kind === "stack" && <KindBadge kind="package" />}
@@ -83,8 +90,8 @@ export function WorkspaceHeader({ draft, route, onNavigate, onEdit, onSave, savi
     </div>
     <nav className="app-segmented w-fit max-w-full" aria-label="Preset sections">
       {tabs.map(tab => {
-        const active = (route.tab || "contents") === tab.id;
-        const next = { ...route, tab: tab.id };
+        const active = (route.tab || "components") === tab.id;
+        const next = { ...route, tab: tab.id, consumer: undefined };
         return <a key={tab.id} href={hrefFor(next)} aria-current={active ? "page" : undefined}
           onClick={e => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); onNavigate(next); } }}
           className={cn("app-segmented-button", active && "app-segmented-button-active")}>{tab.label}</a>;

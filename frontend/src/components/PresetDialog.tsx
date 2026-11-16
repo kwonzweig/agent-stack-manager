@@ -77,11 +77,12 @@ export function PresetDialog({ initial, defaultKind = "preset", roles = [], onCl
     }
   }
 
-  return <Modal title={initial ? "Edit preset details" : "New preset"} onClose={onClose} busy={loading}>
+  const noun = kind === "stack" ? "stack" : "preset";
+  return <Modal title={initial ? `Edit ${noun} details` : `New ${noun}`} onClose={onClose} busy={loading}>
     <form className="space-y-3" onSubmit={submit}>
       <label className="block"><span className={labelClass}>Name</span>
         <input required autoFocus value={name} onChange={e => setName(e.target.value)}
-          placeholder="Preset name" className={inputClass} />
+          placeholder={kind === "stack" ? "Stack name" : "Preset name"} className={inputClass} />
       </label>
       <label className="block"><span className={labelClass}>Description</span>
         <textarea rows={2} value={description} onChange={e => setDescription(e.target.value)}
@@ -117,7 +118,7 @@ export function PresetDialog({ initial, defaultKind = "preset", roles = [], onCl
       <div className={footerClass}>
         <button type="button" onClick={onClose} disabled={loading} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-tertiary transition-colors hover:bg-surface-hover hover:text-secondary">Cancel</button>
         <button type="submit" disabled={!name.trim() || loading} className="rounded-lg border border-accent-border bg-accent-dark px-3 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50">
-          {loading ? "Creating…" : initial ? "Apply changes" : "Create"}
+          {initial ? (loading ? "Applying…" : "Apply changes") : (loading ? "Creating…" : "Create")}
         </button>
       </div>
     </form>

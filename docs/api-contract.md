@@ -13,7 +13,7 @@ For agents and people who edit ASM data. ASM's data lives in these files; no rou
 
 ## Conventions
 
-All JSON errors are `{ "error": "message" }`. A POST or PATCH body is JSON sent with `Content-Type: application/json`; any other type returns 415. Paths use URL-encoded package ids. Existing writes require the package `revision`: a save without one returns 400, and a revision that no longer matches returns 409. No route contacts a consumer.
+All JSON errors are `{ "error": "message" }`. A POST or PATCH body is a JSON object sent with `Content-Type: application/json`; any other type returns 415, and a body that is not valid JSON returns 400. Paths use URL-encoded package ids. Existing writes require the package `revision`: a save without one returns 400, and a revision that no longer matches returns 409. No route contacts a consumer.
 
 ## Store interface (`asm_app/store.py`)
 
@@ -59,7 +59,7 @@ Create/save payload: `title,description,kind,icon,workArea,usage,instruction,pap
 
 `supportKind` is the support table row the component counts in (a `kinds` value of `catalog/consumers.json`): its kind, or for a plugin `claude-code-plugin` or `codex-plugin` by the `.claude-plugin/` or `.codex-plugin/` folder its source names; null for a stack, a plugin that names neither, and the role row.
 
-Conversion statuses are `converted` and `unconverted`. Reasons are concise English. There is no runtime field. Every source component appears; `target` is the written file the component went to (`agents/<id>/AGENTS.md`, `skills/<key>/SKILL.md`), or `{packageId}` for an expanded stack.
+Conversion statuses are `converted` and `unconverted`. Reasons are concise English. Every source component appears; `target` is the written file the component went to (`agents/<id>/AGENTS.md`, `skills/<key>/SKILL.md`), `{packageId}` for an expanded stack, or null when the component is not exported.
 
 `cause` names why the export leaves a component out as expected: `not-in-format` for hooks and plugins, which Paperclip's company package has no entry for, and `adapter` for MCP servers: the company package has no MCP entry either, the export writes no adapter, and Paperclip's docs do not say how an imported agent gets an MCP server, so the report asks for it to be set in the agent's adapter after import. An unconverted component without a `cause` needs attention: a skill with no branch, outside GitHub, or a role that is not one of Paperclip's.
 

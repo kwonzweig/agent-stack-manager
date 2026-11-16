@@ -84,8 +84,10 @@ class ServerTests(unittest.TestCase):
             create_server(Path(self.temp.name), port=self.server.server_port).server_close()
 
     def test_rejects_invalid_json(self):
-        code, _, _ = self.request('/api/presets', data=b'{', headers={'Content-Type':'application/json'})
-        self.assertEqual(code, 400)
+        for data in (b'{', b'not json', b'\xff'):
+            with self.subTest(data=data):
+                code, body, _ = self.request('/api/presets', data=data, headers={'Content-Type':'application/json'})
+                self.assertEqual((code, json.loads(body)), (400, {'error': 'Request body must be valid JSON.'}))
 
     def test_a_local_file_error_is_a_server_error(self):
         # ASM contacts no other service, so a disk or permission error is its own failure, not a gateway's.

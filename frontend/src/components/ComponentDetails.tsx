@@ -4,6 +4,7 @@ import { api, errorMessage, packagePath, externalUrl } from "../api";
 import type { Comment, Component } from "../types";
 import { DetailSheet } from "./DetailSheet";
 import { KindBadge } from "./ComponentUI";
+import { sourceLabel } from "../catalog/catalogItem";
 const SkillMarkdown = lazy(() => import("./SkillMarkdown").then(module => ({ default: module.SkillMarkdown })));
 
 export const displayValue = (value: unknown): string => typeof value === "string" ? value : JSON.stringify(value, null, 2) ?? "";
@@ -95,7 +96,7 @@ export function ComponentDetails({ item, presetId, onClose, instruction, onInstr
         {sourceUrl && <section className="inspector-section">
           <h3>Source</h3>
           <a href={sourceUrl.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-accent underline-offset-4 hover:underline">
-            {sourceUrl.hostname} <ExternalLink className="h-3.5 w-3.5" />
+            {sourceLabel(item)} <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </section>}
         <div className="values">

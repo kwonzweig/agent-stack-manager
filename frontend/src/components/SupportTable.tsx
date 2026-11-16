@@ -1,5 +1,5 @@
 import { Info } from "lucide-react";
-import type { ConsumerData, Report } from "../types";
+import type { ConsumerData, PackageKind, Report } from "../types";
 import { columnName, SUPPORT_ICONS, SUPPORT_LABELS, supportRows, unplacedPlugins, type TableCell } from "../lib/support";
 import { KindIcon } from "./ComponentUI";
 
@@ -15,7 +15,7 @@ function Cell({ cell }: { cell: TableCell }) {
 }
 
 // CC Switch's "Supported Features by Tool" form: one row per component kind, one column per app.
-export function SupportTable({ data, report }: { data: ConsumerData; report?: Report }) {
+export function SupportTable({ data, report, packageKind }: { data: ConsumerData; report?: Report; packageKind: PackageKind }) {
   if (!data.consumers.length) return null;
   const rows = supportRows(data, report);
   const unplaced = unplacedPlugins(report?.items);
@@ -23,7 +23,7 @@ export function SupportTable({ data, report }: { data: ConsumerData; report?: Re
     <div className="section-heading"><h3>Support by app</h3></div>
     <div className="summary-box support-scroll"><table className="summary-table support-table">
       <thead><tr>
-        <th scope="col">Component type (in this preset)</th>
+        <th scope="col">Component type (in this {packageKind})</th>
         {data.consumers.map(consumer => <th key={consumer.id} scope="col">{columnName(consumer)}</th>)}
       </tr></thead>
       <tbody>{rows.map(row => <tr key={row.kind}>

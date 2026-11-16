@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CheckSquare, ChevronRight, LayoutGrid, List, MessageSquare, Pencil, Plus, Save, Square, Trash2 } from "lucide-react";
-import { externalUrl } from "../api";
+import { sourceLabel } from "../catalog/catalogItem";
 import { isDirty, type Draft } from "../draft";
 import type { Component, Kind } from "../types";
 import { cn } from "../utils";
@@ -21,7 +21,6 @@ function WorkspaceCard({ item, selected, selectable, onSelect, onOpen, onRemove,
   item: Component; selectable: boolean; selected: boolean; onSelect: () => void;
   onOpen: () => void; onRemove: () => void; canComment: boolean;
 }) {
-  const source = externalUrl(item.sourceUrl || item.source?.repositoryUrl);
   return <div className={cn("app-panel group relative flex h-full flex-col shadow-card transition-all hover:-translate-y-px hover:border-border hover:shadow-card-hover",
     selected && "border-accent-border ring-1 ring-accent-border")}>
     <div className="flex items-center gap-2.5 px-3.5 pb-1.5 pt-3">
@@ -39,7 +38,7 @@ function WorkspaceCard({ item, selected, selectable, onSelect, onOpen, onRemove,
       <div className={cn("flex flex-wrap items-center gap-1", item.description && "mt-2")}><KindBadge kind={item.kind} /></div>
     </div>
     <div className="mt-auto flex items-center justify-between gap-2 border-t border-border-faint px-3.5 py-2.5">
-      <span className="truncate text-[12px] text-muted">{source?.hostname || (item.kind === "package" ? "Local stack" : "Local")}</span>
+      <span className="truncate text-[12px] text-muted">{sourceLabel(item)}</span>
       <div className="relative z-10">
         <CardActionMenu label={`Actions for ${item.name}`} actions={[
           ...(canComment ? [{ key: "comment", label: "Comments", icon: <MessageSquare className="h-3.5 w-3.5" />, onSelect: onOpen }] : []),
@@ -62,11 +61,12 @@ export function WorkspaceHeader({ draft, route, onNavigate, onEdit, onIcon, onSa
   onEdit: () => void; onIcon: (icon: string) => void; onSave: () => void; saving: boolean;
 }) {
   const dirty = isDirty(draft);
+  const noun = draft.kind === "stack" ? "stack" : "preset";
   return <header className="app-page-header flex flex-col gap-2.5 pb-3">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2.5">
-          <PresetIconPicker label="Change preset icon" disabled={saving} onChange={onIcon}
+          <PresetIconPicker label={`Change ${noun} icon`} disabled={saving} onChange={onIcon}
             value={inferPresetIconKey({ name: draft.title, description: draft.description, icon: draft.icon })}>
             <PresetIcon title={draft.title} description={draft.description} icon={draft.icon} active className="h-7 w-7 rounded-lg [&>svg]:h-4 [&>svg]:w-4" />
           </PresetIconPicker>
@@ -74,7 +74,7 @@ export function WorkspaceHeader({ draft, route, onNavigate, onEdit, onIcon, onSa
             <span className="min-w-0 break-words">{draft.title}</span>
             <span className="app-badge" aria-label={`${draft.members.length + 1} components`}>{draft.members.length + 1}</span>
             <button type="button" className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-secondary"
-              aria-label="Edit preset details" title="Edit preset details" onClick={onEdit} disabled={saving}><Pencil className="h-3.5 w-3.5" /></button>
+              aria-label={`Edit ${noun} details`} title={`Edit ${noun} details`} onClick={onEdit} disabled={saving}><Pencil className="h-3.5 w-3.5" /></button>
           </h1>
         </div>
         {draft.description && <p className="app-page-subtitle break-words">{draft.description}</p>}
@@ -88,7 +88,7 @@ export function WorkspaceHeader({ draft, route, onNavigate, onEdit, onIcon, onSa
         <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save changes"}
       </button>}
     </div>
-    <nav className="app-segmented w-fit max-w-full" aria-label="Preset sections">
+    <nav className="app-segmented w-fit max-w-full" aria-label={`${noun === "stack" ? "Stack" : "Preset"} sections`}>
       {tabs.map(tab => {
         const active = (route.tab || "components") === tab.id;
         const next = { ...route, tab: tab.id, consumer: undefined };
@@ -109,8 +109,9 @@ export function PresetContents({ draft, onOpen, onAdd, onRemove, busy }: {
   const [view, setView] = useState<"grid" | "list">(() => localStorage.getItem("asm:component-view") === "list" ? "list" : "grid");
   const [selectMode, setSelectMode] = useState(false);
   const [selection, setSelection] = useState<Set<string>>(new Set());
+  const noun = draft.kind === "stack" ? "stack" : "preset";
   const instruction: Component = { id: "instruction", name: "Instruction", kind: "instruction",
-    description: draft.instruction ? draft.instruction.replace(/\s+/g, " ").trim() : "Add instructions for this preset.",
+    description: draft.instruction ? draft.instruction.replace(/\s+/g, " ").trim() : `Add instructions for this ${noun}.`,
     configuration: draft.instruction };
   const all = [instruction, ...draft.members];
   const kinds = KINDS.filter(type => all.some(item => item.kind === type));
@@ -128,7 +129,7 @@ export function PresetContents({ draft, onOpen, onAdd, onRemove, busy }: {
     setSelection(prev => new Set([...prev].filter(id => !ids.includes(id))));
   };
 
-  return <section aria-label="Preset components" className="space-y-3">
+  return <section aria-label={`${noun === "stack" ? "Stack" : "Preset"} components`} className="space-y-3">
     <div className="app-toolbar">
       <SearchField value={query} onChange={setQuery} />
       <div className="flex flex-wrap items-center gap-2">
@@ -170,7 +171,6 @@ export function PresetContents({ draft, onOpen, onAdd, onRemove, busy }: {
       </div> : <div className="asm-preset"><ul className="contents-list">
         {visible.map(item => {
           const selectable = selectMode && item.id !== "instruction";
-          const host = externalUrl(item.sourceUrl || item.source?.repositoryUrl)?.hostname;
           return <li key={item.id} className="contents-row">
             <div className="component-label">
               {selectable ? <CheckItem item={item} selected={selection.has(item.id)} onSelect={() => toggleSelection(item.id)} /> :
@@ -178,7 +178,7 @@ export function PresetContents({ draft, onOpen, onAdd, onRemove, busy }: {
               <button type="button" className="row-action" onClick={selectable ? () => toggleSelection(item.id) : () => onOpen(item)}>{item.name}</button>
             </div>
             <span className="type-badge"><KindBadge kind={item.kind} /></span>
-            <span className="source-host">{host}</span>
+            <span className="source-host">{sourceLabel(item)}</span>
             <ChevronRight className="row-arrow h-4 w-4" aria-hidden="true" />
           </li>;
         })}

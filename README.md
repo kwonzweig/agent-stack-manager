@@ -46,7 +46,7 @@ Not built yet: export for Claude Code, Codex and CC Switch, and importing their 
 - **AI Resources** ([package](packages/ar), [export](exports/paperclip/ar)): researches, builds and hires roles as presets in ASM.
 - **Web app engineer** ([package](packages/web-app-engineer), [export](exports/paperclip/web-app-engineer)): builds and reviews web apps.
 
-Each package lists its members, and the dashboard's Export tab counts them. The hooks in CAO and Web app engineer only echo a line, and their plugins are there to show how an export reports a hook and a plugin.
+Each package lists its members, and the dashboard's Export tab counts them. CAO also holds a Stop hook that echoes one line and Anthropic's `session-report` plugin, a report of Claude Code session and subagent usage. Web app engineer holds a SessionStart hook that reminds the agent to check the project's build and test commands, and Anthropic's `frontend-design` plugin. The Paperclip export lists these hooks and plugins as left out.
 
 ## What ASM is not
 
@@ -71,7 +71,7 @@ python -m asm_app serve
 
 Every `python` command in this README runs in the clone with `.venv` active; activate it again in a new terminal. If PowerShell says running scripts is disabled, use Command Prompt.
 
-Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has that port, `serve` stops with `Address already in use` (`WinError 10048` on Windows); pick another port with `python -m asm_app serve --port 4320`. The dashboard edits the files in your clone: browse the Catalog with each repository's GitHub stars, add components to a stack or preset, edit a preset, and read its Export tab. Edits stay in the page until you press **Save changes** at the top of the preset. To save from a script instead, use the local API on the dashboard's address, described in [docs/api-contract.md](docs/api-contract.md): `GET /api/presets/cao` returns the preset with its `revision`, and `PATCH /api/presets/cao` with `Content-Type: application/json` and the body `{"revision": "<that revision>", "description": "New text"}` changes only the description.
+Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has that port, `serve` stops with `Address already in use` (`WinError 10048` on Windows); pick another port with `python -m asm_app serve --port 4320`. The dashboard edits the files in your clone: browse the Catalog with each repository's GitHub stars, add components to a stack or preset, edit a preset, and read its Export tab. Adding from the Catalog saves at once and rewrites the exports; edits on a preset's own page stay in the page until you press **Save changes** at its top. To save from a script instead, use the local API on the dashboard's address, described in [docs/api-contract.md](docs/api-contract.md): `GET /api/presets/cao` returns the preset with its `revision`, and `PATCH /api/presets/cao` with `Content-Type: application/json` and the body `{"revision": "<that revision>", "description": "New text"}` changes only the description.
 
 ## APM lock
 

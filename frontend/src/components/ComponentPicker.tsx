@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Plus, X } from "lucide-react";
 import { cn } from "../utils";
-import type { Component, Kind } from "../types";
+import type { Component, Kind, PackageKind } from "../types";
 import { KIND_LABELS, KindIcon, KINDS, SearchField, TypeFilter } from "./ComponentUI";
 
 // From Skills Manager's AddSkillsSheet and SkillPickerRow.
-export function ComponentPicker({ items, existing, onClose, onAdd, error, loading, onRetry }: {
-  items: Component[]; existing: Set<string>; onClose: () => void; onAdd: (items: Component[]) => void;
+export function ComponentPicker({ items, existing, packageKind, onClose, onAdd, error, loading, onRetry }: {
+  items: Component[]; existing: Set<string>; packageKind: PackageKind; onClose: () => void; onAdd: (items: Component[]) => void;
   error?: string; loading?: boolean; onRetry: () => void;
 }) {
+  const noun = packageKind === "stack" ? "stack" : "preset";
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<Kind | "all">("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -62,7 +63,7 @@ export function ComponentPicker({ items, existing, onClose, onAdd, error, loadin
                 </span>
                 {item.description && <span className="mt-0.5 block truncate text-[12px] text-muted">{item.description}</span>}
               </span>
-              {included && <span className="shrink-0 rounded-full bg-accent-bg px-2 py-0.5 text-[11px] font-medium text-accent">In preset</span>}
+              {included && <span className="shrink-0 rounded-full bg-accent-bg px-2 py-0.5 text-[11px] font-medium text-accent">In {noun}</span>}
             </label>;
           })}
         </div> : <p className="px-5 py-12 text-center text-[13px] text-muted">No matching components.</p>}
@@ -74,7 +75,7 @@ export function ComponentPicker({ items, existing, onClose, onAdd, error, loadin
             className="rounded-md px-2.5 py-1 text-[12px] font-medium text-muted hover:bg-surface-hover hover:text-secondary disabled:opacity-50">Clear</button>
         </div>
         <button type="button" onClick={() => onAdd(selected)} disabled={!selected.length} className="app-button-primary w-full">
-          <Plus className="h-4 w-4" /> Add to preset
+          <Plus className="h-4 w-4" /> Add to {noun}
         </button>
       </div>
     </div>

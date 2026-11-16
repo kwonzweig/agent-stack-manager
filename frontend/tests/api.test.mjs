@@ -19,7 +19,7 @@ test("the dashboard asks only its own server", async () => {
 
 test("a path outside the dashboard's own /api/ is refused before any request", async () => {
   const calls = stubFetch();
-  for (const path of ["http://127.0.0.1:3106/api/companies", "//127.0.0.1:3106/api/companies", "api/presets", "/other"]) {
+  for (const path of ["https://example.com/api/presets", "//example.com/api/presets", "api/presets", "/other"]) {
     await assert.rejects(api(path), /own \/api\//, path);
   }
   assert.deepEqual(calls, []);

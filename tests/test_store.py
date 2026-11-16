@@ -112,6 +112,27 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(error.exception.status, 409)
         self.assertEqual(self.store.get(original["id"])["description"], "Build checkout.")
 
+    def test_an_apm_lockfile_leaves_the_package_and_its_export_unchanged(self):
+        # `apm lock` writes apm.lock.yaml beside apm.yml; it records commits and is not part of the preset.
+        from asm_app.store import _export_digest
+        package = self.create(names=["brainstorming"])
+        before = self.store._snapshot(package["id"])
+        digest = _export_digest(self.store._bundle(package["id"], before))
+        (self.root / "packages/checkout-engineer/apm.lock.yaml").write_text("lockfile_version: '1'\n", encoding="utf-8")
+        after = self.store._snapshot(package["id"])
+        self.assertEqual(after, before)
+        self.assertEqual(self.store.get(package["id"])["revision"], package["revision"])
+        self.assertEqual(_export_digest(self.store._bundle(package["id"], after)), digest)
+
+    def test_a_save_without_a_revision_asks_for_one(self):
+        package = self.create()
+        for payload in ({"description": "x"}, {"revision": None, "description": "x"}, {"revision": 1, "description": "x"}):
+            with self.subTest(payload=payload), self.assertRaises(StoreError) as error:
+                self.store.save(package["id"], payload)
+            self.assertEqual(error.exception.status, 400)
+            self.assertIn("revision is required", str(error.exception))
+        self.assertEqual(self.store.get(package["id"])["description"], "Build checkout.")
+
     def test_create_collision_preserves_existing_package(self):
         original = self.create()
         with self.assertRaises(StoreError) as error:
@@ -176,6 +197,16 @@ class StoreTests(unittest.TestCase):
             with self.assertRaisesRegex(StoreError, "Local dependency"):
                 self.store.lock("checkout-engineer")
         run.assert_not_called()
+
+    def test_lock_gives_apm_ten_minutes(self):
+        # Resolving a preset of 31 skills takes APM minutes, so a one-minute limit stopped it every time.
+        import subprocess
+        package = self.create()
+        with patch("asm_app.store.Store._apm_command", return_value=["apm"]), \
+                patch("asm_app.store.subprocess.run", side_effect=subprocess.TimeoutExpired("apm", 600)) as run:
+            self.assertEqual(self.store.lock(package["id"]), {
+                "ok": False, "output": "APM lock timed out after 600 seconds."})
+        self.assertEqual(run.call_args.kwargs["timeout"], 600)
 
     def test_lock_reports_missing_cli_without_creating_output(self):
         package = self.create()

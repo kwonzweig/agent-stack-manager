@@ -166,9 +166,6 @@ class Handler(BaseHTTPRequestHandler):
             self.send(getattr(error,'status',400), {'error':str(error)})
         except FileNotFoundError:
             self.send(404,{'error':'Package or file not found.'})
-        except (ConnectionError,TimeoutError,OSError) as error:
-            logging.exception('Local service request failed')
-            self.send(502,{'error':'The local service could not complete the request.'})
         except Exception:
             logging.exception('Dashboard request failed')
             self.send(500,{'error':'Request failed. See the local server output.'})

@@ -20,7 +20,7 @@ export function SourceFiles({ files, id, dirty }: { files: NativeFile[]; id: str
     try { await navigator.clipboard.writeText(current.content); setStatus("Copied text preview."); }
     catch (err) { setError(errorMessage(err)); }
   }
-  return <section className="asm-lab source" aria-label="Source files">
+  return <section className="asm-preset source" aria-label="Source files">
     <div className="section-heading"><h2>Source files</h2>
       <button className="app-button-secondary" type="button" onClick={download} disabled={downloading}><Download className="h-4 w-4" /> Download APM package</button>
     </div>
@@ -35,7 +35,7 @@ export function SourceFiles({ files, id, dirty }: { files: NativeFile[]; id: str
           </select>
         </label>
         <div className="file-actions">
-          <button type="button" className="lab-icon-button" title="Copy text preview" aria-label="Copy text preview" onClick={copy}><Copy className="h-4 w-4" /></button>
+          <button type="button" className="icon-button" title="Copy text preview" aria-label="Copy text preview" onClick={copy}><Copy className="h-4 w-4" /></button>
         </div>
       </div>
       <pre className="source-code" tabIndex={0} aria-label={current.path}><code>{current.content}</code></pre>

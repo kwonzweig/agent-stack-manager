@@ -42,11 +42,11 @@ Not built yet: export for Claude Code, Codex and CC Switch, and importing their 
 
 ## Presets in this repo
 
-- **CAO** ([package](packages/cao), [export](exports/paperclip/cao)): takes the human's request and delegates it. Four skills, the `session-report` plugin and the `cao-stop` hook.
-- **AI Resources** ([package](packages/ar), [export](exports/paperclip/ar)): researches, builds and hires roles as presets in ASM. Three skills from their repositories and its own `technology-research`.
-- **Web app engineer** ([package](packages/web-app-engineer), [export](exports/paperclip/web-app-engineer)): builds and reviews web apps. 31 skills, the Playwright MCP server, the `frontend-design` plugin and the `web-session-start` hook.
+- **CAO** ([package](packages/cao), [export](exports/paperclip/cao)): takes the human's request and delegates it.
+- **AI Resources** ([package](packages/ar), [export](exports/paperclip/ar)): researches, builds and hires roles as presets in ASM.
+- **Web app engineer** ([package](packages/web-app-engineer), [export](exports/paperclip/web-app-engineer)): builds and reviews web apps.
 
-The two hooks only echo a line, and the two plugins are there to show how an export reports a hook and a plugin.
+Each package lists its members, and the dashboard's Export tab counts them. The hooks in CAO and Web app engineer only echo a line, and their plugins are there to show how an export reports a hook and a plugin.
 
 ## What ASM is not
 
@@ -58,10 +58,9 @@ The two hooks only echo a line, and the two plugins are there to show how an exp
 
 ## Run
 
-Python 3.11 or newer. ASM installs into a virtual environment in the clone.
+Python 3.11 or newer. ASM installs into a virtual environment in the clone. On Debian or Ubuntu, install `python3-venv` first.
 
 ```sh
-sudo apt install python3-venv   # Debian or Ubuntu only
 git clone https://github.com/kwonzweig/agent-stack-manager
 cd agent-stack-manager
 python3 -m venv .venv      # Windows: py -m venv .venv
@@ -76,12 +75,14 @@ Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has t
 
 ## APM lock
 
-The optional APM CLI resolves a package's dependencies into `apm.lock.yaml` without deploying anything into an app's folders. The lockfile records the commit each branch [resolved to](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/lockfile-spec.md) when it ran; the presets and the Paperclip exports keep naming branches.
+The optional APM CLI resolves a package's dependencies into `apm.lock.yaml` without deploying anything into an app's folders. The lockfile records the commit each branch [resolved to](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/lockfile-spec.md) when it ran; the presets and the Paperclip exports keep naming branches. Git ignores the lockfile, and it does not change a preset's revision or its export.
 
 ```sh
 python -m pip install -e ".[apm]"
-python -m asm_app lock web-app-engineer   # --update resolves again from upstream
+python -m asm_app lock ar   # --update resolves again from upstream
 ```
+
+A preset with a marketplace plugin, such as CAO or Web app engineer, needs that marketplace registered in APM first, or `lock` stops with `Marketplace '…' is not registered`. Their plugins come from Anthropic's: `apm marketplace add anthropics/claude-plugins-official --name claude-plugins-official --branch main` ([`apm marketplace`](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/cli/marketplace.md)). A large preset takes APM minutes to resolve; `lock` waits up to ten.
 
 ## Development
 

@@ -9,10 +9,11 @@ For agents and people who edit ASM data. ASM's data lives in these files; no rou
 - `catalog/consumers.json`: what each app supports per component kind (below).
 - `exports/paperclip/<id>/`: each preset's Paperclip package, generated; never edit it by hand. [paperclip.md](paperclip.md) says how to import it.
 - `.asm/`: component comments, ignored by Git.
+- `packages/<id>/apm.lock.yaml`: written by `lock`, ignored by Git and by the store.
 
 ## Conventions
 
-All JSON errors are `{ "error": "message" }`. A POST or PATCH body is JSON sent with `Content-Type: application/json`; any other type returns 415. Paths use URL-encoded package ids. Existing writes require the package `revision`; conflicts return 409. No route contacts a consumer.
+All JSON errors are `{ "error": "message" }`. A POST or PATCH body is JSON sent with `Content-Type: application/json`; any other type returns 415. Paths use URL-encoded package ids. Existing writes require the package `revision`: a save without one returns 400, and a revision that no longer matches returns 409. No route contacts a consumer.
 
 ## Store interface (`asm_app/store.py`)
 
@@ -27,7 +28,7 @@ All JSON errors are `{ "error": "message" }`. A POST or PATCH body is JSON sent 
 - `consumers()` -> `catalog/consumers.json` (below), or no consumers when the file is missing.
 - `comments(id,component_id)` -> list
 - `add_comment(id,component_id,payload)` -> comment
-- `lock(id,update=False)` -> `{ok,output}`; bounded fixed APM invocation, no shell. It runs `apm lock` in `packages/<id>/`, which writes `apm.lock.yaml` there.
+- `lock(id,update=False)` -> `{ok,output}`; bounded fixed APM invocation, no shell. It runs `apm lock` in `packages/<id>/` for up to ten minutes, which writes `apm.lock.yaml` there. Git ignores that file, and it is not part of the package: its `revision`, its files and its export stay as they were.
 
 PackageSummary: `id,title,description,kind` (`preset` or `stack`), `icon` (a lowercase icon name such as `rocket`, or empty when none was chosen), `version,workArea:[],usage:[],componentCount`.
 

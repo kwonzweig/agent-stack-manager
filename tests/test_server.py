@@ -7,6 +7,7 @@ import unittest
 from zipfile import ZipFile
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from unittest.mock import patch
 
 from asm_app.server import create_server
 
@@ -85,6 +86,26 @@ class ServerTests(unittest.TestCase):
     def test_rejects_invalid_json(self):
         code, _, _ = self.request('/api/presets', data=b'{', headers={'Content-Type':'application/json'})
         self.assertEqual(code, 400)
+
+    def test_a_local_file_error_is_a_server_error(self):
+        # ASM contacts no other service, so a disk or permission error is its own failure, not a gateway's.
+        with patch('asm_app.store.Store.catalog', side_effect=PermissionError('denied')), \
+                self.assertLogs(level='ERROR'):
+            code, body, _ = self.request('/api/catalog')
+        self.assertEqual(code, 500)
+        self.assertEqual(json.loads(body), {'error':'Request failed. See the local server output.'})
+
+    def test_a_save_without_a_revision_is_a_bad_request(self):
+        (Path(self.temp.name)/'catalog').mkdir()
+        source = Path(__file__).resolve().parents[1]/'catalog/components.json'
+        (Path(self.temp.name)/'catalog/components.json').write_bytes(source.read_bytes())
+        code, body, _ = self.request('/api/presets', data=json.dumps({'title':'API example','kind':'preset'}).encode(),
+                                     headers={'Content-Type':'application/json'})
+        self.assertEqual(code, 201)
+        code, body, _ = self.request('/api/presets/'+json.loads(body)['id'], data=b'{"description":"x"}',
+                                     headers={'Content-Type':'application/json'}, method='PATCH')
+        self.assertEqual(code, 400)
+        self.assertIn('revision is required', json.loads(body)['error'])
 
     def test_static_route_does_not_expose_workspace(self):
         (Path(self.temp.name)/'secret.txt').write_text('private', encoding='utf-8')

@@ -1,26 +1,22 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Ban, ChevronRight, CircleCheck, CircleMinus, CircleX, Download, RefreshCw, ShieldX } from "lucide-react";
+import { Ban, ChevronRight, CircleCheck, CircleX, Download } from "lucide-react";
 import { api, downloadArchive, errorMessage, packagePath } from "../api";
 import { cn } from "../utils";
 import type { Report, ReportItem, Result } from "../types";
 import { KindBadge, KindIcon, KIND_LABELS, KINDS } from "./ComponentUI";
-import { formatDate, ValuePanel } from "./ComponentDetails";
+import { ValuePanel } from "./ComponentDetails";
 import { DetailSheet } from "./DetailSheet";
-import { outcome, stageStatus } from "../lib/paperclipOutcome";
+import { conversionStatus, outcome } from "../lib/paperclipOutcome";
 
-const stages = [["conversion", "Conversion"], ["import", "Paperclip import"]] as const;
-const icons = {
-  converted: CircleCheck, saved: CircleCheck, unsupported: Ban, refused: ShieldX,
-  unconverted: CircleX, no_access: CircleX, missing: CircleX, not_checked: CircleMinus,
-} as const;
+const icons = { converted: CircleCheck, unsupported: Ban, unconverted: CircleX } as const;
 function Status({ result }: { result: Result }) {
-  const { id, label, tone } = stageStatus(result);
+  const { id, label, tone } = conversionStatus(result);
   const Icon = icons[id];
   return <span className={"status status-" + tone}><Icon className="h-3.5 w-3.5" aria-hidden="true" />{label}</span>;
 }
 const filters = [["all", "All"], ["expected", "Left out as expected"], ["attention", "Needs attention"]] as const;
-const columns = ["Type", "Total", "Converted", "Saved", "Left out as expected", "Needs attention"];
-const countTones = ["", "count-good", "count-good", "", "count-bad"];
+const columns = ["Type", "Total", "Converted", "Left out as expected", "Needs attention"];
+const countTones = ["", "count-good", "", "count-bad"];
 
 export function PaperclipReport({ id, revision, dirty, heading }: {
   id: string; revision: string; dirty: boolean; heading: ReactNode;
@@ -28,29 +24,20 @@ export function PaperclipReport({ id, revision, dirty, heading }: {
   const [report, setReport] = useState<Report>();
   const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState<"" | "convert" | "observe" | "download">("convert");
+  const [busy, setBusy] = useState<"" | "convert" | "download">("convert");
   const [item, setItem] = useState<ReportItem>();
   const request = useRef<AbortController | null>(null);
-  async function load(observe = false) {
+  // The conversion runs by itself whenever the preset opens or its saved revision changes.
+  useEffect(() => {
     request.current?.abort();
     const controller = new AbortController();
     request.current = controller;
-    setError(""); setBusy(observe ? "observe" : "convert");
-    try {
-      const result = await api<Report>(packagePath(id, observe ? "/paperclip/observe" : "/paperclip"), {
-        signal: controller.signal, ...(observe ? { method: "POST", body: {} } : {}),
-      });
-      if (!controller.signal.aborted) setReport(result);
-    } catch (err) {
-      if (!controller.signal.aborted) setError(errorMessage(err));
-    } finally {
-      if (!controller.signal.aborted) setBusy("");
-    }
-  }
-  useEffect(() => {
-    setReport(undefined);
-    void load();
-    return () => request.current?.abort();
+    setReport(undefined); setError(""); setBusy("convert");
+    api<Report>(packagePath(id, "/paperclip"), { signal: controller.signal })
+      .then(result => { if (!controller.signal.aborted) setReport(result); })
+      .catch(err => { if (!controller.signal.aborted) setError(errorMessage(err)); })
+      .finally(() => { if (!controller.signal.aborted) setBusy(""); });
+    return () => controller.abort();
   }, [id, revision]);
   async function download() {
     setError(""); setBusy("download");
@@ -60,8 +47,8 @@ export function PaperclipReport({ id, revision, dirty, heading }: {
   const shown = { all, expected: all.filter(row => outcome(row) === "expected"), attention: all.filter(row => outcome(row) === "attention") };
   const visible = shown[filter];
   const groups = KINDS.map(kind => [kind, all.filter(row => row.kind === kind)] as const).filter(([, rows]) => rows.length);
-  const metrics = (rows: ReportItem[]) => [rows.length, rows.filter(row => row.conversion.status === "converted").length,
-    ...(["saved", "expected", "attention"] as const).map(result => rows.filter(row => outcome(row) === result).length)];
+  const metrics = (rows: ReportItem[]) => [rows.length,
+    ...(["converted", "expected", "attention"] as const).map(result => rows.filter(row => outcome(row) === result).length)];
   function cells(rows: ReportItem[]) {
     return metrics(rows).map((count, index) => <td className={cn("number", count > 0 && countTones[index])} key={index}>{count}</td>);
   }
@@ -69,15 +56,13 @@ export function PaperclipReport({ id, revision, dirty, heading }: {
     <div className="section-heading flex-wrap">
       {heading}
       <div className="flex flex-wrap items-center gap-2">
-        <button className="app-button-secondary" type="button" disabled={Boolean(busy)} onClick={() => void load()}><RefreshCw className="h-4 w-4" /> Convert</button>
-        <button className="app-button-secondary" type="button" disabled={Boolean(busy)} onClick={() => void load(true)}><RefreshCw className="h-4 w-4" /> Refresh import status</button>
         <button className="app-button-secondary" type="button" disabled={Boolean(busy) || !all.some(row => row.conversion.status === "converted")}
           onClick={download}><Download className="h-4 w-4" /> Download Paperclip package</button>
       </div>
     </div>
     {dirty && <p className="mb-2 text-[12px] text-muted">Showing the saved revision.</p>}
     {error && <p role="alert" className="mb-2 text-[13px] text-danger">{error}</p>}
-    {busy && <p role="status" className="mb-2 text-[13px] text-muted">{{ convert: "Converting package…", observe: "Checking saved Paperclip state…", download: "Preparing download…" }[busy]}</p>}
+    {busy && <p role="status" className="mb-2 text-[13px] text-muted">{{ convert: "Converting package…", download: "Preparing download…" }[busy]}</p>}
     {report && <>
       <section aria-label="Conversion summary">
         <div className="section-heading"><h3>Conversion summary</h3></div>
@@ -98,25 +83,23 @@ export function PaperclipReport({ id, revision, dirty, heading }: {
           </div>
         </div>
         {visible.length ? <div className="report-list">
-          <div className="report-row report-head" aria-hidden="true"><span>Component</span>{stages.map(([key, label]) => <span key={key}>{label}</span>)}<span>Reason</span><span /></div>
           <ul>{visible.map((row, index) => <li key={row.id + index} className="report-row">
             <div className="component-label"><KindIcon kind={row.kind} className="h-4 w-4 shrink-0 text-muted" />
               <div className="component-name"><button type="button" className="row-action" onClick={() => setItem(row)}>{row.name}</button><span className="component-kind">{KIND_LABELS[row.kind]}</span></div>
             </div>
-            {stages.map(([key, label]) => <div className="stage-cell" key={key}><span className="stage-label">{label}</span><Status result={row[key]} /></div>)}
-            <p className="row-reason">{(row.conversion.status === "unconverted" ? row.conversion.reason : row.import.reason) || row.conversion.reason}</p>
+            <Status result={row.conversion} />
+            <p className="row-reason">{row.conversion.reason}</p>
             <ChevronRight className="row-arrow h-4 w-4" aria-hidden="true" />
           </li>)}</ul>
         </div> : <p className="empty">{{ all: "No conversion results.", expected: "No components left out as expected.", attention: "No components need attention." }[filter]}</p>}
       </section>
-      {report.observedAt && <p className="report-footer text-[12px] text-muted">Last import check: {formatDate(report.observedAt)}</p>}
     </>}
     {item && <DetailSheet open title={item.name} meta={<KindBadge kind={item.kind} />} onClose={() => setItem(undefined)}>
       <div className="asm-lab space-y-4">
-        <div className="stage-details">{stages.map(([key, label]) => <section className="stage-detail" key={key}>
-          <h3>{label}<Status result={item[key]} /></h3>
-          <p>{item[key].reason}</p>
-        </section>)}</div>
+        <section className="conversion-detail">
+          <h3>Conversion<Status result={item.conversion} /></h3>
+          <p>{item.conversion.reason}</p>
+        </section>
         <div className="values"><ValuePanel label="Source value" value={item.source} /><ValuePanel label="Paperclip value" value={item.target} /></div>
       </div>
     </DetailSheet>}

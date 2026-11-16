@@ -19,7 +19,7 @@ interface Props {
   onOpenChange?: (open: boolean) => void;
 }
 
-/** Overflow "…" menu for low-frequency card actions (see UI spec in CLAUDE.md). */
+/** Overflow "…" menu for low-frequency card actions. */
 export function CardActionMenu({ actions, label, className, onOpenChange }: Props) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

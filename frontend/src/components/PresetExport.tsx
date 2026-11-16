@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Consumer, ConsumerData } from "../types";
+import type { Consumer, ConsumerData, PackageKind } from "../types";
 import { cn } from "../utils";
 import { hrefFor, type Route } from "./Sidebar";
 import { PaperclipReport, useConversion } from "./PaperclipReport";
@@ -27,13 +27,13 @@ export function PresetExport({ consumers, loading, error, onRetry, route, onNavi
 }
 
 // The Export tab: what each app supports for this preset, then one tab per app ASM exports to.
-export function PresetExportTab({ id, revision, dirty, data, loading, error, onRetry, route, onNavigate }: {
-  id: string; revision: string; dirty: boolean; data: ConsumerData; loading: boolean; error: string;
+export function PresetExportTab({ id, kind, revision, dirty, data, loading, error, onRetry, route, onNavigate }: {
+  id: string; kind: PackageKind; revision: string; dirty: boolean; data: ConsumerData; loading: boolean; error: string;
   onRetry: () => void; route: Route; onNavigate: (route: Route) => void;
 }) {
   const conversion = useConversion(id, revision);
   return <>
-    <SupportTable data={data} report={conversion.report} />
+    <SupportTable data={data} report={conversion.report} packageKind={kind} />
     <PresetExport consumers={data.consumers.filter(consumer => consumer.export)} loading={loading} error={error}
       onRetry={onRetry} route={route} onNavigate={onNavigate}
       render={(consumer, tabs) => consumer === "paperclip"

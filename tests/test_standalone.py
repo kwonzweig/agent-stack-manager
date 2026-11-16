@@ -1,4 +1,5 @@
 import ast
+import re
 import subprocess
 import unittest
 from pathlib import Path
@@ -12,6 +13,7 @@ NETWORK_CLIENTS = {"urllib.request", "http.client", "socket", "requests", "httpx
 # Calls that open a connection, or load a module by a name the import check cannot see.
 NETWORK_CALLS = {"open_connection", "open_unix_connection", "create_connection", "import_module", "__import__"}
 NETWORK_COMMANDS = {"curl", "wget"}
+SHELL_CALLS = {"system", "popen"}
 FRONTEND_NETWORK = ("XMLHttpRequest", "WebSocket", "EventSource", "sendBeacon", "fetch(")
 # This file is the one place these names may appear.
 REMOVED = ("ASM_PAPERCLIP_URL", "ASM_PAPERCLIP_COMPANY_ID", "/api/connection", "paperclip/observe",
@@ -37,14 +39,26 @@ def imported_modules(tree):
             yield from (f"{node.module}.{alias.name}" for alias in node.names)
 
 
+def commands_in(text):
+    # Each word of a command line or a shell string, as a program name: "/usr/bin/curl" and "curl.exe" are curl.
+    for word in re.split(r"[\s;&|()'\"`]+", text):
+        program = re.split(r"[\\/]", word)[-1].casefold().removesuffix(".exe")
+        if program in NETWORK_COMMANDS:
+            yield program
+
+
 def network_calls(tree):
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
-            name = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, "id", None)
+            func = node.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
             if name in NETWORK_CALLS:
                 yield name + "()"
-        elif isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value in NETWORK_COMMANDS:
-            yield node.value
+            # os.system and os.popen hand their whole argument to a shell.
+            if isinstance(func, ast.Attribute) and getattr(func.value, "id", None) == "os" and name in SHELL_CALLS:
+                yield f"os.{name}()"
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            yield from commands_in(node.value)
 
 
 def python_modules():
@@ -97,6 +111,36 @@ class StandaloneTests(unittest.TestCase):
             if names:
                 found[path.relative_to(ROOT).as_posix()] = names
         self.assertEqual(found, {}, WHAT_ASM_IS)
+
+
+class NetworkCallCheckTests(unittest.TestCase):
+    """The check above catches each way of reaching the network it is meant to catch."""
+
+    def found(self, source):
+        return sorted(set(network_calls(ast.parse(source))))
+
+    def test_catches_a_command_in_a_list(self):
+        self.assertEqual(self.found('subprocess.run(["curl", "-s", "http://x"])'), ["curl"])
+        self.assertEqual(self.found('subprocess.run(["/usr/bin/wget", "http://x"])'), ["wget"])
+
+    def test_catches_a_command_in_a_shell_string(self):
+        for source in ('os.system("curl -s http://127.0.0.1/api")',
+                       'subprocess.run("curl http://x", shell=True)',
+                       'subprocess.run("sh -c \'wget -q http://x\'", shell=True)',
+                       'subprocess.run("echo; curl.exe http://x", shell=True)'):
+            with self.subTest(source=source):
+                self.assertTrue(set(self.found(source)) & {"curl", "wget"}, source)
+
+    def test_catches_os_system_and_os_popen(self):
+        self.assertEqual(self.found('os.system(command)'), ["os.system()"])
+        self.assertEqual(self.found('os.popen(command)'), ["os.popen()"])
+
+    def test_catches_connection_calls_and_hidden_imports(self):
+        self.assertEqual(self.found('asyncio.open_connection("x", 80)'), ["open_connection()"])
+        self.assertEqual(self.found('importlib.import_module("socket")'), ["import_module()"])
+
+    def test_leaves_ordinary_text_alone(self):
+        self.assertEqual(self.found('message = "Recurl the curly braces"; subprocess.run([*command, "lock"])'), [])
 
 
 class RemovedRouteTests(unittest.TestCase):

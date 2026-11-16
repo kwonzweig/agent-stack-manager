@@ -80,7 +80,10 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get('Content-Length','0'))
         if not 0 < length <= MAX_BODY:
             raise ValueError('Request body must be between 1 byte and 1 MB.')
-        data = json.loads(self.rfile.read(length))
+        try:
+            data = json.loads(self.rfile.read(length))
+        except ValueError:  # not JSON, or not UTF-8
+            raise ValueError('Request body must be valid JSON.') from None
         if not isinstance(data, dict):
             raise ValueError('Request body must be an object.')
         return data

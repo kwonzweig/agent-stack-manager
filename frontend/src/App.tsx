@@ -5,6 +5,7 @@ import type { CatalogItem, Component, ConsumerData, Package, PackageKind, Packag
 import { createDraft, isDirty, makePayload, overlappingChanges, rebaseDraft, withMembers, type Draft } from "./draft";
 import CatalogPage from "./catalog/CatalogPage";
 import { hrefFor, Sidebar, type Route } from "./components/Sidebar";
+import { readRoute } from "./lib/route";
 import { Modal, PresetDialog } from "./components/PresetDialog";
 import { WorkspaceHeader, PresetContents } from "./components/Workspace";
 import { ComponentPicker } from "./components/ComponentPicker";
@@ -42,22 +43,7 @@ function useList<T>(path: string, initial: T) {
   return { ...current, refresh, setCurrent };
 }
 
-function readRoute(): Route {
-  const hash = location.hash.slice(1);
-  const params = new URLSearchParams(hash);
-  const view = params.get("view") || hash.split("/")[0];
-  if (view === "presets") {
-    const tab = params.get("tab");
-    let legacyId: string | undefined;
-    try { legacyId = hash.startsWith("presets/") ? decodeURIComponent(hash.slice(8)) : undefined; } catch {}
-    const id = params.get("preset") || legacyId;
-    if (tab === "source") return { view, id, tab };
-    // "paperclip" is the tab's name before Export held one tab per consumer.
-    if (tab === "export" || tab === "paperclip") return { view, id, tab: "export", consumer: params.get("consumer") || (tab === "paperclip" ? "paperclip" : undefined) };
-    return { view, id, tab: "components" };
-  }
-  return { view: "catalog" };
-}
+const currentRoute = () => readRoute(location.hash.slice(1));
 
 function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return <div className="flex flex-wrap items-center gap-2 rounded-lg border border-danger bg-danger-bg px-3 py-2 text-[13px] text-danger" role="alert">
@@ -67,7 +53,7 @@ function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void 
 }
 
 export function App() {
-  const [route, setRoute] = useState(readRoute);
+  const [route, setRoute] = useState(currentRoute);
   const [theme, setTheme] = useState<"light" | "dark">(() => localStorage.getItem("asm:theme") === "dark" ? "dark" : "light");
   const presets = useList("/api/presets", { presets: [] as PackageSummary[] });
   const catalog = useList("/api/catalog", defaultCatalog);
@@ -93,7 +79,7 @@ export function App() {
   const closeOverlay = useCallback(() => setOverlay(undefined), []);
 
   useEffect(() => {
-    const sync = () => { setRoute(readRoute()); setOverlay(undefined); };
+    const sync = () => { setRoute(currentRoute()); setOverlay(undefined); };
     window.addEventListener("popstate", sync);
     window.addEventListener("hashchange", sync);
     return () => {
@@ -213,7 +199,7 @@ export function App() {
         {!routeId ? <PresetList presets={presets.data.presets} loading={presets.loading} onNavigate={navigate} onCreate={createPreset} />
           : !draft ? activeLoadError ?
           <ErrorBox message={activeLoadError} onRetry={() => { void getPackage(routeId).catch(() => {}); }} /> :
-          <p role="status" className="text-[13px] text-muted">Loading preset…</p> : <div className="app-page" key={draft.original.id}>
+          <p role="status" className="text-[13px] text-muted">{presets.data.presets.find(item => item.id === routeId)?.kind === "stack" ? "Loading stack…" : "Loading preset…"}</p> : <div className="app-page" key={draft.original.id}>
             <WorkspaceHeader draft={draft} route={{ ...route, id: draft.original.id }} onNavigate={navigate}
               onEdit={() => setOverlay({ type: "edit", id: draft.original.id })}
               onIcon={icon => updateDraft(draft.original.id, before => ({ ...before, icon }))}
@@ -222,7 +208,7 @@ export function App() {
               <ErrorBox message={activeSave.message} />
               {activeSave.conflict && <button type="button" className="app-button-secondary" onClick={() => setOverlay({ type: "conflict", id: draft.original.id })}>Review saved version</button>}
             </div>}
-            {route.tab === "export" ? <PresetExportTab id={draft.original.id} revision={draft.original.revision}
+            {route.tab === "export" ? <PresetExportTab id={draft.original.id} kind={draft.original.kind} revision={draft.original.revision}
                 dirty={isDirty(draft)} data={consumers.data} loading={consumers.loading} error={consumers.error}
                 onRetry={consumers.refresh} route={{ ...route, id: draft.original.id }} onNavigate={navigate} />
               : route.tab === "source" ? <SourceFiles id={draft.original.id} files={draft.original.files} dirty={isDirty(draft)} />
@@ -242,7 +228,7 @@ export function App() {
       roles={consumers.data.consumers.find(consumer => consumer.id === "paperclip")?.roles?.values}
       onSave={fields => updateDraft(overlay.id, before => ({ ...before, ...fields }))} />}
     {overlay?.type === "picker" && drafts[overlay.id] && <ComponentPicker items={pickerItems}
-      existing={new Set(drafts[overlay.id].members.map(item => item.id))} onClose={closeOverlay}
+      existing={new Set(drafts[overlay.id].members.map(item => item.id))} packageKind={drafts[overlay.id].kind} onClose={closeOverlay}
       onAdd={items => { addMembers(overlay.id, items); closeOverlay(); }}
       error={catalog.error} loading={catalog.loading} onRetry={catalog.refresh} />}
     {overlay?.type === "component" && <ComponentDetails item={overlay.item} onClose={closeOverlay}

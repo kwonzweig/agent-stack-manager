@@ -31,7 +31,7 @@ Each cell is the app's own term, linked to the page that says so; "Not documente
 
 ## Export
 
-Saving a preset converts it for Paperclip and writes it to `exports/paperclip/<id>/`; commit the changed files with Git. Every component is accounted for: exported, left out as expected (with the reason), or needs attention. Import a folder by hand as [docs/paperclip.md](docs/paperclip.md) describes.
+Saving a preset or stack writes its `apm.yml` in `packages/` and converts every preset for Paperclip, rewriting only the files in `exports/paperclip/<id>/` whose content changed; `git status` shows both, and you commit them with Git. Every component is accounted for: exported, left out as expected (with the reason), or needs attention. Import a folder by hand as [docs/paperclip.md](docs/paperclip.md) describes.
 
 ```sh
 python -m asm_app export          # rewrite exports/paperclip/ and list what each preset leaves out
@@ -71,7 +71,7 @@ python -m asm_app serve
 
 Every `python` command in this README runs in the clone with `.venv` active; activate it again in a new terminal. If PowerShell says running scripts is disabled, use Command Prompt.
 
-Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has that port, `serve` stops with an error; `--port 4320` picks another. The dashboard edits the files in your clone: browse the Catalog with each repository's GitHub stars, add components to a stack or preset, edit a preset, and read its Export tab.
+Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has that port, `serve` stops with `Address already in use` (`WinError 10048` on Windows); pick another port with `python -m asm_app serve --port 4320`. The dashboard edits the files in your clone: browse the Catalog with each repository's GitHub stars, add components to a stack or preset, edit a preset, and read its Export tab. Edits stay in the page until you press **Save changes** at the top of the preset. To save from a script instead, use the local API in [docs/api-contract.md](docs/api-contract.md): `PATCH /api/presets/<id>` with the preset's current `revision`.
 
 ## APM lock
 

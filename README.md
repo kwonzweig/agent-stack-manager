@@ -52,7 +52,7 @@ The Paperclip ZIP includes a native package and remote-source import plan. Paper
 python -m asm_app paperclip web-app-engineer --url http://127.0.0.1:3100 --company YOUR_COMPANY_ID --apply
 ```
 
-Omit `--apply` for readback only. New agents are paused; this command does not start employee runs. Nonzero exit status means some components were not saved or the operation failed; the JSON result identifies them.
+Omit `--apply` for readback only. Paperclip keeps a refusal it recorded for a skill, also after an upgrade changes its rules. Add `--recheck` to `--apply` to have it scan those sources again; the scan uses GitHub requests, so it runs only when asked. New agents are paused; this command does not start employee runs. Nonzero exit status means some components were not saved or the operation failed; the JSON result identifies them.
 
 For the dashboard's readback action, set `ASM_PAPERCLIP_URL` and `ASM_PAPERCLIP_COMPANY_ID` before starting the server. Opening the dashboard and editing/exporting a preset never installs it into a consumer. No company is selected implicitly.
 

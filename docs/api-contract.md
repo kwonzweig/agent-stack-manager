@@ -12,7 +12,7 @@ For agents and people who edit ASM data. ASM's data lives in these files; no rou
 
 ## Conventions
 
-All JSON errors are `{ "error": "message" }`. Paths use URL-encoded package ids. Existing writes require the package `revision`; conflicts return 409. No route contacts a consumer.
+All JSON errors are `{ "error": "message" }`. A POST or PATCH body is JSON sent with `Content-Type: application/json`; any other type returns 415. Paths use URL-encoded package ids. Existing writes require the package `revision`; conflicts return 409. No route contacts a consumer.
 
 ## Store interface (`asm_app/store.py`)
 

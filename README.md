@@ -58,9 +58,10 @@ The two hooks only echo a line, and the two plugins are there to show how an exp
 
 ## Run
 
-Python 3.11 or newer. ASM installs into a virtual environment in the clone; on Debian or Ubuntu run `sudo apt install python3-venv` first.
+Python 3.11 or newer. ASM installs into a virtual environment in the clone.
 
 ```sh
+sudo apt install python3-venv   # Debian or Ubuntu only
 git clone https://github.com/kwonzweig/agent-stack-manager
 cd agent-stack-manager
 python3 -m venv .venv      # Windows: py -m venv .venv
@@ -71,7 +72,7 @@ python -m asm_app serve
 
 Every `python` command in this README runs in the clone with `.venv` active; activate it again in a new terminal. If PowerShell says running scripts is disabled, use Command Prompt.
 
-Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has that port, `serve` stops with `Address already in use` (`WinError 10048` on Windows); pick another port with `python -m asm_app serve --port 4320`. The dashboard edits the files in your clone: browse the Catalog with each repository's GitHub stars, add components to a stack or preset, edit a preset, and read its Export tab. Edits stay in the page until you press **Save changes** at the top of the preset. To save from a script instead, use the local API in [docs/api-contract.md](docs/api-contract.md): `PATCH /api/presets/<id>` with the preset's current `revision`.
+Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has that port, `serve` stops with `Address already in use` (`WinError 10048` on Windows); pick another port with `python -m asm_app serve --port 4320`. The dashboard edits the files in your clone: browse the Catalog with each repository's GitHub stars, add components to a stack or preset, edit a preset, and read its Export tab. Edits stay in the page until you press **Save changes** at the top of the preset. To save from a script instead, use the local API on the dashboard's address, described in [docs/api-contract.md](docs/api-contract.md): `GET /api/presets/cao` returns the preset with its `revision`, and `PATCH /api/presets/cao` with `Content-Type: application/json` and the body `{"revision": "<that revision>", "description": "New text"}` changes only the description.
 
 ## APM lock
 
@@ -87,10 +88,15 @@ python -m asm_app lock web-app-engineer   # --update resolves again from upstrea
 ```sh
 python -m unittest discover -s tests
 python -m asm_app export --check
+```
+
+The built dashboard is committed in `asm_app/web/`, so running it needs no Node.js. To change the dashboard, rebuild it with Node.js 22.12 or newer and commit it with the source:
+
+```sh
 cd frontend
 npm ci
 npm test
 npm run build
 ```
 
-The built dashboard is committed in `asm_app/web/`, so running it needs no Node.js; rebuild it with Node.js 22.12 or newer and commit it with the source. Get Node.js from [nodejs.org/download](https://nodejs.org/en/download); a Linux distribution's own package may be older. The data files and the local API are in [docs/api-contract.md](docs/api-contract.md); reused frontend code and its licences are in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md).
+Get Node.js from [nodejs.org/download](https://nodejs.org/en/download); a Linux distribution's own package may be older. The data files and the local API are in [docs/api-contract.md](docs/api-contract.md); reused frontend code and its licences are in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md).

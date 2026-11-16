@@ -1,31 +1,32 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronRight, CircleCheck, CircleMinus, CircleX, Download, RefreshCw } from "lucide-react";
+import { Ban, ChevronRight, CircleCheck, CircleMinus, CircleX, Download, RefreshCw, ShieldX } from "lucide-react";
 import { api, downloadArchive, errorMessage, packagePath } from "../api";
 import { cn } from "../utils";
 import type { Report, ReportItem, Result } from "../types";
 import { KindBadge, KindIcon, KIND_LABELS, KINDS } from "./ComponentUI";
 import { formatDate, ValuePanel } from "./ComponentDetails";
 import { DetailSheet } from "./DetailSheet";
+import { outcome, stageStatus } from "../lib/paperclipOutcome";
 
 const stages = [["conversion", "Conversion"], ["import", "Paperclip import"]] as const;
-const statuses = {
-  converted: ["Converted", "good"], unconverted: ["Unconverted", "bad"],
-  saved: ["Saved", "good"], missing: ["Missing", "bad"], not_checked: ["Not checked", "neutral"],
+const icons = {
+  converted: CircleCheck, saved: CircleCheck, unsupported: Ban, refused: ShieldX,
+  unconverted: CircleX, no_access: CircleX, missing: CircleX, not_checked: CircleMinus,
 } as const;
 function Status({ result }: { result: Result }) {
-  const [label, tone] = statuses[result.status as keyof typeof statuses] || statuses.not_checked;
-  const Icon = tone === "good" ? CircleCheck : tone === "bad" ? CircleX : CircleMinus;
+  const { id, label, tone } = stageStatus(result);
+  const Icon = icons[id];
   return <span className={"status status-" + tone}><Icon className="h-3.5 w-3.5" aria-hidden="true" />{label}</span>;
 }
-function needsAttention(item: ReportItem) {
-  return item.conversion.status === "unconverted" || item.import.status === "missing";
-}
+const filters = [["all", "All"], ["expected", "Left out as expected"], ["attention", "Needs attention"]] as const;
+const columns = ["Type", "Total", "Converted", "Saved", "Left out as expected", "Needs attention"];
+const countTones = ["", "count-good", "count-good", "", "count-bad"];
 
 export function PaperclipReport({ id, revision, dirty, heading }: {
   id: string; revision: string; dirty: boolean; heading: ReactNode;
 }) {
   const [report, setReport] = useState<Report>();
-  const [filter, setFilter] = useState<"all" | "attention">("all");
+  const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<"" | "convert" | "observe" | "download">("convert");
   const [item, setItem] = useState<ReportItem>();
@@ -56,13 +57,13 @@ export function PaperclipReport({ id, revision, dirty, heading }: {
     try { await downloadArchive(id, true); } catch (err) { setError(errorMessage(err)); } finally { setBusy(""); }
   }
   const all = report?.items ?? [];
-  const attention = all.filter(needsAttention);
-  const visible = filter === "all" ? all : attention;
+  const shown = { all, expected: all.filter(row => outcome(row) === "expected"), attention: all.filter(row => outcome(row) === "attention") };
+  const visible = shown[filter];
   const groups = KINDS.map(kind => [kind, all.filter(row => row.kind === kind)] as const).filter(([, rows]) => rows.length);
   const metrics = (rows: ReportItem[]) => [rows.length, rows.filter(row => row.conversion.status === "converted").length,
-    rows.filter(row => row.conversion.status === "unconverted").length, rows.filter(row => row.import.status === "saved").length];
+    ...(["saved", "expected", "attention"] as const).map(result => rows.filter(row => outcome(row) === result).length)];
   function cells(rows: ReportItem[]) {
-    return metrics(rows).map((count, index) => <td className={cn("number", count && index > 0 && (index === 2 ? "count-bad" : "count-good"))} key={index}>{count}</td>);
+    return metrics(rows).map((count, index) => <td className={cn("number", count > 0 && countTones[index])} key={index}>{count}</td>);
   }
   return <section className="asm-lab" aria-label="Paperclip conversion report">
     <div className="section-heading flex-wrap">
@@ -81,7 +82,7 @@ export function PaperclipReport({ id, revision, dirty, heading }: {
       <section aria-label="Conversion summary">
         <div className="section-heading"><h3>Conversion summary</h3></div>
         <div className="summary-box"><table className="summary-table">
-          <thead><tr>{["Type", "Total", "Converted", "Unconverted", "Saved"].map((name, index) => <th key={name} className={index ? "number" : ""} scope="col">{name}</th>)}</tr></thead>
+          <thead><tr>{columns.map((name, index) => <th key={name} className={index ? "number" : ""} scope="col">{name}</th>)}</tr></thead>
           <tbody>{groups.map(([kind, rows]) => <tr key={kind}>
             <th scope="row"><span className="kind-label"><KindIcon kind={kind} className="h-4 w-4 text-muted" /> {KIND_LABELS[kind]}</span></th>{cells(rows)}
           </tr>)}</tbody>
@@ -90,10 +91,10 @@ export function PaperclipReport({ id, revision, dirty, heading }: {
       </section>
       <section className="report-items" aria-label="Component results">
         <div className="section-heading"><h3>Component results</h3>
-          <div className="app-segmented" role="group" aria-label="Report filter">
-            {([{ id: "all", label: `All (${all.length})` }, { id: "attention", label: `Needs attention (${attention.length})` }] as const).map(({ id, label }) =>
+          <div className="app-segmented max-w-full flex-wrap" role="group" aria-label="Report filter">
+            {filters.map(([id, label]) =>
               <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)}
-                className={cn("app-segmented-button", filter === id && "app-segmented-button-active")}>{label}</button>)}
+                className={cn("app-segmented-button", filter === id && "app-segmented-button-active")}>{label} ({shown[id].length})</button>)}
           </div>
         </div>
         {visible.length ? <div className="report-list">
@@ -106,7 +107,7 @@ export function PaperclipReport({ id, revision, dirty, heading }: {
             <p className="row-reason">{(row.conversion.status === "unconverted" ? row.conversion.reason : row.import.reason) || row.conversion.reason}</p>
             <ChevronRight className="row-arrow h-4 w-4" aria-hidden="true" />
           </li>)}</ul>
-        </div> : <p className="empty">{filter === "attention" ? "No components need attention." : "No conversion results."}</p>}
+        </div> : <p className="empty">{{ all: "No conversion results.", expected: "No components left out as expected.", attention: "No components need attention." }[filter]}</p>}
       </section>
       {report.observedAt && <p className="report-footer text-[12px] text-muted">Last import check: {formatDate(report.observedAt)}</p>}
     </>}

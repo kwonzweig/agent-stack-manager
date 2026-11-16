@@ -59,6 +59,7 @@ export interface Consumer {
 export interface Result {
   status: string;
   reason: string;
+  cause?: "unsupported" | "refused" | "access";
 }
 export interface ReportItem {
   id: string;

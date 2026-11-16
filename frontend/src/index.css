@@ -56,13 +56,6 @@
     --color-danger-bg: rgba(239,68,68,0.08);
   }
 
-  /* System preference fallback (when no .dark class and user chose "system") */
-  @media (prefers-color-scheme: dark) {
-    :root:not(.dark) {
-      /* JS will add .dark class, but this is a brief fallback */
-    }
-  }
-
   html,
   body,
   #root {
@@ -89,10 +82,6 @@
     @apply mx-auto flex min-h-full w-full max-w-[1200px] flex-col gap-6 pb-8;
   }
 
-  .app-page-narrow {
-    @apply max-w-[1040px];
-  }
-
   .app-page-header {
     @apply border-b border-border-subtle pb-4;
   }
@@ -105,16 +94,8 @@
     @apply mt-1.5 text-[13px] leading-5 text-muted;
   }
 
-  .app-section-title {
-    @apply text-[12px] font-semibold uppercase tracking-[0.08em] text-muted;
-  }
-
   .app-panel {
     @apply rounded-xl border border-border-subtle bg-surface;
-  }
-
-  .app-panel-muted {
-    @apply rounded-xl border border-border-subtle bg-bg-secondary;
   }
 
   .app-toolbar {
@@ -127,10 +108,6 @@
 
   .app-toolbar-button {
     @apply inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg text-[13px] font-medium transition-colors outline-none;
-  }
-
-  .app-toolbar-button-secondary {
-    @apply border border-border-subtle bg-surface px-2.5 text-muted hover:bg-surface-hover hover:text-secondary;
   }
 
   .app-toolbar-button-primary {

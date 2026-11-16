@@ -411,7 +411,14 @@ class StoreTests(unittest.TestCase):
         with self.assertRaisesRegex(StoreError, "https://github.com/obra/superpowers"):
             self.store.catalog()
 
-    def test_migrated_fixtures_keep_instructions_and_component_types(self):
+    def test_catalog_descriptions_are_one_line(self):
+        # A card shows the description on one line and an export stub writes it as one YAML value.
+        for item in Store(ROOT).catalog()["items"]:
+            description = item.get("description") or ""
+            with self.subTest(item=item["id"]):
+                self.assertEqual(description, " ".join(description.split()))
+
+    def test_committed_presets_hold_their_instruction_and_members(self):
         store = Store(ROOT)
         expected = {"web-app-engineer": {"instruction": 1, "skill": 31, "mcp": 1, "hook": 1, "plugin": 1},
                     "cao": {"instruction": 1, "skill": 4, "hook": 1, "plugin": 1},

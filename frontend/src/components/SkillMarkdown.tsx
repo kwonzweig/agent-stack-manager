@@ -9,9 +9,9 @@ interface SkillMarkdownProps {
 
 // remark-gfm's autolink step compiles a regex with lookbehind on every render.
 // WebKit before Safari 16.4 (e.g. an un-updated macOS Monterey) rejects that
-// with a SyntaxError, which unmounts the whole app and leaves a blank window —
-// the symptom reported in #613. Such engines get plain Markdown instead: no
-// tables, task lists or strikethrough, but the skill is readable.
+// with a SyntaxError, which unmounts the whole app and leaves a blank page.
+// Such engines get plain Markdown instead: no tables, task lists or
+// strikethrough, but the skill is readable.
 const SUPPORTS_LOOKBEHIND = (() => {
   try {
     new RegExp("(?<=a)b");

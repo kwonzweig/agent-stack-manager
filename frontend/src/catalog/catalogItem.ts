@@ -1,4 +1,4 @@
-import type { CatalogItem } from '../types';
+import type { CatalogItem, Source } from '../types';
 
 export function itemName(item: CatalogItem) {
   return item.title || item.name || item.kind;
@@ -24,4 +24,13 @@ export function starsTitle(item: CatalogItem) {
 // "obra/superpowers" for a GitHub URL, otherwise the host and path.
 export function repositoryLabel(url: string) {
   return url.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/^https?:\/\//i, '').replace(/(\.git)?\/?$/, '');
+}
+
+// Where a component comes from: its repository as the Catalog card names it, else the host of its page.
+export function sourceLabel(item: { kind: string; sourceUrl?: string | null; source?: Source | null }) {
+  if (item.source?.repositoryUrl) return repositoryLabel(item.source.repositoryUrl);
+  if (item.sourceUrl && /^https?:\/\//i.test(item.sourceUrl)) {
+    try { return new URL(item.sourceUrl).hostname; } catch { /* not a URL */ }
+  }
+  return item.kind === 'package' ? 'Local stack' : 'Local';
 }

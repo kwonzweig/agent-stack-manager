@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { byStars, starsLabel, starsTitle } from "../src/catalog/catalogItem.ts";
+import { byStars, sourceLabel, starsLabel, starsTitle } from "../src/catalog/catalogItem.ts";
 
 const item = (id, stars) => ({ id, type: "component", kind: "skill", name: id, ...(stars === undefined ? {} : { stars, starsCheckedOn: "2026-11-16" }) });
 
@@ -24,4 +24,13 @@ test("a card shows the count short and names the exact count and the day it was 
   assert.equal(starsLabel(318282), "318.3K");
   assert.equal(starsLabel(0), "0");
   assert.equal(starsTitle(item("a", 318282)), "318,282 GitHub stars, read on 2026-11-16");
+});
+
+test("a preset's component names its repository as the Catalog card does", () => {
+  const superpowers = { source: { repositoryUrl: "https://github.com/obra/superpowers", path: "skills/brainstorming" },
+    sourceUrl: "https://github.com/obra/superpowers/blob/HEAD/skills/brainstorming" };
+  assert.equal(sourceLabel({ kind: "skill", ...superpowers }), "obra/superpowers");
+  assert.equal(sourceLabel({ kind: "skill", sourceUrl: "https://example.com/docs/skill" }), "example.com");
+  assert.equal(sourceLabel({ kind: "skill" }), "Local");
+  assert.equal(sourceLabel({ kind: "package", source: null }), "Local stack");
 });

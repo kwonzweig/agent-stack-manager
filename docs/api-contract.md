@@ -52,4 +52,4 @@ Conversion statuses `converted,unconverted`; import statuses `saved,missing,not_
 
 `observe(package, *, root:Path, base_url:str, company_id:str)` -> report after readback.
 
-`import_package(package, *, root:Path, base_url:str, company_id:str)` -> report; CLI only, explicit `--apply` and company required. Native remote source import and paused role; no employees run. Failed components remain in report. Do not silently choose production company.
+`import_package(package, *, root:Path, base_url:str, company_id:str, recheck:bool=False)` -> report; CLI only, explicit `--apply` and company required. `recheck` (`--recheck`) has Paperclip scan again a source whose skill it refused before. Native remote source import and paused role; no employees run. Failed components remain in report. Do not silently choose production company.

@@ -68,6 +68,7 @@ class PaperclipFixture:
         self.requests = []
         self.source_rejected = False
         self.source_private = False
+        self.recheck_accepts = False
         self.sources_unavailable = False
         self.preview_error = None
         self.ignore_instruction_update = False
@@ -102,6 +103,10 @@ class PaperclipFixture:
                              "details": {"code": "skill_source_github_read_failed", "status": 404}}
             self.add_source(with_check=True)
             return 201, {"source": self.sources[0]}
+        if method == "POST" and url == COMPANY_PATH + "/skill-sources/source-1/refresh":
+            if self.recheck_accepts:
+                self.add_source(with_check=True)
+            return 200, {"source": self.sources[0], "imported": [], "updated": [], "unchanged": [], "warnings": []}
         if method == "PATCH" and url == COMPANY_PATH + "/skill-sources/source-1":
             if set(body["selectedPaths"]) != {"skills/other/SKILL.md", PATH}:
                 return 422, {"error": "The previous source selection was lost"}
@@ -191,10 +196,10 @@ class PaperclipTests(unittest.TestCase):
     def readback(self):
         return paperclip.observe(self.package, root=ROOT, base_url=self.url, company_id=COMPANY)
 
-    def apply(self, current=None):
+    def apply(self, current=None, **options):
         current = self.package if current is None else current
         with patch.object(paperclip, "_read_package", return_value=current):
-            return paperclip.import_package(self.package, root=ROOT, base_url=self.url, company_id=COMPANY)
+            return paperclip.import_package(self.package, root=ROOT, base_url=self.url, company_id=COMPANY, **options)
 
     def test_export_preserves_native_instruction_and_remote_source(self):
         report = paperclip.convert(self.package, root=ROOT)
@@ -299,6 +304,31 @@ class PaperclipTests(unittest.TestCase):
         self.assertEqual(skill["status"], "missing")
         self.assertEqual(skill["cause"], "refused")
         self.assertIn(refusal, skill["reason"])
+
+    def refused_source(self):
+        refusal = "SKILL.md: Remote-fetch or dynamic execution pattern is not allowed."
+        self.fixture.sources[:] = [{"id": "source-1", "repositoryUrl": REPO, "trackingRef": REF,
+                                    "lastScanCommit": REF, "revision": 1, "excludedFolders": [],
+                                    "entries": [{"path": PATH, "selection": "selected", "skillId": None,
+                                                 "present": True, "error": refusal}]}]
+        return ("POST", COMPANY_PATH + "/skill-sources/source-1/refresh")
+
+    def test_recheck_has_paperclip_check_a_refused_skill_again(self):
+        recheck = self.refused_source()
+        self.fixture.recheck_accepts = True
+        skill = by_id(self.apply(recheck=True))["check"]["import"]
+        self.assertIn(recheck, [request[:2] for request in self.fixture.requests])
+        self.assertEqual(skill["status"], "saved")
+
+    def test_skill_refused_again_stays_refused(self):
+        self.refused_source()
+        skill = by_id(self.apply(recheck=True))["check"]["import"]
+        self.assertEqual((skill["status"], skill["cause"]), ("missing", "refused"))
+
+    def test_import_without_recheck_leaves_a_stored_refusal_alone(self):
+        recheck = self.refused_source()
+        self.apply()
+        self.assertNotIn(recheck, [request[:2] for request in self.fixture.requests])
 
     def test_private_source_is_reported_as_needing_access(self):
         self.fixture.source_private = True

@@ -217,8 +217,29 @@ class PaperclipTests(unittest.TestCase):
         report = self.convert()
         self.assertEqual(set(report), {"consumer", "items", "summary", "files", "folder"})
         for row in report["items"]:
-            self.assertEqual(set(row), {"id", "name", "kind", "source", "target", "conversion"})
+            self.assertEqual(set(row), {"id", "name", "kind", "supportKind", "source", "target", "conversion"})
         self.assertEqual(report["summary"], {"total": 5, "converted": 2, "unconverted": 3})
+
+    def test_each_row_names_its_support_table_row(self):
+        manifest = "https://github.com/example/plugins/blob/main/plugins/{}/{}/plugin.json"
+        self.package["components"][4]["sourceUrl"] = manifest.format("design", ".claude-plugin")
+        self.package["components"] += [
+            {"id": "codex-tool", "name": "Codex tool", "kind": "plugin",
+             "source": {"repositoryUrl": "https://github.com/example/plugins", "path": "tool/.codex-plugin/plugin.json"}},
+            {"id": "plain", "name": "Plain", "kind": "plugin", "configuration": {"name": "plain", "marketplace": "x"}},
+            {"id": "both", "name": "Both", "kind": "plugin", "file": ".apm/plugins/both/.claude-plugin/plugin.json",
+             "sourceUrl": manifest.format("both", ".codex-plugin")},
+        ]
+        kinds = {row["id"]: row["supportKind"] for row in self.convert()["items"]}
+        self.assertEqual(kinds, {"instruction": "instruction", "check": "skill", "playwright": "mcp", "stop": "hook",
+                                 "design": "claude-code-plugin", "codex-tool": "codex-plugin",
+                                 "plain": None, "both": None})
+
+    def test_a_frontend_design_member_is_a_claude_code_plugin(self):
+        store = Store(ROOT)
+        report = self.convert(store.get("web-app-engineer"))
+        row = next(row for row in report["items"] if row["name"] == "frontend-design")
+        self.assertEqual(row["supportKind"], "claude-code-plugin")
 
     def test_report_names_the_committed_export_folder(self):
         self.assertEqual(self.convert()["folder"], {

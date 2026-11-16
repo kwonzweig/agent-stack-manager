@@ -225,6 +225,62 @@ def _repository_key(url):
     return url.rstrip("/").removesuffix(".git").casefold()
 
 
+# The rows of the support table: the component kinds, with Plugin split by the manifest each app reads.
+SUPPORT_KINDS = ("instruction", "skill", "mcp", "hook", "claude-code-plugin", "codex-plugin")
+# `not-documented`: the app's page on that format says nothing, kept apart from `no`.
+_SUPPORT_VALUES = ("yes", "no", "not-documented")
+
+
+def _https(value):
+    return isinstance(value, str) and urlsplit(value).scheme == "https" and bool(urlsplit(value).hostname)
+
+
+def _consumers(data):
+    """catalog/consumers.json, refused unless every cell is filled and names the page that says so."""
+    data = _mapping(data)
+    if data.get("kinds") != list(SUPPORT_KINDS):
+        raise StoreError(f"catalog/consumers.json kinds must be {', '.join(SUPPORT_KINDS)}.")
+    consumers = data.get("consumers")
+    if not isinstance(consumers, list):
+        raise StoreError("catalog/consumers.json consumers must be a list.")
+    seen = set()
+    for consumer in consumers:
+        consumer = _mapping(consumer)
+        identifier = consumer.get("id")
+        if not isinstance(identifier, str) or not _ID.fullmatch(identifier) or identifier in seen:
+            raise StoreError("Every consumer needs a unique lowercase id.")
+        seen.add(identifier)
+        if not _text(consumer.get("name")).strip() or not isinstance(consumer.get("export"), bool):
+            raise StoreError(f"Consumer {identifier} needs a name and export true or false.")
+        tools = consumer.get("tools", [])
+        if not isinstance(tools, list) or any(not _text(tool).strip() for tool in tools):
+            raise StoreError(f"Consumer {identifier} tools must be a list of names.")
+        if "roles" in consumer:
+            roles = _mapping(consumer["roles"])
+            values = roles.get("values")
+            if (not isinstance(values, list) or not values or any(not isinstance(v, str) or not v for v in values)
+                    or not _https(roles.get("doc"))):
+                raise StoreError(f"Consumer {identifier} roles need values and the doc that lists them.")
+        support = consumer.get("support")
+        if not isinstance(support, dict) or list(support) != list(SUPPORT_KINDS):
+            raise StoreError(f"Consumer {identifier} needs one support cell per kind, in the order of kinds.")
+        for kind, cell in support.items():
+            cell = _mapping(cell)
+            where = f"Support of {kind} by {identifier}"
+            if cell.get("value") not in _SUPPORT_VALUES:
+                raise StoreError(f"{where} must be {', '.join(_SUPPORT_VALUES)}.")
+            if not _https(cell.get("doc")):
+                raise StoreError(f"{where} needs doc, the page that says so.")
+            if cell["value"] == "yes" and not _text(cell.get("name")).strip():
+                raise StoreError(f"{where} needs name, the app's own term.")
+            for field in ("name", "note"):
+                if field in cell and not _text(cell[field]).strip():
+                    raise StoreError(f"{where}: {field} must be text.")
+            if set(cell) - {"value", "name", "note", "doc"}:
+                raise StoreError(f"{where} has fields other than value, name, note and doc.")
+    return data
+
+
 def _repository_stars(rows):
     """Each catalog repository's stars and the day they were read, keyed by URL. Both are must-fill."""
     if not isinstance(rows, list):
@@ -364,6 +420,19 @@ class Store:
                 raise StoreError(f"Catalog item {row['id']} comes from {repository['repositoryUrl']}, "
                                  "which has no repositories row with its stars.")
         return catalog
+
+    def consumers(self):
+        """What each app supports per component kind, from catalog/consumers.json; none without the file."""
+        path = self._checked(self.root / "catalog" / "consumers.json")
+        if not path.is_file():
+            return {"kinds": list(SUPPORT_KINDS), "consumers": []}
+        return _consumers(_read_json(path.read_bytes(), "consumer support data"))
+
+    def _paperclip_roles(self):
+        for consumer in self.consumers()["consumers"]:
+            if consumer["id"] == "paperclip" and "roles" in consumer:
+                return consumer["roles"]["values"]
+        raise StoreError("catalog/consumers.json lists no Paperclip roles to check the role against.")
 
     def _entries(self, identifier, model, files, catalog):
         entries = []
@@ -562,6 +631,8 @@ class Store:
         for field in ("workArea", "usage"):
             if field in payload:
                 labels[field] = self._strings(payload[field], field)
+        if "paperclip" in payload:
+            self._paperclip(labels, payload["paperclip"])
         if "instruction" in payload:
             path = _PRIMARY.format(identifier)
             old = files.get(path, b"")
@@ -598,6 +669,33 @@ class Store:
         from .paperclip import write_exports
         write_exports(self.root)
         return result
+
+    def _paperclip(self, labels, value):
+        """Write x-preset-labels.paperclip from the payload; an empty role or false removes its key."""
+        if not isinstance(value, dict) or set(value) - {"role", "canCreateAgents"}:
+            raise StoreError("paperclip must be an object with role and canCreateAgents.")
+        role = value.get("role")
+        if role is not None and not isinstance(role, str):
+            raise StoreError("paperclip.role must be text.")
+        allowed = value.get("canCreateAgents", False)
+        if not isinstance(allowed, bool):
+            raise StoreError("paperclip.canCreateAgents must be true or false.")
+        stored = labels.get("paperclip")
+        block = dict(stored) if isinstance(stored, dict) else {}
+        # A role already in apm.yml is kept even when it is not Paperclip's, so other edits still save;
+        # the export reports it as needing attention.
+        if role and role != block.get("role") and role not in (roles := self._paperclip_roles()):
+            raise StoreError(f"Role {role} is not one of Paperclip's roles: {', '.join(roles)}.")
+        block.pop("role", None)
+        block.pop("canCreateAgents", None)
+        if role:
+            block["role"] = role
+        if allowed:
+            block["canCreateAgents"] = True
+        if block:
+            labels["paperclip"] = block
+        else:
+            labels.pop("paperclip", None)
 
     @staticmethod
     def _strings(values, field):

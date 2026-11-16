@@ -18,30 +18,38 @@ const filters = [["all", "All"], ["expected", "Left out as expected"], ["attenti
 const columns = ["Type", "Total", "Converted", "Left out as expected", "Needs attention"];
 const countTones = ["", "count-good", "", "count-bad"];
 
-export function PaperclipReport({ id, revision, dirty, heading }: {
-  id: string; revision: string; dirty: boolean; heading: ReactNode;
-}) {
-  const [report, setReport] = useState<Report>();
-  const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState<"" | "convert" | "download">("convert");
-  const [item, setItem] = useState<ReportItem>();
+export interface Conversion { report?: Report; error: string; loading: boolean }
+
+// The conversion runs by itself whenever the preset opens or its saved revision changes.
+export function useConversion(id: string, revision: string): Conversion {
+  const [state, setState] = useState<Conversion>({ error: "", loading: true });
   const request = useRef<AbortController | null>(null);
-  // The conversion runs by itself whenever the preset opens or its saved revision changes.
   useEffect(() => {
     request.current?.abort();
     const controller = new AbortController();
     request.current = controller;
-    setReport(undefined); setError(""); setBusy("convert");
+    setState({ error: "", loading: true });
     api<Report>(packagePath(id, "/paperclip"), { signal: controller.signal })
-      .then(result => { if (!controller.signal.aborted) setReport(result); })
-      .catch(err => { if (!controller.signal.aborted) setError(errorMessage(err)); })
-      .finally(() => { if (!controller.signal.aborted) setBusy(""); });
+      .then(report => { if (!controller.signal.aborted) setState({ report, error: "", loading: false }); })
+      .catch(err => { if (!controller.signal.aborted) setState({ error: errorMessage(err), loading: false }); });
     return () => controller.abort();
   }, [id, revision]);
+  return state;
+}
+
+export function PaperclipReport({ id, conversion, dirty, heading }: {
+  id: string; conversion: Conversion; dirty: boolean; heading: ReactNode;
+}) {
+  const { report } = conversion;
+  const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
+  const [downloadError, setDownloadError] = useState("");
+  const [downloading, setDownloading] = useState(false);
+  const [item, setItem] = useState<ReportItem>();
+  const error = conversion.error || downloadError;
+  const busy = conversion.loading ? "convert" : downloading ? "download" : "";
   async function download() {
-    setError(""); setBusy("download");
-    try { await downloadArchive(id, true); } catch (err) { setError(errorMessage(err)); } finally { setBusy(""); }
+    setDownloadError(""); setDownloading(true);
+    try { await downloadArchive(id, true); } catch (err) { setDownloadError(errorMessage(err)); } finally { setDownloading(false); }
   }
   const all = report?.items ?? [];
   const shown = { all, expected: all.filter(row => outcome(row) === "expected"), attention: all.filter(row => outcome(row) === "attention") };

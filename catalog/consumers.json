@@ -1,4 +1,5 @@
 {
+  "kinds": ["instruction", "skill", "mcp", "hook", "claude-code-plugin", "codex-plugin"],
   "consumers": [
     {
       "id": "paperclip",
@@ -7,6 +8,54 @@
       "roles": {
         "values": ["ceo", "cto", "cmo", "cfo", "security", "engineer", "designer", "pm", "qa", "devops", "researcher", "general"],
         "doc": "https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/constants.ts"
+      },
+      "support": {
+        "instruction": {"value": "yes", "name": "AGENTS.md", "note": "The body of an agent's AGENTS.md is its instruction.", "doc": "https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md"},
+        "skill": {"value": "yes", "name": "Skills", "note": "An import from GitHub omits files over 1 MiB, past 9,990 files or 61 MiB per repository, and files its execution or secret-disclosure checks reject; unsafe content, secrets and invalid paths are rejected.", "doc": "https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/skills-store.md"},
+        "mcp": {"value": "not-documented", "note": "The company package spec has no MCP entry.", "doc": "https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md"},
+        "hook": {"value": "not-documented", "note": "The company package spec has no hook entry.", "doc": "https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md"},
+        "claude-code-plugin": {"value": "not-documented", "note": "The company package spec has no plugin entry.", "doc": "https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md"},
+        "codex-plugin": {"value": "not-documented", "note": "The company package spec has no plugin entry.", "doc": "https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md"}
+      }
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "export": false,
+      "support": {
+        "instruction": {"value": "yes", "name": "CLAUDE.md", "note": "Claude Code can also read a repository's AGENTS.md.", "doc": "https://code.claude.com/docs/en/memory"},
+        "skill": {"value": "yes", "name": "Skills", "doc": "https://code.claude.com/docs/en/skills"},
+        "mcp": {"value": "yes", "name": "MCP servers", "doc": "https://code.claude.com/docs/en/mcp"},
+        "hook": {"value": "yes", "name": "Hooks", "note": "Configured in settings files such as .claude/settings.json.", "doc": "https://code.claude.com/docs/en/hooks"},
+        "claude-code-plugin": {"value": "yes", "name": "Plugins", "note": "A plugin's manifest is .claude-plugin/plugin.json.", "doc": "https://code.claude.com/docs/en/plugins"},
+        "codex-plugin": {"value": "not-documented", "note": "Claude Code's plugin docs name only the .claude-plugin/plugin.json manifest.", "doc": "https://code.claude.com/docs/en/plugins"}
+      }
+    },
+    {
+      "id": "codex",
+      "name": "Codex",
+      "export": false,
+      "support": {
+        "instruction": {"value": "yes", "name": "AGENTS.md", "doc": "https://learn.chatgpt.com/docs/agent-configuration/agents-md"},
+        "skill": {"value": "yes", "name": "Skills", "doc": "https://learn.chatgpt.com/docs/build-skills"},
+        "mcp": {"value": "yes", "name": "MCP servers", "note": "Set in config.toml.", "doc": "https://learn.chatgpt.com/docs/extend/mcp"},
+        "hook": {"value": "yes", "name": "Hooks", "note": "Configured in hooks.json or config.toml under .codex/.", "doc": "https://learn.chatgpt.com/docs/hooks"},
+        "claude-code-plugin": {"value": "not-documented", "note": "OpenAI says it accepts Claude-compatible plugin manifests, but not that Codex loads a plugin whose only manifest is .claude-plugin/plugin.json.", "doc": "https://developers.openai.com/codex/plugins/build/"},
+        "codex-plugin": {"value": "yes", "name": "Plugins", "note": "A root plugin.json, with .codex-plugin/plugin.json still read as a fallback.", "doc": "https://developers.openai.com/codex/plugins/build/"}
+      }
+    },
+    {
+      "id": "ccswitch",
+      "name": "CC Switch",
+      "export": false,
+      "tools": ["Claude Code", "Codex"],
+      "support": {
+        "instruction": {"value": "yes", "name": "Prompts: CLAUDE.md · AGENTS.md", "doc": "https://github.com/farion1231/cc-switch#supported-features-by-tool"},
+        "skill": {"value": "yes", "name": "Skills · Skills", "doc": "https://github.com/farion1231/cc-switch#supported-features-by-tool"},
+        "mcp": {"value": "yes", "name": "MCP · MCP", "doc": "https://github.com/farion1231/cc-switch#supported-features-by-tool"},
+        "hook": {"value": "no", "name": "Not managed", "note": "Switching leaves the hooks the user added as they are.", "doc": "https://github.com/farion1231/cc-switch"},
+        "claude-code-plugin": {"value": "no", "name": "Not managed", "note": "Switching leaves the plugins the user added as they are.", "doc": "https://github.com/farion1231/cc-switch"},
+        "codex-plugin": {"value": "no", "name": "Not managed", "note": "Switching leaves the plugins the user added as they are.", "doc": "https://github.com/farion1231/cc-switch"}
       }
     }
   ]

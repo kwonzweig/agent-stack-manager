@@ -126,6 +126,24 @@ def _skill_source(component, owner, root):
     return _github_source(source.get("repositoryUrl"), source.get("path"), source.get("ref"))
 
 
+_MANIFESTS = {".claude-plugin": "claude-code-plugin", ".codex-plugin": "codex-plugin"}
+
+
+def support_kind(component):
+    """The support table row of a component. A plugin's row is that of the manifest folder in its source,
+    `.claude-plugin/` or `.codex-plugin/`; a plugin with neither, or both, has none."""
+    kind = component["kind"]
+    if kind in ("instruction", "skill", "mcp", "hook"):
+        return kind
+    if kind != "plugin":
+        return None
+    source = component.get("source") if isinstance(component.get("source"), dict) else {}
+    places = [component.get("sourceUrl"), component.get("file"), source.get("path"), source.get("repositoryUrl")]
+    found = {_MANIFESTS[part] for place in places if isinstance(place, str)
+             for part in re.split(r"[/\\]", place) if part in _MANIFESTS}
+    return found.pop() if len(found) == 1 else None
+
+
 def _base_key(stub):
     folder = stub["path"]
     return stub["repo"].split("/")[1] if folder == "." else folder.rsplit("/", 1)[-1]
@@ -174,7 +192,7 @@ def _report(package, root):
         else:
             reason = "The Paperclip exporter has no mapping for this component."
         row = {
-            "id": item_id, "name": component["name"], "kind": kind,
+            "id": item_id, "name": component["name"], "kind": kind, "supportKind": support_kind(component),
             "source": component.get("source") or component.get("sourceUrl") or component.get("file"),
             "target": target,
             "conversion": _status("converted" if target is not None else "unconverted", reason),
@@ -250,7 +268,7 @@ def _role(package, root):
     roles = _roles(root)
     if roles is None or role in roles:
         return role, None
-    row = {"id": "paperclip:role", "name": "Paperclip role", "kind": "other", "source": role, "target": None,
+    row = {"id": "paperclip:role", "name": "Paperclip role", "kind": "other", "supportKind": None, "source": role, "target": None,
            "conversion": _status("unconverted", f"Role {role} is not one of Paperclip's roles, so {DEFAULT_ROLE} "
                                                 f"was written; choose one of {', '.join(roles)}.")}
     return DEFAULT_ROLE, row

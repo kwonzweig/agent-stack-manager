@@ -94,9 +94,14 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(item["source"], {
             "repositoryUrl": "https://github.com/TanStack/router",
             "path": "packages/react-start/skills/react-start/SKILL.md",
-            "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09",
+            "ref": "main",
         })
-        self.assertEqual(item["sourceUrl"], "https://github.com/TanStack/router/blob/0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09/packages/react-start/skills/react-start/SKILL.md")
+        self.assertEqual(item["sourceUrl"], "https://github.com/TanStack/router/blob/main/packages/react-start/skills/react-start/SKILL.md")
+
+    def test_source_without_a_ref_links_the_default_branch(self):
+        from asm_app.store import _source_url
+        source = {"repositoryUrl": "https://github.com/obra/superpowers", "path": "skills/brainstorming/SKILL.md", "ref": ""}
+        self.assertEqual(_source_url(source), "https://github.com/obra/superpowers/blob/HEAD/skills/brainstorming/SKILL.md")
 
     def test_stale_revision_includes_native_changes_outside_yaml(self):
         original = self.create(names=["web-session-start"])
@@ -197,7 +202,7 @@ class StoreTests(unittest.TestCase):
     def test_migrated_fixtures_keep_instructions_and_component_types(self):
         store = Store(ROOT)
         expected = {"web-app-engineer": {"instruction": 1, "skill": 31, "mcp": 1, "hook": 1, "plugin": 1},
-                    "cao": {"instruction": 1, "skill": 5, "hook": 1, "plugin": 1}}
+                    "cao": {"instruction": 1, "skill": 4, "hook": 1, "plugin": 1}}
         for package_id, counts in expected.items():
             with self.subTest(package_id=package_id):
                 package = store.get(package_id)

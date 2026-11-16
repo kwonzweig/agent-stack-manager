@@ -75,24 +75,28 @@ def _ref_key(ref):
 
 
 def _source_id(source):
-    return _repo_key(source["repositoryUrl"]), source["path"], _ref_key(source["ref"])
+    return _repo_key(source["repositoryUrl"]), source["path"], _ref_key(source.get("ref", ""))
 
 
 def _native_source(component):
+    """The remote skill as Paperclip imports it. Without a ref it follows the default branch."""
     source = component.get("source") or {}
     repository = source.get("repositoryUrl")
-    path, ref = source.get("path"), source.get("ref")
+    path, ref = source.get("path"), source.get("ref") or ""
     if not (isinstance(repository, str) and isinstance(path, str) and isinstance(ref, str)):
         return None
     repository = repository.rstrip("/").removesuffix(".git")
-    if not REPOSITORY.fullmatch(repository) or not ref or ref == "HEAD":
+    if not REPOSITORY.fullmatch(repository):
         return None
     path = path.rstrip("/")
     if path.startswith("/") or "\\" in path or any(part in (".", "..") for part in path.split("/")):
         return None
     if path.rsplit("/", 1)[-1].lower() != "skill.md":
         path = f"{path}/SKILL.md" if path else "SKILL.md"
-    return {"repositoryUrl": repository, "path": path, "ref": ref}
+    target = {"repositoryUrl": repository, "path": path}
+    if ref and ref != "HEAD":
+        target["ref"] = ref
+    return target
 
 
 def _mcp_config(component):
@@ -141,7 +145,7 @@ def _report(package, root):
         elif kind == "skill":
             target = _native_source(component)
             reason = ("Included in the remote skill import plan." if target else
-                      "Native import needs a GitHub repository, a skill path and an explicit branch or commit.")
+                      "Native import needs a GitHub repository and a skill path.")
         elif kind == "mcp":
             target, reason = _mcp_config(component)
             if target:
@@ -347,7 +351,7 @@ def _resolve_skills(api, report):
     for row in rows:
         target = row["target"]
         identity = _source_id(target)
-        source = _matching_source(sources, target["repositoryUrl"], target["ref"])
+        source = _matching_source(sources, target["repositoryUrl"], target.get("ref", ""))
         if not source:
             found[identity] = (None, "The remote skill source is not registered in Paperclip.")
             continue
@@ -372,7 +376,7 @@ def _resolve_skills(api, report):
                 (skill_path and skill_path != target["path"])):
             found[identity] = (None, "The saved skill repository or path differs from the package reference.")
             continue
-        ref = target["ref"]
+        ref = target.get("ref", "")
         expected_commit = ref if COMMIT.fullmatch(ref) else source.get("lastScanCommit")
         if (not expected_commit or _ref_key(skill.get("sourceRef") or "") != _ref_key(expected_commit)
                 or not skill.get("key")):
@@ -520,7 +524,7 @@ def _register_sources(api, report, errors, recheck=False):
     targets = defaultdict(dict)
     for row in _sources(report):
         target = row["target"]
-        targets[(target["repositoryUrl"].casefold(), target["ref"])][target["path"]] = target
+        targets[(target["repositoryUrl"].casefold(), target.get("ref", ""))][target["path"]] = target
     if not targets:
         return
     path = api.company + "/skill-sources"

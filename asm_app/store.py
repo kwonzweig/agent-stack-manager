@@ -186,9 +186,10 @@ def _source_url(source):
     location = urlsplit(repo)
     if location.scheme not in {"https", "http"}:
         return None
-    if ref and path and location.hostname in {"github.com", "gitlab.com"}:
+    if path and location.hostname in {"github.com", "gitlab.com"}:
+        # Without a ref the source follows the default branch, which HEAD names on both hosts.
         prefix = "/-/blob/" if location.hostname == "gitlab.com" else "/blob/"
-        return f"{repo}{prefix}{quote(ref, safe='')}/{quote(path)}"
+        return f"{repo}{prefix}{quote(ref or 'HEAD', safe='')}/{quote(path)}"
     return repo
 
 

@@ -5,17 +5,17 @@
       "name": "brainstorming",
       "kind": "skill",
       "description": "Clarify intent and approve a design before implementation.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/brainstorming/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/brainstorming/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/brainstorming"
         }
       }
@@ -25,17 +25,17 @@
       "name": "diagnosing-superpowers",
       "kind": "skill",
       "description": "Diagnose a Superpowers session from its transcript.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/diagnosing-superpowers/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/diagnosing-superpowers/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/diagnosing-superpowers/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/diagnosing-superpowers"
         }
       }
@@ -45,17 +45,17 @@
       "name": "dispatching-parallel-agents",
       "kind": "skill",
       "description": "Coordinate independent agent work.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/dispatching-parallel-agents/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/dispatching-parallel-agents/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/dispatching-parallel-agents/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/dispatching-parallel-agents"
         }
       }
@@ -65,17 +65,17 @@
       "name": "executing-plans",
       "kind": "skill",
       "description": "Execute an implementation plan inline.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/executing-plans/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/executing-plans/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/executing-plans/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/executing-plans"
         }
       }
@@ -85,17 +85,17 @@
       "name": "finishing-a-development-branch",
       "kind": "skill",
       "description": "Choose how to integrate tested branch changes.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/finishing-a-development-branch/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/finishing-a-development-branch/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/finishing-a-development-branch/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/finishing-a-development-branch"
         }
       }
@@ -105,17 +105,17 @@
       "name": "receiving-code-review",
       "kind": "skill",
       "description": "Verify code review feedback before implementing it.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/receiving-code-review/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/receiving-code-review/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/receiving-code-review/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/receiving-code-review"
         }
       }
@@ -125,17 +125,17 @@
       "name": "requesting-code-review",
       "kind": "skill",
       "description": "Review implementation against its requirements.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/requesting-code-review/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/requesting-code-review/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/requesting-code-review/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/requesting-code-review"
         }
       }
@@ -145,17 +145,17 @@
       "name": "subagent-driven-development",
       "kind": "skill",
       "description": "Execute independent implementation tasks with subagents.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/subagent-driven-development/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/subagent-driven-development/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/subagent-driven-development/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/subagent-driven-development"
         }
       }
@@ -165,17 +165,17 @@
       "name": "systematic-debugging",
       "kind": "skill",
       "description": "Identify a root cause before choosing a fix.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/systematic-debugging/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/systematic-debugging/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/systematic-debugging"
         }
       }
@@ -185,17 +185,17 @@
       "name": "test-driven-development",
       "kind": "skill",
       "description": "Write a failing test before implementing a feature or fix.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/test-driven-development/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/test-driven-development/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/test-driven-development"
         }
       }
@@ -205,17 +205,17 @@
       "name": "using-git-worktrees",
       "kind": "skill",
       "description": "Create or reuse an isolated workspace.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/using-git-worktrees/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/using-git-worktrees/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/using-git-worktrees/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/using-git-worktrees"
         }
       }
@@ -225,17 +225,17 @@
       "name": "using-superpowers",
       "kind": "skill",
       "description": "Load relevant workflow skills at the start of a conversation.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/using-superpowers/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/using-superpowers/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/using-superpowers/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/using-superpowers"
         }
       }
@@ -245,17 +245,17 @@
       "name": "verification-before-completion",
       "kind": "skill",
       "description": "Verify evidence before making a completion claim.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/verification-before-completion/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/verification-before-completion/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/verification-before-completion/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/verification-before-completion"
         }
       }
@@ -265,17 +265,17 @@
       "name": "writing-plans",
       "kind": "skill",
       "description": "Write an implementation plan before editing code.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/writing-plans/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/writing-plans/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/writing-plans"
         }
       }
@@ -285,17 +285,17 @@
       "name": "writing-skills",
       "kind": "skill",
       "description": "Author or verify skills before deployment.",
-      "sourceUrl": "https://github.com/obra/superpowers/blob/22f0b463e7a5e579904dd6211a520321035526f7/skills/writing-skills/SKILL.md",
+      "sourceUrl": "https://github.com/obra/superpowers/blob/main/skills/writing-skills/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/obra/superpowers",
         "path": "skills/writing-skills/SKILL.md",
-        "ref": "22f0b463e7a5e579904dd6211a520321035526f7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/obra/superpowers.git",
-          "ref": "22f0b463e7a5e579904dd6211a520321035526f7",
+          "ref": "main",
           "path": "skills/writing-skills"
         }
       }
@@ -305,17 +305,17 @@
       "name": "qa",
       "kind": "skill",
       "description": "Test the site, API or CLI and fix confirmed bugs.",
-      "sourceUrl": "https://github.com/garrytan/gstack/blob/6b033e79fa06477cbec44875209db65a281e0718/qa/SKILL.md",
+      "sourceUrl": "https://github.com/garrytan/gstack/blob/main/qa/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/garrytan/gstack",
         "path": "qa/SKILL.md",
-        "ref": "6b033e79fa06477cbec44875209db65a281e0718"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/garrytan/gstack.git",
-          "ref": "6b033e79fa06477cbec44875209db65a281e0718",
+          "ref": "main",
           "path": "qa"
         }
       }
@@ -325,17 +325,17 @@
       "name": "review",
       "kind": "skill",
       "description": "Review the PR diff for production problems before merge.",
-      "sourceUrl": "https://github.com/garrytan/gstack/blob/6b033e79fa06477cbec44875209db65a281e0718/review/SKILL.md",
+      "sourceUrl": "https://github.com/garrytan/gstack/blob/main/review/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/garrytan/gstack",
         "path": "review/SKILL.md",
-        "ref": "6b033e79fa06477cbec44875209db65a281e0718"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/garrytan/gstack.git",
-          "ref": "6b033e79fa06477cbec44875209db65a281e0718",
+          "ref": "main",
           "path": "review"
         }
       }
@@ -345,17 +345,17 @@
       "name": "design-review",
       "kind": "skill",
       "description": "Audit and fix visual inconsistency, spacing, hierarchy and slow interactions.",
-      "sourceUrl": "https://github.com/garrytan/gstack/blob/6b033e79fa06477cbec44875209db65a281e0718/design-review/SKILL.md",
+      "sourceUrl": "https://github.com/garrytan/gstack/blob/main/design-review/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/garrytan/gstack",
         "path": "design-review/SKILL.md",
-        "ref": "6b033e79fa06477cbec44875209db65a281e0718"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/garrytan/gstack.git",
-          "ref": "6b033e79fa06477cbec44875209db65a281e0718",
+          "ref": "main",
           "path": "design-review"
         }
       }
@@ -365,17 +365,17 @@
       "name": "react-start",
       "kind": "skill",
       "description": "React-specific TanStack Start setup, routes and server functions.",
-      "sourceUrl": "https://github.com/TanStack/router/blob/0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09/packages/react-start/skills/react-start/SKILL.md",
+      "sourceUrl": "https://github.com/TanStack/router/blob/main/packages/react-start/skills/react-start/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/TanStack/router",
         "path": "packages/react-start/skills/react-start/SKILL.md",
-        "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/TanStack/router.git",
-          "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09",
+          "ref": "main",
           "path": "packages/react-start/skills/react-start"
         }
       }
@@ -385,17 +385,17 @@
       "name": "start-core",
       "kind": "skill",
       "description": "Framework setup and routing, with references for server functions, HTTP routes, auth and deployment.",
-      "sourceUrl": "https://github.com/TanStack/router/blob/0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09/packages/start-client-core/skills/start-core/SKILL.md",
+      "sourceUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/TanStack/router",
         "path": "packages/start-client-core/skills/start-core/SKILL.md",
-        "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/TanStack/router.git",
-          "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09",
+          "ref": "main",
           "path": "packages/start-client-core/skills/start-core"
         }
       }
@@ -405,17 +405,17 @@
       "name": "server-functions",
       "kind": "skill",
       "description": "Server functions, input validation, request utilities, errors and form handling.",
-      "sourceUrl": "https://github.com/TanStack/router/blob/0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09/packages/start-client-core/skills/start-core/server-functions/SKILL.md",
+      "sourceUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/server-functions/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/TanStack/router",
         "path": "packages/start-client-core/skills/start-core/server-functions/SKILL.md",
-        "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/TanStack/router.git",
-          "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09",
+          "ref": "main",
           "path": "packages/start-client-core/skills/start-core/server-functions"
         }
       }
@@ -425,17 +425,17 @@
       "name": "server-routes",
       "kind": "skill",
       "description": "Raw HTTP routes, handlers, context and request parsing.",
-      "sourceUrl": "https://github.com/TanStack/router/blob/0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09/packages/start-client-core/skills/start-core/server-routes/SKILL.md",
+      "sourceUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/server-routes/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/TanStack/router",
         "path": "packages/start-client-core/skills/start-core/server-routes/SKILL.md",
-        "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/TanStack/router.git",
-          "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09",
+          "ref": "main",
           "path": "packages/start-client-core/skills/start-core/server-routes"
         }
       }
@@ -445,17 +445,17 @@
       "name": "auth-server-primitives",
       "kind": "skill",
       "description": "Server-side authentication, cookies, sessions, OAuth and CSRF.",
-      "sourceUrl": "https://github.com/TanStack/router/blob/0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09/packages/start-client-core/skills/start-core/auth-server-primitives/SKILL.md",
+      "sourceUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/auth-server-primitives/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/TanStack/router",
         "path": "packages/start-client-core/skills/start-core/auth-server-primitives/SKILL.md",
-        "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/TanStack/router.git",
-          "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09",
+          "ref": "main",
           "path": "packages/start-client-core/skills/start-core/auth-server-primitives"
         }
       }
@@ -465,17 +465,17 @@
       "name": "deployment",
       "kind": "skill",
       "description": "Deployment runtimes, SSR modes, static prerendering and caching.",
-      "sourceUrl": "https://github.com/TanStack/router/blob/0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09/packages/start-client-core/skills/start-core/deployment/SKILL.md",
+      "sourceUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/deployment/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/TanStack/router",
         "path": "packages/start-client-core/skills/start-core/deployment/SKILL.md",
-        "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/TanStack/router.git",
-          "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09",
+          "ref": "main",
           "path": "packages/start-client-core/skills/start-core/deployment"
         }
       }
@@ -485,17 +485,17 @@
       "name": "execution-model",
       "kind": "skill",
       "description": "Isomorphic execution and client/server boundaries.",
-      "sourceUrl": "https://github.com/TanStack/router/blob/0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09/packages/start-client-core/skills/start-core/execution-model/SKILL.md",
+      "sourceUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/execution-model/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/TanStack/router",
         "path": "packages/start-client-core/skills/start-core/execution-model/SKILL.md",
-        "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/TanStack/router.git",
-          "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09",
+          "ref": "main",
           "path": "packages/start-client-core/skills/start-core/execution-model"
         }
       }
@@ -505,17 +505,17 @@
       "name": "middleware",
       "kind": "skill",
       "description": "Request and function middleware and shared context.",
-      "sourceUrl": "https://github.com/TanStack/router/blob/0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09/packages/start-client-core/skills/start-core/middleware/SKILL.md",
+      "sourceUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/middleware/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/TanStack/router",
         "path": "packages/start-client-core/skills/start-core/middleware/SKILL.md",
-        "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/TanStack/router.git",
-          "ref": "0b6d4f3f6b42e704555d9ff0014ddbf8b44f8e09",
+          "ref": "main",
           "path": "packages/start-client-core/skills/start-core/middleware"
         }
       }
@@ -525,17 +525,17 @@
       "name": "shadcn",
       "kind": "skill",
       "description": "Find, add, customize and compose shadcn components and design systems.",
-      "sourceUrl": "https://github.com/shadcn-ui/ui/blob/e62c9435fff729a175f38983dee73b2cb4f6a069/skills/shadcn/SKILL.md",
+      "sourceUrl": "https://github.com/shadcn-ui/ui/blob/main/skills/shadcn/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/shadcn-ui/ui",
         "path": "skills/shadcn/SKILL.md",
-        "ref": "e62c9435fff729a175f38983dee73b2cb4f6a069"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/shadcn-ui/ui.git",
-          "ref": "e62c9435fff729a175f38983dee73b2cb4f6a069",
+          "ref": "main",
           "path": "skills/shadcn"
         }
       }
@@ -545,17 +545,17 @@
       "name": "supabase",
       "kind": "skill",
       "description": "Build with Supabase Database, Auth, Storage, Realtime, client libraries and CLI.",
-      "sourceUrl": "https://github.com/supabase/agent-skills/blob/c9be0e931b7930f7d02126d04774d904c381e7d7/skills/supabase/SKILL.md",
+      "sourceUrl": "https://github.com/supabase/agent-skills/blob/main/skills/supabase/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/supabase/agent-skills",
         "path": "skills/supabase/SKILL.md",
-        "ref": "c9be0e931b7930f7d02126d04774d904c381e7d7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/supabase/agent-skills.git",
-          "ref": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+          "ref": "main",
           "path": "skills/supabase"
         }
       }
@@ -565,17 +565,17 @@
       "name": "supabase-postgres-best-practices",
       "kind": "skill",
       "description": "Author and review Postgres schemas, migrations, queries, indexes and row-level security.",
-      "sourceUrl": "https://github.com/supabase/agent-skills/blob/c9be0e931b7930f7d02126d04774d904c381e7d7/skills/supabase-postgres-best-practices/SKILL.md",
+      "sourceUrl": "https://github.com/supabase/agent-skills/blob/main/skills/supabase-postgres-best-practices/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/supabase/agent-skills",
         "path": "skills/supabase-postgres-best-practices/SKILL.md",
-        "ref": "c9be0e931b7930f7d02126d04774d904c381e7d7"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/supabase/agent-skills.git",
-          "ref": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+          "ref": "main",
           "path": "skills/supabase-postgres-best-practices"
         }
       }
@@ -585,17 +585,17 @@
       "name": "webapp-testing",
       "kind": "skill",
       "description": "Test local web apps with Python Playwright, screenshots and browser logs.",
-      "sourceUrl": "https://github.com/anthropics/skills/blob/2c5958ecac7cee2b583967a2c4981d0f4a75c579/skills/webapp-testing/SKILL.md",
+      "sourceUrl": "https://github.com/anthropics/skills/blob/main/skills/webapp-testing/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/anthropics/skills",
         "path": "skills/webapp-testing/SKILL.md",
-        "ref": "2c5958ecac7cee2b583967a2c4981d0f4a75c579"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/anthropics/skills.git",
-          "ref": "2c5958ecac7cee2b583967a2c4981d0f4a75c579",
+          "ref": "main",
           "path": "skills/webapp-testing"
         }
       }
@@ -605,17 +605,17 @@
       "name": "ai-slop-prevention",
       "kind": "skill",
       "description": "Apply house rules to UI, prose, schemas and code.",
-      "sourceUrl": "https://github.com/kwonzweig/ai-slop-prevention/blob/84293890727baa92444b3608774429368f338cc4/SKILL.md",
+      "sourceUrl": "https://github.com/kwonzweig/ai-slop-prevention/blob/main/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/kwonzweig/ai-slop-prevention",
         "path": "SKILL.md",
-        "ref": "84293890727baa92444b3608774429368f338cc4"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/kwonzweig/ai-slop-prevention.git",
-          "ref": "84293890727baa92444b3608774429368f338cc4"
+          "ref": "main"
         }
       }
     },
@@ -624,18 +624,17 @@
       "name": "frontend-design",
       "kind": "plugin",
       "description": "Anthropic's frontend design plugin for UI implementation.",
-      "sourceUrl": "https://github.com/anthropics/claude-plugins-official/blob/b5b01ac4f889fec0c4c6bb89f27ca7c8574473f6/plugins/frontend-design/.claude-plugin/plugin.json",
+      "sourceUrl": "https://github.com/anthropics/claude-plugins-official/blob/main/plugins/frontend-design/.claude-plugin/plugin.json",
       "source": {
         "repositoryUrl": "https://github.com/anthropics/claude-plugins-official",
         "path": "plugins/frontend-design",
-        "ref": "b5b01ac4f889fec0c4c6bb89f27ca7c8574473f6"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "name": "frontend-design",
-          "marketplace": "claude-plugins-official",
-          "version": "b5b01ac4f889fec0c4c6bb89f27ca7c8574473f6"
+          "marketplace": "claude-plugins-official"
         }
       }
     },
@@ -644,11 +643,11 @@
       "name": "playwright",
       "kind": "mcp",
       "description": "Browser automation tools through MCP.",
-      "sourceUrl": "https://github.com/microsoft/playwright-mcp/blob/v0.0.85/README.md",
+      "sourceUrl": "https://github.com/microsoft/playwright-mcp/blob/main/README.md",
       "source": {
         "repositoryUrl": "https://github.com/microsoft/playwright-mcp",
         "path": "README.md",
-        "ref": "v0.0.85"
+        "ref": "main"
       },
       "apm": {
         "section": "mcp",
@@ -658,7 +657,7 @@
           "transport": "stdio",
           "command": "npx",
           "args": [
-            "@playwright/mcp@0.0.85"
+            "@playwright/mcp@latest"
           ]
         }
       }
@@ -680,38 +679,18 @@
       "name": "agent-operating-standards",
       "kind": "skill",
       "description": "Shared operating rules for authorized action, capability checks, completion reports and maintained guidance. Use at task intake and when these decisions arise during work.",
-      "sourceUrl": "https://github.com/kwonzweig/agent-operating-standards/blob/e12f3eae70da3102dd5eb8fc71907fd705417f0f/skills/agent-operating-standards/SKILL.md",
+      "sourceUrl": "https://github.com/kwonzweig/agent-operating-standards/blob/main/skills/agent-operating-standards/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/kwonzweig/agent-operating-standards",
         "path": "skills/agent-operating-standards/SKILL.md",
-        "ref": "e12f3eae70da3102dd5eb8fc71907fd705417f0f"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/kwonzweig/agent-operating-standards.git",
-          "ref": "e12f3eae70da3102dd5eb8fc71907fd705417f0f",
+          "ref": "main",
           "path": "skills/agent-operating-standards"
-        }
-      }
-    },
-    {
-      "id": "work-process",
-      "name": "work-process",
-      "kind": "skill",
-      "description": "Use when handling a Paperclip Task, coordinating its sources and permissions, delegating work, or accepting an integrated result.",
-      "sourceUrl": "https://github.com/team-harvest-sun/paper-kit/blob/bc53b48d8517381c9ba01615ec526ad001d7ccf5/skills/work-process/SKILL.md",
-      "source": {
-        "repositoryUrl": "https://github.com/team-harvest-sun/paper-kit",
-        "path": "skills/work-process/SKILL.md",
-        "ref": "bc53b48d8517381c9ba01615ec526ad001d7ccf5"
-      },
-      "apm": {
-        "section": "apm",
-        "value": {
-          "git": "https://github.com/team-harvest-sun/paper-kit.git",
-          "ref": "bc53b48d8517381c9ba01615ec526ad001d7ccf5",
-          "path": "skills/work-process"
         }
       }
     },
@@ -720,17 +699,17 @@
       "name": "find-tools",
       "kind": "skill",
       "description": "Find and assess existing internal or external tools, reusable components, libraries, services, workflows, and AI skills. Use when the user asks for tools or skills, or before choosing how to handle unfamiliar, specialized, or recurring work. Skip routine execution with an already chosen tool.",
-      "sourceUrl": "https://github.com/kwonzweig/there-is-a-tool-for-that/blob/7653d1cc78d4a3c7a4dc459e095606b7aaa430c3/skills/find-tools/SKILL.md",
+      "sourceUrl": "https://github.com/kwonzweig/there-is-a-tool-for-that/blob/main/skills/find-tools/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/kwonzweig/there-is-a-tool-for-that",
         "path": "skills/find-tools/SKILL.md",
-        "ref": "7653d1cc78d4a3c7a4dc459e095606b7aaa430c3"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/kwonzweig/there-is-a-tool-for-that.git",
-          "ref": "7653d1cc78d4a3c7a4dc459e095606b7aaa430c3",
+          "ref": "main",
           "path": "skills/find-tools"
         }
       }
@@ -740,17 +719,17 @@
       "name": "find-skills",
       "kind": "skill",
       "description": "Helps users discover and install agent skills when they ask questions like \"how do I do X\", \"find a skill for X\", \"is there a skill that can...\", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.",
-      "sourceUrl": "https://github.com/vercel-labs/skills/blob/14cf84aa922cccc7e5b11fee5af9a01b3750fddf/skills/find-skills/SKILL.md",
+      "sourceUrl": "https://github.com/vercel-labs/skills/blob/main/skills/find-skills/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/vercel-labs/skills",
         "path": "skills/find-skills/SKILL.md",
-        "ref": "14cf84aa922cccc7e5b11fee5af9a01b3750fddf"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/vercel-labs/skills.git",
-          "ref": "14cf84aa922cccc7e5b11fee5af9a01b3750fddf",
+          "ref": "main",
           "path": "skills/find-skills"
         }
       }
@@ -760,17 +739,17 @@
       "name": "humanizer",
       "kind": "skill",
       "description": "Rewrite AI-sounding text so it reads like the writer without changing what it says.\nUse when editing or reviewing prose for AI tells: not-X-but-Y contrasts, one-line\nclosers, staged openers, forced triads, dashes everywhere, inflated claims, sales\nlanguage, stock AI words, bold labels, or filler. Based on Wikipedia's \"Signs of AI writing.\"\n",
-      "sourceUrl": "https://github.com/blader/humanizer/blob/225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8/SKILL.md",
+      "sourceUrl": "https://github.com/blader/humanizer/blob/main/SKILL.md",
       "source": {
         "repositoryUrl": "https://github.com/blader/humanizer",
         "path": "SKILL.md",
-        "ref": "225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "git": "https://github.com/blader/humanizer.git",
-          "ref": "225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8"
+          "ref": "main"
         }
       }
     },
@@ -779,18 +758,17 @@
       "name": "session-report",
       "kind": "plugin",
       "description": "Anthropic's on-demand report for Claude Code session and subagent usage.",
-      "sourceUrl": "https://github.com/anthropics/claude-plugins-official/blob/b5b01ac4f889fec0c4c6bb89f27ca7c8574473f6/plugins/session-report/.claude-plugin/plugin.json",
+      "sourceUrl": "https://github.com/anthropics/claude-plugins-official/blob/main/plugins/session-report/.claude-plugin/plugin.json",
       "source": {
         "repositoryUrl": "https://github.com/anthropics/claude-plugins-official",
         "path": "plugins/session-report",
-        "ref": "b5b01ac4f889fec0c4c6bb89f27ca7c8574473f6"
+        "ref": "main"
       },
       "apm": {
         "section": "apm",
         "value": {
           "name": "session-report",
-          "marketplace": "claude-plugins-official",
-          "version": "b5b01ac4f889fec0c4c6bb89f27ca7c8574473f6"
+          "marketplace": "claude-plugins-official"
         }
       }
     },

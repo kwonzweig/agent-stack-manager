@@ -1,6 +1,6 @@
 # Data files and local API
 
-For agents and people who edit ASM data. ASM reads and writes only these files; no route contacts a consumer.
+For agents and people who edit ASM data. ASM's data lives in these files; no route contacts a consumer.
 
 ## Files
 
@@ -27,7 +27,7 @@ All JSON errors are `{ "error": "message" }`. Paths use URL-encoded package ids.
 - `consumers()` -> `catalog/consumers.json` (below), or no consumers when the file is missing.
 - `comments(id,component_id)` -> list
 - `add_comment(id,component_id,payload)` -> comment
-- `lock(id,update=False)` -> `{ok,output}`; bounded fixed APM invocation, no shell.
+- `lock(id,update=False)` -> `{ok,output}`; bounded fixed APM invocation, no shell. It runs `apm lock` in `packages/<id>/`, which writes `apm.lock.yaml` there.
 
 PackageSummary: `id,title,description,kind` (`preset` or `stack`), `icon` (a lowercase icon name such as `rocket`, or empty when none was chosen), `version,workArea:[],usage:[],componentCount`.
 
@@ -66,7 +66,7 @@ The files, named by the package id:
 
 - `COMPANY.md`: `schema: agentcompanies/v1`, `kind: company`, `slug`, `name`, `description`.
 - `agents/<id>/AGENTS.md`: `kind: agent`, `name`, `title`, `slug`, `role` and `skills`, the stub keys in member order; no `reportsTo`. The body is the Instruction.
-- `skills/<key>/SKILL.md`: one stub per skill with `key`, `name`, `description` and `metadata.sources[0] = {kind: github-dir, repo, path, trackingRef, url}`, no commit. `path` is the skill's folder, `.` for a skill at the repository root. It is not yet confirmed whether Paperclip accepts `.` for the root. `trackingRef` is the member's APM `ref`. A skill the preset holds itself is read from this repository, the `project.urls.Repository` of `pyproject.toml`, at `packages/<id>/.apm/skills/<name>` on `main`; its stub takes `name` and `description` from that `SKILL.md`'s frontmatter, or the folder name when it has none. The key is the folder name, or the repository name for a root skill; when two skills share it, both take `<repo>-<name>`.
+- `skills/<key>/SKILL.md`: one stub per skill with `key`, `name`, `description` and `metadata.sources[0] = {kind: github-dir, repo, path, trackingRef, url}`, no commit. `path` is the skill's folder, `.` for a skill at the repository root. Paperclip does not read the stubs; [paperclip.md](paperclip.md) turns them into skill sources. `trackingRef` is the member's APM `ref`. A skill the preset holds itself is read from this repository, the `project.urls.Repository` of `pyproject.toml`, at `packages/<id>/.apm/skills/<name>` on `main`; its stub takes `name` and `description` from that `SKILL.md`'s frontmatter, or the folder name when it has none. The key is the folder name, or the repository name for a root skill; when two skills share it, both take `<repo>-<name>`.
 - `.paperclip.yaml`: `schemaVersion: 7` and, under `agents.<id>`, `role`, `permissions.canCreateAgents`, `runtime.heartbeat.enabled: false` and `metadata.agentStackManagerPackageId` and `metadata.agentStackManagerRevision`, a SHA-256 over the preset's files and those of its nested stacks with LF line endings (`store._export_digest`). No adapter and no budget.
 
 `role` comes from `x-preset-labels.paperclip.role`, `general` when unset; it must be one of the Paperclip `roles` in `catalog/consumers.json`, which cite Paperclip's list. `canCreateAgents` is true only where the labels set it.

@@ -10,11 +10,11 @@ Agent stacks change fast. Following them needs one central place to keep and org
 
 It works in three units:
 
-- **Agent config component**: one Instruction, Skill, MCP server, Hook or Plugin, named by its source repository.
+- **Agent config component**: one Instruction, Skill, MCP server, Hook or Plugin, with its source repository when it comes from one.
 - **Stack**: components that are used together.
 - **Agent preset**: one role. Its Instruction, its components and the stacks it includes, more than a list of skills.
 
-Every stack and preset is a [Microsoft APM](https://github.com/microsoft/apm) package in `packages/`, the common language. ASM keeps its own labels (title, icon, Paperclip role) under `x-preset-labels` in `apm.yml`; there is no second preset format.
+Every stack and preset is a [Microsoft APM](https://github.com/microsoft/apm) package in `packages/`, the common language. ASM keeps its own labels (title, icon, Paperclip role) under `x-preset-labels` in `apm.yml`; there is no second preset format. The aim is that ASM exports each preset from APM into the formats apps such as Paperclip and CC Switch read, and imports their formats back into APM.
 
 ## What each app supports
 
@@ -53,6 +53,7 @@ The two hooks only echo a line, and the two plugins are there to show how an exp
 - Not connected to any app: it reads nothing from one, imports nothing into one, and does not know whether an import succeeded.
 - Not an agent runner: no button starts an agent or research.
 - Not a version pin: a component from a repository follows its branch, never a commit, so an app that tracks the branch gets its updates.
+- Not a workaround: it does not make an app take what the app's docs do not support.
 - Not hosted: the dashboard runs on your machine, on loopback.
 
 ## Run
@@ -70,7 +71,7 @@ Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome (`--port` picks another).
 
 ## APM lock
 
-The optional APM CLI resolves a package's dependencies into `apm.lock.yaml` without deploying anything into an app's folders:
+The optional APM CLI resolves a package's dependencies into `apm.lock.yaml` without deploying anything into an app's folders. The lockfile records the commit each branch [resolved to](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/lockfile-spec.md) when it ran; the presets and the Paperclip exports keep naming branches.
 
 ```sh
 python -m pip install -e '.[apm]'

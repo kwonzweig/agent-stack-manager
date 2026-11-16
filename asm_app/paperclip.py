@@ -253,6 +253,26 @@ def _role(package, root):
     return DEFAULT_ROLE, row
 
 
+def _skill_labels(component, key):
+    """A stub's name and description: the catalog row's, or for a preset's own skill its SKILL.md's."""
+    name = component["name"]
+    description = (component.get("description") or "").strip()
+    if component.get("file"):
+        front = {}
+        text = component.get("configuration")
+        lines = text.replace("\r\n", "\n").split("\n") if isinstance(text, str) else []
+        if lines and lines[0] == "---" and "---" in lines[1:]:
+            try:
+                front = yaml.safe_load("\n".join(lines[1:lines.index("---", 1)]))
+            except yaml.YAMLError:
+                front = {}
+            front = front if isinstance(front, dict) else {}
+        own = lambda field: front[field].strip() if isinstance(front.get(field), str) else ""
+        name = own("name") or PurePosixPath(component["file"]).parent.name or key
+        description = description or own("description")
+    return name, description
+
+
 def _files(package, role, stubs, bundle):
     from .store import _export_digest
 
@@ -274,9 +294,10 @@ def _files(package, role, stubs, bundle):
         ".paperclip.yaml": _yaml({"schemaVersion": 7, "agents": {slug: config}}),
     }
     for key, (stub, component) in stubs.items():
-        front = {"key": key, "name": component["name"]}
-        if (component.get("description") or "").strip():
-            front["description"] = component["description"].strip()
+        name, description = _skill_labels(component, key)
+        front = {"key": key, "name": name}
+        if description:
+            front["description"] = description
         front["metadata"] = {"sources": [stub]}
         files[f"skills/{key}/SKILL.md"] = _frontmatter(front, f"Imported from {stub['url']}.")
     return files

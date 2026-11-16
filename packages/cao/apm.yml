@@ -24,4 +24,4 @@ dependencies:
 x-preset-labels:
   title: CAO
   paperclip:
-    role: general
+    role: ceo

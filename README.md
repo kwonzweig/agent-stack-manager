@@ -26,7 +26,7 @@ On macOS/Linux, activate with `source .venv/bin/activate` instead. Open [localho
 
 The CAO preset holds its Instruction, four skills (`agent-operating-standards`, `find-tools`, `find-skills`, `humanizer`), the `cao-stop` hook and the `session-report` plugin. The Web app engineer preset holds its Instruction, 31 skills, the Playwright MCP server, the `web-session-start` hook and the `frontend-design` plugin. The two hooks only echo a line, and the two plugins are not there for real use: both pairs test how hooks and plugins convert.
 
-`x-preset-labels` stores display metadata and the Paperclip role (`general` when unset) and whether the agent may create agents. APM dependencies store membership; there is no second ASM preset format. The component catalog is an index of source references and creation templates, not a second list of each preset's components.
+`x-preset-labels` stores display metadata and the Paperclip role (`general` when unset; CAO sets `ceo`) and whether the agent may create agents. APM dependencies store membership; there is no second ASM preset format. The component catalog is an index of source references and creation templates, not a second list of each preset's components.
 
 ## Consumers
 
@@ -37,7 +37,7 @@ The CAO preset holds its Instruction, four skills (`agent-operating-standards`, 
 | Claude Code | Placeholder |
 | CC Switch | Placeholder |
 
-The Paperclip export writes the Instruction as the agent's `AGENTS.md` and one skill stub per GitHub skill that follows the skill's branch. Paperclip's company package has no entry for MCP servers, hooks or plugins: MCP is set in the agent's adapter after import, and hooks and plugins are left out. Each is reported with that cause, and anything else that does not convert is reported as needing attention.
+The Paperclip export writes the Instruction as the agent's `AGENTS.md` and one skill stub per GitHub skill that follows the skill's branch. Paperclip's [company package spec](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) has no entry for MCP servers, hooks or plugins. The export writes no adapter, and Paperclip's docs do not say how an imported agent gets an MCP server, so the report asks for MCP to be set in the agent's adapter after import; hooks and plugins are left out. Each is reported with that cause, and anything else that does not convert is reported as needing attention.
 
 Export without touching a consumer:
 

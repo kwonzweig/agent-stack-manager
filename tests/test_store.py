@@ -201,7 +201,7 @@ class StoreTests(unittest.TestCase):
 
     def test_paperclip_labels_are_read_from_preset_labels(self):
         store = Store(ROOT)
-        self.assertEqual(store.get("cao")["paperclip"], {"role": "general", "canCreateAgents": False})
+        self.assertEqual(store.get("cao")["paperclip"], {"role": "ceo", "canCreateAgents": False})
         self.assertEqual(store.get("web-app-engineer")["paperclip"], {"role": None, "canCreateAgents": False})
 
     def test_save_keeps_the_paperclip_labels(self):

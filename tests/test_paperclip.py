@@ -280,7 +280,7 @@ class RepositoryTests(unittest.TestCase):
         report = paperclip.convert(Store(ROOT).get("cao"), root=ROOT)
         front, _, extension = agent(report, "cao")
         self.assertEqual(front["skills"], ["agent-operating-standards", "find-tools", "find-skills", "humanizer"])
-        self.assertEqual(extension["role"], "general")
+        self.assertEqual(extension["role"], "ceo")
         source = frontmatter(written(report)["skills/humanizer/SKILL.md"])[0]["metadata"]["sources"][0]
         self.assertEqual((source["path"], source["url"]), (".", "https://github.com/blader/humanizer/tree/main"))
         self.assertNotIn("engineer", written(report)[".paperclip.yaml"])
@@ -298,6 +298,16 @@ class RepositoryTests(unittest.TestCase):
             "kind": "github-dir", "repo": "example/stack-repo", "path": "packages/demo/.apm/skills/hire",
             "trackingRef": "main", "url": "https://github.com/example/stack-repo/tree/main/packages/demo/.apm/skills/hire"}])
         self.assertEqual(agent(report, "demo")[0]["skills"], ["hire"])
+        self.assertEqual((stub["name"], stub["description"]), ("hire", "Hire."))
+
+    def test_own_skill_without_a_frontmatter_name_is_named_after_its_folder(self):
+        (self.root / "pyproject.toml").write_text(
+            '[project]\nname = "x"\n\n[project.urls]\nRepository = "https://github.com/example/stack-repo"\n',
+            encoding="utf-8")
+        self.package("demo", "name: demo\n", {".apm/skills/hire-well/SKILL.md": "Steps.\n"})
+        stub, _ = frontmatter(written(self.convert("demo"))["skills/hire-well/SKILL.md"])
+        self.assertEqual(stub["name"], "hire-well")
+        self.assertNotIn("description", stub)
 
     def test_own_skill_without_a_repository_url_needs_attention(self):
         self.package("demo", "name: demo\n", {".apm/skills/hire/SKILL.md": "---\nname: hire\n---\n"})

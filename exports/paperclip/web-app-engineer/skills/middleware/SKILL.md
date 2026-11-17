@@ -1,7 +1,10 @@
 ---
 key: middleware
 name: middleware
-description: Request and function middleware and shared context.
+description: createMiddleware, request middleware (.server only), server function
+  middleware (.client + .server), context passing via next({ context }), sendContext
+  for client-server transfer, global middleware via createStart in src/start.ts, middleware
+  factories, method order enforcement, fetch override precedence.
 metadata:
   sources:
     - kind: github-dir

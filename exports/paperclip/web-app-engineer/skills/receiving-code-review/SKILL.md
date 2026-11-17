@@ -1,7 +1,9 @@
 ---
 key: receiving-code-review
 name: receiving-code-review
-description: Verify code review feedback before implementing it.
+description: Use when receiving code review feedback, before implementing suggestions,
+  especially if feedback seems unclear or technically questionable - requires technical
+  rigor and verification, not performative agreement or blind implementation
 metadata:
   sources:
     - kind: github-dir

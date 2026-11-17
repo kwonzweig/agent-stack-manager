@@ -121,6 +121,18 @@ export function App() {
     setRoute(next);
   }
   const openPreset = (id: string) => navigate({ view: "presets", id });
+  // A Catalog item's page has its own address. Back returns to the Catalog as it was left,
+  // through history when the Catalog opened it, so the browser's Back button does the same.
+  const catalogItem = route.view === "catalog" && route.item ? catalog.data.items.find(item => item.id === route.item) : undefined;
+  function openCatalogItem(id: string) {
+    setOverlay(undefined);
+    history.pushState({ fromCatalog: true }, "", hrefFor({ view: "catalog", item: id }));
+    setRoute({ view: "catalog", item: id });
+  }
+  function closeCatalogItem() {
+    if (history.state?.fromCatalog) history.back();
+    else navigate({ view: "catalog" });
+  }
   const createPreset = () => setOverlay({ type: "create", selected: [], kind: "preset" });
   const pickerItems = catalog.data.items.filter(item => item.type !== "preset").map(catalogMember)
     .filter(item => item.id !== "package:" + routeId && item.id !== "instruction");
@@ -186,11 +198,11 @@ export function App() {
     <Sidebar route={route} presets={presets.data.presets} onNavigate={navigate}
       onCreate={createPreset} theme={theme}
       onTheme={() => setTheme(value => value === "light" ? "dark" : "light")} />
-    <main ref={main} inert={overlay?.type === "component"} className="min-h-0 min-w-0 flex-1 overflow-y-auto" id="main">
+    <main ref={main} inert={overlay?.type === "component" || !!catalogItem} className="min-h-0 min-w-0 flex-1 overflow-y-auto" id="main">
       {presets.error && <div className="mx-auto max-w-[1240px] px-5 pt-5"><ErrorBox message={presets.error} onRetry={presets.refresh} /></div>}
       {route.view === "catalog" ? <CatalogPage
         items={catalog.data.items} presets={presets.data.presets}
-        onOpenItem={item => setOverlay({ type: "component", item: catalogMember(item) })}
+        onOpenItem={item => openCatalogItem(item.id)}
         onOpenPreset={openPreset}
         onCreatePreset={(selected, kind = "preset") => setOverlay({ type: "create", selected, kind })}
         onAdd={addToPackage} isLoading={catalog.loading} error={catalog.error} onRetry={catalog.refresh}
@@ -229,7 +241,9 @@ export function App() {
       existing={new Set(drafts[overlay.id].members.map(item => item.id))} packageKind={drafts[overlay.id].kind} onClose={closeOverlay}
       onAdd={items => { addMembers(overlay.id, items); closeOverlay(); }}
       error={catalog.error} loading={catalog.loading} onRetry={catalog.refresh} />}
+    {catalogItem && <ComponentDetails item={catalogMember(catalogItem)} backLabel="Catalog" onClose={closeCatalogItem} />}
     {overlay?.type === "component" && <ComponentDetails item={overlay.item} onClose={closeOverlay}
+      backLabel={overlay.id ? drafts[overlay.id].title : "Catalog"}
       presetId={overlay.id && drafts[overlay.id].original.components.some(item => item.id === overlay.item.id) ? overlay.id : undefined}
       instruction={overlay.id ? drafts[overlay.id].instruction : undefined}
       onInstruction={overlay.id && overlay.item.id === "instruction" ? instruction =>

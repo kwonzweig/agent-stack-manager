@@ -336,6 +336,28 @@ class StoreTests(unittest.TestCase):
         with self.assertRaisesRegex(StoreError, "stars"):
             self.store.catalog()
 
+    def test_catalog_items_carry_what_they_copy_from_their_source(self):
+        item = self.catalog["brainstorming"]
+        self.assertTrue(item["descriptionUrl"].startswith("https://github.com/obra/superpowers/blob/"))
+        self.assertTrue(item["descriptionUrl"].endswith("/skills/brainstorming/SKILL.md"))
+        for field in ("descriptionCheckedOn", "installsCheckedOn"):
+            self.assertRegex(item[field], r"^\d{4}-\d{2}-\d{2}$")
+        self.assertIs(type(item["installs"]), int)
+        # A hook defined in the catalog is its own source.
+        self.assertNotIn("descriptionCheckedOn", self.catalog["web-session-start"])
+
+    def test_catalog_refuses_a_sourced_item_without_the_day_its_copies_were_read(self):
+        bad_changes = ({"description": None}, {"descriptionUrl": "SKILL.md"}, {"descriptionCheckedOn": None},
+                       {"descriptionCheckedOn": "yesterday"}, {"installs": -1}, {"installs": "432k"},
+                       {"installsCheckedOn": "2026-13-01"})
+        for bad in bad_changes:
+            with self.subTest(change=bad):
+                self.write_catalog(lambda data: next(
+                    row for row in data["items"] if row["name"] == "brainstorming").update(bad))
+                with self.assertRaisesRegex(StoreError, "brainstorming"):
+                    self.store.catalog()
+                self.setUp()
+
     def test_catalog_refuses_a_component_whose_repository_has_no_row(self):
         self.write_catalog(lambda data: data.update(repositories=[
             row for row in data["repositories"] if row["url"] != "https://github.com/obra/superpowers"]))

@@ -1,7 +1,8 @@
 ---
 key: writing-skills
 name: writing-skills
-description: Author or verify skills before deployment.
+description: Use when creating new skills, editing existing skills, or verifying skills
+  work before deployment
 metadata:
   sources:
     - kind: github-dir

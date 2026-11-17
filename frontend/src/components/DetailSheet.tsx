@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 
 
@@ -10,6 +10,8 @@ interface DetailSheetProps {
   title: ReactNode;
   description?: ReactNode;
   meta?: ReactNode;
+  /** The page the back button returns to, such as "Catalog". */
+  backLabel: string;
   onClose: () => void;
   children: ReactNode;
 }
@@ -19,6 +21,7 @@ export function DetailSheet({
   title,
   description,
   meta,
+  backLabel,
   onClose,
   children,
 }: DetailSheetProps) {
@@ -54,16 +57,18 @@ export function DetailSheet({
         onClick={onClose}
       />
       <div role="dialog" aria-label={typeof title === "string" ? title : "Component details"} className="absolute inset-0 z-10 flex min-h-0 flex-col overflow-hidden border-l border-border-subtle bg-bg-secondary">
-        <button
-          onClick={onClose}
-          aria-label="Close details"
-          autoFocus
-          className="absolute top-4 right-5 z-10 shrink-0 rounded-md p-1.5 text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary"
-        >
-          <X className="h-4 w-4" />
-        </button>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-6 scrollbar-hide">
-          <h2 className="mb-3 min-w-0 pr-10 text-[28px] font-semibold leading-tight tracking-tight text-primary">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-6 scrollbar-hide">
+          <button
+            type="button"
+            onClick={onClose}
+            autoFocus
+            aria-label={"Back to " + backLabel}
+            title={"Back to " + backLabel}
+            className="-ml-2 mb-3 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium text-muted transition-colors hover:bg-surface-hover hover:text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {backLabel}
+          </button>
+          <h2 className="mb-3 min-w-0 text-[28px] font-semibold leading-tight tracking-tight text-primary">
             <span className="block">{title}</span>
           </h2>
           {description ? (

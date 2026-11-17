@@ -1,7 +1,9 @@
 ---
 key: react-start
 name: react-start
-description: React-specific TanStack Start setup, routes and server functions.
+description: 'React bindings for TanStack Start: createStart, StartClient, StartServer,
+  React-specific imports, re-exports from @tanstack/react-router, full project setup
+  with React, useServerFn hook.'
 metadata:
   sources:
     - kind: github-dir

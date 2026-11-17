@@ -1,7 +1,8 @@
 ---
 key: writing-plans
 name: writing-plans
-description: Write an implementation plan before editing code.
+description: Use when you have a spec or requirements for a multi-step task, before
+  touching code
 metadata:
   sources:
     - kind: github-dir

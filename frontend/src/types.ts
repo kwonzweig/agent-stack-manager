@@ -16,7 +16,19 @@ export interface PackageSummary {
   usage: string[];
   componentCount: number;
 }
-export interface CatalogItem {
+/** What the catalog copies from an item's source, each with the day it was read (scripts/refresh_catalog.py). */
+export interface SourceCopies {
+  /** GitHub stars of the source repository; absent without a repository. */
+  stars?: number;
+  starsCheckedOn?: string;
+  /** The page the description was copied from. */
+  descriptionUrl?: string;
+  descriptionCheckedOn?: string;
+  /** skills.sh installs; absent when skills.sh does not list the skill. */
+  installs?: number;
+  installsCheckedOn?: string;
+}
+export interface CatalogItem extends SourceCopies {
   id: string;
   type: "component" | PackageKind;
   kind: Kind | PackageKind;
@@ -27,15 +39,13 @@ export interface CatalogItem {
   source?: Source | null;
   configuration?: unknown;
   componentCount?: number;
-  /** GitHub stars of the source repository and the day they were read; absent without a repository. */
-  stars?: number;
-  starsCheckedOn?: string;
   version?: string;
   packageId?: string;
   workArea?: string[];
   usage?: string[];
 }
-export interface Component {
+/** A preset member, or a Catalog item with its source copies when opened from the Catalog. */
+export interface Component extends SourceCopies {
   id: string;
   name: string;
   kind: Kind;

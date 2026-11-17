@@ -106,7 +106,7 @@ export function PaperclipReport({ id, conversion, dirty, heading }: {
         </div> : <p className="empty">{{ all: "No conversion results.", expected: "No components left out as expected.", attention: "No components need attention." }[filter]}</p>}
       </section>
     </>}
-    {item && <DetailSheet open title={item.name} meta={<KindBadge kind={item.kind} />} onClose={() => setItem(undefined)}>
+    {item && <DetailSheet open title={item.name} meta={<KindBadge kind={item.kind} />} backLabel="Paperclip export" onClose={() => setItem(undefined)}>
       <div className="asm-preset space-y-4">
         <section className="conversion-detail">
           <h3>Conversion<Status result={item.conversion} /></h3>

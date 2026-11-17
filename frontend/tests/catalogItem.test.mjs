@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { byStars, filterCatalogFacets, sourceLabel, starsLabel, starsTitle } from "../src/catalog/catalogItem.ts";
+import { byStars, countLabel, filterCatalogFacets, installsTitle, sourceLabel, starsTitle } from "../src/catalog/catalogItem.ts";
 
 const item = (id, stars) => ({ id, type: "component", kind: "skill", name: id, ...(stars === undefined ? {} : { stars, starsCheckedOn: "2026-11-16" }) });
 
@@ -21,9 +21,10 @@ test("the Stars order leaves the given list as it was", () => {
 });
 
 test("a card shows the count short and names the exact count and the day it was read", () => {
-  assert.equal(starsLabel(318282), "318.3K");
-  assert.equal(starsLabel(0), "0");
+  assert.equal(countLabel(318282), "318.3K");
+  assert.equal(countLabel(0), "0");
   assert.equal(starsTitle(item("a", 318282)), "318,282 GitHub stars, read on 2026-11-16");
+  assert.equal(installsTitle({ installs: 432022, installsCheckedOn: "2026-11-16" }), "432,022 skills.sh installs, read on 2026-11-16");
 });
 
 test("a preset's component names its repository as the Catalog card does", () => {

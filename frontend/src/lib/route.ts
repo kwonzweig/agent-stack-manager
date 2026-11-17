@@ -3,7 +3,10 @@ import type { Route } from "../components/Sidebar";
 // Reads the location hash that hrefFor writes.
 export function readRoute(hash: string): Route {
   const params = new URLSearchParams(hash);
-  if (params.get("view") !== "presets") return { view: "catalog" };
+  if (params.get("view") !== "presets") {
+    const item = params.get("item");
+    return item ? { view: "catalog", item } : { view: "catalog" };
+  }
   const id = params.get("preset") || undefined;
   const tab = params.get("tab");
   if (tab === "source") return { view: "presets", id, tab };

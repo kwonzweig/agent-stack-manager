@@ -3,7 +3,7 @@ import { ExternalLink, FileText, MessageSquare, Pencil } from "lucide-react";
 import { api, errorMessage, packagePath, externalUrl } from "../api";
 import type { Comment, Component } from "../types";
 import { DetailSheet } from "./DetailSheet";
-import { KindBadge } from "./ComponentUI";
+import ItemProperties from "../catalog/ItemProperties";
 import { sourceLabel } from "../catalog/catalogItem";
 const SkillMarkdown = lazy(() => import("./SkillMarkdown").then(module => ({ default: module.SkillMarkdown })));
 
@@ -72,14 +72,27 @@ function Comments({ presetId, componentId }: { presetId: string; componentId: st
   </section>;
 }
 
-export function ComponentDetails({ item, presetId, onClose, instruction, onInstruction, onBrowseStack }: {
-  item: Component; presetId?: string; onClose: () => void;
+// Where a Catalog description was copied from: the file's name, or the repository whose GitHub description it is.
+function copiedFrom(url: URL) {
+  const [owner, repository, blob, ...rest] = url.pathname.split("/").filter(Boolean);
+  return blob === "blob" ? rest[rest.length - 1] : `the GitHub description of ${owner}/${repository}`;
+}
+
+export function ComponentDetails({ item, presetId, backLabel, onClose, instruction, onInstruction, onBrowseStack }: {
+  item: Component; presetId?: string; backLabel: string; onClose: () => void;
   instruction?: string; onInstruction?: (value: string) => void; onBrowseStack?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const sourceUrl = externalUrl(item.sourceUrl || item.source?.repositoryUrl);
-  return <DetailSheet open title={item.name} description={item.id !== "instruction" ? item.description : undefined}
-    meta={<KindBadge kind={item.kind} />} onClose={onClose}>
+  const copied = item.descriptionCheckedOn ? externalUrl(item.descriptionUrl) : undefined;
+  return <DetailSheet open title={item.name} backLabel={backLabel} onClose={onClose}
+    description={item.id !== "instruction" && item.description ? <>
+      <p>{item.description}</p>
+      {copied && <p className="mt-1 text-[12px] leading-5 text-muted">
+        Copied word for word from <a href={copied.href} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-secondary">{copiedFrom(copied)}</a>, read on {item.descriptionCheckedOn}.
+      </p>}
+    </> : undefined}
+    meta={<div className="flex flex-wrap items-center gap-2"><ItemProperties item={item} repository="link" /></div>}>
     <div className="asm-preset mx-auto max-w-[1240px] space-y-5">
       {item.id === "instruction" && onInstruction ? <section aria-label="Instruction">
         <div className="section-heading">

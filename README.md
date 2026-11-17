@@ -102,7 +102,7 @@ npm test
 npm run build
 ```
 
-Get Node.js from [nodejs.org/download](https://nodejs.org/en/download); a Linux distribution's own package may be older. The data files and the local API are in [docs/api-contract.md](docs/api-contract.md); reused frontend code and its licences are in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md).
+Get Node.js from [nodejs.org/download](https://nodejs.org/en/download); a Linux distribution's own package may be older. The data files and the local API are in [docs/api-contract.md](docs/api-contract.md); the dashboard's design rules are in [instructions/design-policy.md](instructions/design-policy.md); reused frontend code and its licences are in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md). `python scripts/refresh_catalog.py` rereads what the Catalog copies from each source.
 
 ## Contributing
 

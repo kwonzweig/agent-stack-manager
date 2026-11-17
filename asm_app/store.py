@@ -292,14 +292,28 @@ def _repository_stars(rows):
         stars, checked = row.get("stars"), row.get("starsCheckedOn")
         if type(stars) is not int or stars < 0:
             raise StoreError(f"Catalog repository {url} needs stars, a count read from its page.")
-        try:
-            valid = isinstance(checked, str) and date.fromisoformat(checked).isoformat() == checked
-        except ValueError:
-            valid = False
-        if not valid:
+        if not _day(checked):
             raise StoreError(f"Catalog repository {url} needs starsCheckedOn, the day its stars were read (YYYY-MM-DD).")
         found[_repository_key(url)] = {"stars": stars, "starsCheckedOn": checked}
     return found
+
+
+def _day(value):
+    try:
+        return isinstance(value, str) and date.fromisoformat(value).isoformat() == value
+    except ValueError:
+        return False
+
+
+def _check_copies(row):
+    """A sourced item's description and skills.sh installs are copies that scripts/refresh_catalog.py reads."""
+    if not (isinstance(row.get("description"), str) and _https(row.get("descriptionUrl")) and _day(row.get("descriptionCheckedOn"))):
+        raise StoreError(f"Catalog item {row['id']} needs description, descriptionUrl and descriptionCheckedOn, "
+                         "copied from its source by scripts/refresh_catalog.py.")
+    if ("installs" in row or "installsCheckedOn" in row) and not (
+            type(row.get("installs")) is int and row["installs"] >= 0 and _day(row.get("installsCheckedOn"))):
+        raise StoreError(f"Catalog item {row['id']} needs installs, its skills.sh count, "
+                         "with installsCheckedOn, the day it was read (YYYY-MM-DD).")
 
 
 def _item_source(row):
@@ -417,6 +431,8 @@ class Store:
             if repository and _repository_key(repository["repositoryUrl"]) not in stars:
                 raise StoreError(f"Catalog item {row['id']} comes from {repository['repositoryUrl']}, "
                                  "which has no repositories row with its stars.")
+            if repository:
+                _check_copies(row)
         return catalog
 
     def consumers(self):

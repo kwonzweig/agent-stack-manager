@@ -1,7 +1,7 @@
 ---
 key: review
 name: review
-description: Review the PR diff for production problems before merge.
+description: Use when you review this PR's diff. (gstack)
 metadata:
   sources:
     - kind: github-dir

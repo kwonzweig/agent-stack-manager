@@ -1,7 +1,10 @@
 ---
 key: execution-model
 name: execution-model
-description: Isomorphic execution and client/server boundaries.
+description: Isomorphic-by-default principle, environment boundary functions (createServerFn,
+  createServerOnlyFn, createClientOnlyFn, createIsomorphicFn), ClientOnly component,
+  useHydrated hook, import protection, dead code elimination, environment variable
+  safety (VITE_ prefix, process.env).
 metadata:
   sources:
     - kind: github-dir

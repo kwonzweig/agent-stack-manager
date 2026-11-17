@@ -1,7 +1,10 @@
 ---
 key: server-routes
 name: server-routes
-description: Raw HTTP routes, handlers, context and request parsing.
+description: Server-side API endpoints using the server property on createFileRoute,
+  HTTP method handlers (GET, POST, PUT, DELETE), createHandlers for per-handler middleware,
+  handler context (request, params, context), request body parsing, response helpers,
+  file naming for API routes.
 metadata:
   sources:
     - kind: github-dir

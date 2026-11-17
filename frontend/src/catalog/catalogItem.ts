@@ -1,4 +1,4 @@
-import type { CatalogItem, Source } from '../types';
+import type { CatalogItem, Source, SourceCopies } from '../types';
 
 export function itemName(item: CatalogItem) {
   return item.title || item.name || item.kind;
@@ -31,12 +31,17 @@ export function byStars(items: CatalogItem[]) {
   return [...items].sort((a, b) => (b.stars ?? -1) - (a.stars ?? -1));
 }
 
-export function starsLabel(stars: number) {
-  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(stars);
+// "318.3K" for stars or installs.
+export function countLabel(count: number) {
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(count);
 }
 
-export function starsTitle(item: CatalogItem) {
+export function starsTitle(item: SourceCopies) {
   return (item.stars ?? 0).toLocaleString('en') + ' GitHub stars, read on ' + item.starsCheckedOn;
+}
+
+export function installsTitle(item: SourceCopies) {
+  return (item.installs ?? 0).toLocaleString('en') + ' skills.sh installs, read on ' + item.installsCheckedOn;
 }
 
 // "obra/superpowers" for a GitHub URL, otherwise the host and path.

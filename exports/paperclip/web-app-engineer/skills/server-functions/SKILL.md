@@ -1,8 +1,10 @@
 ---
 key: server-functions
 name: server-functions
-description: Server functions, input validation, request utilities, errors and form
-  handling.
+description: createServerFn (GET/POST), validator (Zod or function), useServerFn hook,
+  server context utilities (getRequest, getRequestHeader, setResponseHeader, setResponseStatus),
+  error handling (throw errors, redirect, notFound), streaming, FormData handling,
+  file organization (.functions.ts, .server.ts).
 metadata:
   sources:
     - kind: github-dir

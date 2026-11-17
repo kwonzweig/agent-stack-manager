@@ -1,7 +1,8 @@
 ---
 key: requesting-code-review
 name: requesting-code-review
-description: Review implementation against its requirements.
+description: Use when completing tasks, implementing major features, or before merging
+  to verify work meets requirements
 metadata:
   sources:
     - kind: github-dir

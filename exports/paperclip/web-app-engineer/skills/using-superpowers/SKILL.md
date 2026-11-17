@@ -1,7 +1,8 @@
 ---
 key: using-superpowers
 name: using-superpowers
-description: Load relevant workflow skills at the start of a conversation.
+description: Use when starting any conversation - establishes how to find and use
+  skills, requiring skill invocation before ANY response including clarifying questions
 metadata:
   sources:
     - kind: github-dir

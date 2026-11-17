@@ -1,7 +1,8 @@
 ---
 key: systematic-debugging
 name: systematic-debugging
-description: Identify a root cause before choosing a fix.
+description: Use when encountering any bug, test failure, or unexpected behavior,
+  before proposing fixes
 metadata:
   sources:
     - kind: github-dir

@@ -1,7 +1,9 @@
 ---
 key: using-git-worktrees
 name: using-git-worktrees
-description: Create or reuse an isolated workspace.
+description: Use when starting feature work that needs isolation from current workspace
+  or before executing implementation plans - ensures an isolated workspace exists
+  via native tools or git worktree fallback
 metadata:
   sources:
     - kind: github-dir

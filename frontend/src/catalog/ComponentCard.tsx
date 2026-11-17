@@ -1,12 +1,12 @@
 // Grid and list cards from AITMPL dashboard/src/components/ComponentGrid.tsx (MIT).
 import { useState } from 'react';
-import { FolderGit2, Star } from 'lucide-react';
 import type { CatalogItem, PackageKind, PackageSummary } from '../types';
 import { KIND_STYLES } from '../lib/kinds';
 import { KindIcon } from '../components/ComponentUI';
 import AddToMenu from './AddToMenu';
 import Checkbox from './Checkbox';
-import { itemName, itemRepository, repositoryLabel, starsLabel, starsTitle } from './catalogItem';
+import ItemProperties from './ItemProperties';
+import { itemName } from './catalogItem';
 
 interface Props {
   item: CatalogItem;
@@ -28,32 +28,7 @@ export default function ComponentCard({ item, index, viewMode, selected, targets
   const name = itemName(item);
   const isList = viewMode === 'list';
   const selectable = item.type !== 'preset';
-  const repository = itemRepository(item);
-  const label = item.componentCount === undefined
-    ? config.singular
-    : item.componentCount + (item.componentCount === 1 ? ' component' : ' components');
-  const chips = (
-    <>
-      <span className="font-mono text-[10px] font-semibold px-2 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-tertiary)]">
-        {label}
-      </span>
-      {repository && onRepository && (
-        <button type="button" onClick={() => onRepository(repository)}
-          className="relative z-[1] inline-flex min-w-0 max-w-full items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-accent)]"
-          title={'Show everything from ' + repositoryLabel(repository)}>
-          <FolderGit2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className="truncate">{repositoryLabel(repository)}</span>
-        </button>
-      )}
-      {item.stars !== undefined && (
-        <span className="inline-flex shrink-0 items-center gap-1 font-mono text-[11px] tabular-nums text-[var(--color-text-secondary)]"
-          title={starsTitle(item)} aria-label={starsTitle(item)}>
-          <Star className="h-3.5 w-3.5" aria-hidden="true" />
-          {starsLabel(item.stars)}
-        </span>
-      )}
-    </>
-  );
+  const chips = <ItemProperties item={item} repository={onRepository} />;
 
   return (
     <article
@@ -73,7 +48,7 @@ export default function ComponentCard({ item, index, viewMode, selected, targets
         <KindIcon kind={item.kind} className={isList ? 'h-[22px] w-[22px]' : 'h-5 w-5'} />
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col self-stretch">
         <h3 className={'font-mono text-[14px] font-bold text-[var(--color-text-primary)] group-hover:text-[var(--color-accent)] transition-colors ' +
           (isList ? 'mb-1' : 'leading-tight mb-1.5')}>
           <button type="button" className="text-left break-words after:absolute after:inset-0 after:rounded-md focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-[var(--color-primary-500)]" onClick={() => onOpen(item)}>
@@ -85,7 +60,8 @@ export default function ComponentCard({ item, index, viewMode, selected, targets
             {item.description}
           </p>
         )}
-        <div className={'flex flex-wrap items-center gap-2 ' + (isList ? 'mt-1.5 sm:hidden' : 'mt-3')}>{chips}</div>
+        {/* In the grid the properties sit at the card's bottom, so cards in one row line up. */}
+        <div className={'flex flex-wrap items-center gap-2 ' + (isList ? 'mt-1.5 sm:hidden' : 'mt-auto pt-3')}>{chips}</div>
       </div>
 
       {isList && <div className="hidden sm:flex min-w-0 max-w-[40%] items-center gap-2 shrink-0">{chips}</div>}

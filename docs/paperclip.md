@@ -5,8 +5,10 @@
 | File | Holds |
 | --- | --- |
 | `COMPANY.md` | The package's slug, name and description. |
-| `agents/<id>/AGENTS.md` | The agent's name, title, role and skill names; the body is the preset's Instruction. |
-| `.paperclip.yaml` | Role, `canCreateAgents`, heartbeat off, and `metadata.agentStackManagerPackageId` and `agentStackManagerRevision`. No adapter. |
+| `agents/<id>/AGENTS.md` | The agent's name, title, role `general` and skill names; the body is the preset's Instruction. |
+| `.paperclip.yaml` | Role `general`, heartbeat off, and `metadata.agentStackManagerPackageId` and `agentStackManagerRevision`. No adapter and no permissions. |
+
+A preset holds nothing for one app alone, so the export takes no role or right from it. Every agent gets the role `general`, because Paperclip stores a role outside its own list when a package names none, and no permissions. Whoever imports gives the company what it needs in Paperclip (step 5 below).
 | `skills/<key>/SKILL.md` | One stub per skill: repository, path and branch, no commit. |
 
 ## Import a preset
@@ -17,8 +19,9 @@ Only the board and CEO agents may import a company package ([companies.ts](https
 2. **Import the agent without `skills/`.** Send `COMPANY.md`, `agents/<id>/AGENTS.md` and `.paperclip.yaml` as inline files, with `include` set to agents only and `target` to the existing company. The stubs would make the import fail with a 422 (observed on 2026.1106.0). The board uses `POST /api/companies/import`. A CEO agent uses `POST /api/companies/{companyId}/imports/apply` and passes `adapterOverrides` for the agent's slug: the export has no adapter, and this route refuses the `process` adapter Paperclip [falls back to](https://github.com/paperclipai/paperclip/blob/v2026.1106.0/server/src/services/company-portability.ts#L3270) ([company-portability.ts](https://github.com/paperclipai/paperclip/blob/v2026.1106.0/server/src/services/company-portability.ts#L3678-L3680)).
 3. **Check the skills.** The skill names in `AGENTS.md` become the agent's desired skills and resolve by slug to the skills of step 1 (observed on 2026.1106.0). A skill whose source was created later is attached with `POST /api/agents/{agentId}/skills/sync`, `{"mode": "add", "desiredSkills": [...]}`.
 4. **Set the adapter**, and in it any MCP server the preset has.
+5. **Set the role and rights the company needs.** Give the role `ceo` to an agent that leads the company, and the right to create agents to an agent that hires, such as AI Resources.
 
-An agent without import rights hires instead: the sources of step 1, then `POST /api/companies/{companyId}/agent-hires` with the package's name, title, role, metadata, skills and an adapter, `PUT /api/agents/{agentId}/instructions-bundle/file` with the `AGENTS.md` body, and step 3. It needs `canCreateAgents`. The AI Resources preset's Instruction follows this path.
+An agent without import rights hires instead: the sources of step 1, then `POST /api/companies/{companyId}/agent-hires` with the package's name, title, role, metadata, skills and an adapter, `PUT /api/agents/{agentId}/instructions-bundle/file` with the `AGENTS.md` body, and step 3. It needs the right to create agents, given in Paperclip by whoever set the company up. The AI Resources preset's Instruction follows this path.
 
 ## Apply a preset update
 

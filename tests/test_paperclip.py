@@ -1,7 +1,6 @@
 from copy import deepcopy
 from io import BytesIO
 from pathlib import Path
-import re
 import shutil
 import tempfile
 import unittest
@@ -157,31 +156,13 @@ class PaperclipTests(unittest.TestCase):
 
     def test_paperclip_settings_carry_the_package_and_its_revision_only(self):
         _, _, extension = agent(self.convert())
-        self.assertEqual(set(extension), {"role", "permissions", "runtime", "metadata"})
+        self.assertEqual(set(extension), {"role", "runtime", "metadata"})
         self.assertEqual(extension["role"], "general")
-        self.assertEqual(extension["permissions"], {"canCreateAgents": False})
         self.assertEqual(extension["runtime"], {"heartbeat": {"enabled": False}})
         self.assertEqual(set(extension["metadata"]), {"agentStackManagerPackageId", "agentStackManagerRevision"})
         self.assertEqual(extension["metadata"]["agentStackManagerPackageId"], "test-preset")
         self.assertRegex(extension["metadata"]["agentStackManagerRevision"], r"^[0-9a-f]{64}$")
         self.assertEqual(yaml.safe_load(written(self.convert())[".paperclip.yaml"])["schemaVersion"], 7)
-
-    def test_labels_set_the_role_and_agent_creation(self):
-        self.package["paperclip"] = {"role": "researcher", "canCreateAgents": True}
-        front, _, extension = agent(self.convert())
-        self.assertEqual((front["role"], extension["role"]), ("researcher", "researcher"))
-        self.assertEqual(extension["permissions"], {"canCreateAgents": True})
-
-    def test_role_outside_paperclips_list_needs_attention(self):
-        self.package["paperclip"] = {"role": "wizard", "canCreateAgents": False}
-        report = self.convert()
-        row = by_id(report)["paperclip:role"]
-        self.assertEqual(row["conversion"]["status"], "unconverted")
-        self.assertNotIn("cause", row["conversion"])
-        self.assertIn("wizard", row["conversion"]["reason"])
-        self.assertEqual(agent(report)[2]["role"], "general")
-        self.package["paperclip"]["role"] = "general"
-        self.assertNotIn("paperclip:role", by_id(self.convert()))
 
     def test_mcp_is_left_for_the_adapter(self):
         conversion = by_id(self.convert())["playwright"]["conversion"]
@@ -311,12 +292,12 @@ class RepositoryTests(unittest.TestCase):
         report = paperclip.convert(Store(ROOT).get("cao"), root=ROOT)
         front, _, extension = agent(report, "cao")
         self.assertEqual(front["skills"], ["agent-operating-standards", "find-tools", "find-skills", "humanizer"])
-        self.assertEqual(extension["role"], "ceo")
+        self.assertEqual((front["role"], extension["role"]), ("general", "general"))
         source = frontmatter(written(report)["skills/humanizer/SKILL.md"])[0]["metadata"]["sources"][0]
         self.assertEqual((source["path"], source["url"]), (".", "https://github.com/blader/humanizer/tree/main"))
         self.assertNotIn("engineer", written(report)[".paperclip.yaml"])
 
-    def test_ar_exports_its_skills_and_may_create_agents(self):
+    def test_ar_exports_its_skills(self):
         report = paperclip.convert(Store(ROOT).get("ar"), root=ROOT)
         self.assertEqual([row["id"] for row in report["items"] if paperclip.needs_attention(row)], [])
         front, body, extension = agent(report, "ar")
@@ -324,8 +305,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(front["skills"], ["find-tools", "find-skills", "agent-operating-standards",
                                            "technology-research"])
         self.assertTrue(body)
-        self.assertEqual(extension["permissions"], {"canCreateAgents": True})
-        self.assertEqual(extension["role"], front["role"])
+        self.assertEqual((front["role"], extension["role"]), ("general", "general"))
         stub, _ = frontmatter(written(report)["skills/technology-research/SKILL.md"])
         self.assertEqual(stub["metadata"]["sources"], [{
             "kind": "github-dir", "repo": "kwonzweig/agent-stack-manager",
@@ -333,13 +313,6 @@ class RepositoryTests(unittest.TestCase):
             "url": "https://github.com/kwonzweig/agent-stack-manager/tree/main/packages/ar/.apm/skills/technology-research"}])
         self.assertEqual(stub["name"], "technology-research")
         self.assertTrue(stub["description"])
-
-    def test_only_ar_may_create_agents(self):
-        store = Store(ROOT)
-        allowed = {row["id"] for row in store.list_packages() if row["kind"] == "preset"
-                   and agent(paperclip.convert(store.get(row["id"]), root=ROOT), row["id"])[2]
-                   ["permissions"]["canCreateAgents"]}
-        self.assertEqual(allowed, {"ar"})
 
     def test_presets_own_skill_tracks_this_repositorys_main(self):
         (self.root / "pyproject.toml").write_text(
@@ -382,16 +355,6 @@ class RepositoryTests(unittest.TestCase):
 
     def test_this_repositorys_url_is_in_pyproject(self):
         self.assertEqual(paperclip._repository(ROOT), "https://github.com/kwonzweig/agent-stack-manager")
-
-
-class ConsumersTests(unittest.TestCase):
-    def test_paperclip_roles_are_data_with_their_source(self):
-        import json
-        consumers = json.loads((ROOT / "catalog/consumers.json").read_text(encoding="utf-8"))["consumers"]
-        entry = next(row for row in consumers if row["id"] == "paperclip")
-        self.assertEqual(entry["roles"]["values"], ["ceo", "cto", "cmo", "cfo", "security", "engineer", "designer",
-                                                    "pm", "qa", "devops", "researcher", "general"])
-        self.assertTrue(re.match(r"https://github\.com/paperclipai/paperclip/", entry["roles"]["doc"]))
 
 
 class ZipTests(unittest.TestCase):

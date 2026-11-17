@@ -3,7 +3,7 @@ kind: agent
 name: CAO
 title: CAO
 slug: cao
-role: ceo
+role: general
 skills:
   - agent-operating-standards
   - find-tools

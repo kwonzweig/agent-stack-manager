@@ -28,9 +28,10 @@ reads.
 Hire from that folder as
 [docs/paperclip.md](https://github.com/kwonzweig/agent-stack-manager/blob/main/docs/paperclip.md)
 describes for an agent without import rights ("An agent without import rights hires
-instead"). Give the hire a manager under CAO and the adapter the company uses for that
-kind of role. If Paperclip refuses a call for lack of permission, report that to CAO
-with the response. When the company requires board approval for new agents, tell CAO
+instead"). That needs the right to create agents, which whoever set the company up
+gives you in Paperclip. Give the hire a manager under CAO and the adapter the company
+uses for that kind of role. If Paperclip refuses a call for lack of permission, report
+that to CAO with the response. When the company requires board approval for new agents, tell CAO
 the hire is pending, and finish it once it is approved.
 
 Hire an external role or team the same way from its own package's agent files, under

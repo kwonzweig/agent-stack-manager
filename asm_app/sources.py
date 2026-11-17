@@ -1,8 +1,7 @@
 """What each Catalog item's source says now: its description, its repository's GitHub stars and its skills.sh installs.
 
 ASM queries these when it shows them and writes none of them into the repo. Answers are kept for an hour in
-.asm/sources.json, which Git ignores, so a page load asks each host once. This module is the one place ASM
-reaches the network, and only the hosts in HOSTS; it never contacts a consumer.
+.asm/sources.json, which Git ignores, so a page load asks each host once.
 """
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -17,24 +16,22 @@ from urllib.request import Request, urlopen
 
 from .store import _skill_labels
 
-HOSTS = {"api.github.com", "raw.githubusercontent.com", "skills.sh"}
 MAX_AGE = 3600  # seconds an answer is reused before the source is asked again
 # skills.sh refuses quick bursts; the others take a few requests at once.
 _LIMITS = {"api.github.com": threading.BoundedSemaphore(4), "raw.githubusercontent.com": threading.BoundedSemaphore(8),
            "skills.sh": threading.BoundedSemaphore(1)}
+_OTHER_HOST = threading.BoundedSemaphore(4)
 
 
 def fetch(url):
     host = urlsplit(url).hostname
-    if host not in HOSTS:
-        raise ValueError(f"ASM reads sources only from {', '.join(sorted(HOSTS))}, not {host}.")
     headers = {"User-Agent": "agent-stack-manager"}
     if host == "api.github.com":
         headers["Accept"] = "application/vnd.github+json"
         token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
         if token:
             headers["Authorization"] = "Bearer " + token
-    with _LIMITS[host]:
+    with _LIMITS.get(host, _OTHER_HOST):
         for attempt in range(3):
             try:
                 with urlopen(Request(url, headers=headers), timeout=20) as response:

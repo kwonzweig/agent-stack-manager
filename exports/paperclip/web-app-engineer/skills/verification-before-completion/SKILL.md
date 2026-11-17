@@ -1,7 +1,6 @@
 ---
 key: verification-before-completion
 name: verification-before-completion
-description: Verify evidence before making a completion claim.
 metadata:
   sources:
     - kind: github-dir

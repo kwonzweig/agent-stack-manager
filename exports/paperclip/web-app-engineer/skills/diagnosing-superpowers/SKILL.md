@@ -1,7 +1,6 @@
 ---
 key: diagnosing-superpowers
 name: diagnosing-superpowers
-description: Diagnose a Superpowers session from its transcript.
 metadata:
   sources:
     - kind: github-dir

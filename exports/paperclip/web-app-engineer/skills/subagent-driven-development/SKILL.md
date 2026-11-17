@@ -1,7 +1,6 @@
 ---
 key: subagent-driven-development
 name: subagent-driven-development
-description: Execute independent implementation tasks with subagents.
 metadata:
   sources:
     - kind: github-dir

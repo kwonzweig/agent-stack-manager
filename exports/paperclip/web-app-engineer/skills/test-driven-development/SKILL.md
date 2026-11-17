@@ -1,7 +1,6 @@
 ---
 key: test-driven-development
 name: test-driven-development
-description: Write a failing test before implementing a feature or fix.
 metadata:
   sources:
     - kind: github-dir

@@ -73,7 +73,7 @@ python -m asm_app serve
 
 Every `python` command in this README runs in the clone with `.venv` active; activate it again in a new terminal. The install also gives the command `agent-stack-manager`, the same as `python -m asm_app`; both act on the folder they run in, and `--root <clone>` names another. If PowerShell says running scripts is disabled, use Command Prompt.
 
-Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has that port, `serve` stops with `Address already in use` (`WinError 10048` on Windows); pick another port with `python -m asm_app serve --port 4320`. The dashboard edits the files in your clone: browse the Catalog with each repository's GitHub stars, add components to a stack or preset, edit a preset, and read its Export tab. Adding from the Catalog saves at once and rewrites the exports; edits on a preset's own page stay in the page until you press **Save changes** at its top. To save from a script instead, use the local API on the dashboard's address, described in [docs/api-contract.md](docs/api-contract.md): `GET /api/presets/cao` returns the preset with its `revision`, and `PATCH /api/presets/cao` with `Content-Type: application/json` and the body `{"revision": "<that revision>", "description": "New text"}` changes only the description.
+Open [127.0.0.1:4319](http://127.0.0.1:4319) in Chrome. If another program has that port, `serve` stops with `Address already in use` (`WinError 10048` on Windows); pick another port with `python -m asm_app serve --port 4320`. The dashboard edits the files in your clone: browse the Catalog, with each component's description, GitHub stars and skills.sh installs read from its source when the page opens, add components to a stack or preset, edit a preset, and read its Export tab. Adding from the Catalog saves at once and rewrites the exports; edits on a preset's own page stay in the page until you press **Save changes** at its top. To save from a script instead, use the local API on the dashboard's address, described in [docs/api-contract.md](docs/api-contract.md): `GET /api/presets/cao` returns the preset with its `revision`, and `PATCH /api/presets/cao` with `Content-Type: application/json` and the body `{"revision": "<that revision>", "description": "New text"}` changes only the description.
 
 ## APM lock
 
@@ -102,7 +102,7 @@ npm test
 npm run build
 ```
 
-Get Node.js from [nodejs.org/download](https://nodejs.org/en/download); a Linux distribution's own package may be older. The data files and the local API are in [docs/api-contract.md](docs/api-contract.md); reused frontend code and its licences are in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md).
+Get Node.js from [nodejs.org/download](https://nodejs.org/en/download); a Linux distribution's own package may be older. The data files and the local API are in [docs/api-contract.md](docs/api-contract.md); the dashboard's design rules are in [instructions/design-policy.md](instructions/design-policy.md); reused frontend code and its licences are in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md).
 
 ## Contributing
 

@@ -1,7 +1,6 @@
 ---
 key: server-routes
 name: server-routes
-description: Raw HTTP routes, handlers, context and request parsing.
 metadata:
   sources:
     - kind: github-dir

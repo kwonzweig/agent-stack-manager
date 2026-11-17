@@ -30,6 +30,7 @@ class DashboardServer(ThreadingHTTPServer):
         self.root = Path(root).resolve()
         self.io_lock = threading.RLock()
         self._store = None
+        self._sources = None
         super().__init__(address, Handler)
 
     @property
@@ -38,6 +39,13 @@ class DashboardServer(ThreadingHTTPServer):
             from .store import Store
             self._store = Store(self.root)
         return self._store
+
+    @property
+    def sources(self):
+        if self._sources is None:
+            from .sources import SourceReader
+            self._sources = SourceReader(self.root / '.asm' / 'sources.json')
+        return self._sources
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -118,6 +126,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, self.server.store.consumers())
                 if path == '/api/catalog':
                     return self.send(200, self.server.store.catalog())
+                if path == '/api/catalog/sources':
+                    items = [item for item in self.server.store.catalog()['items'] if item['type'] == 'component']
+                    return self.send(200, self.server.sources.read(items))
                 if path == '/api/presets':
                     return self.send(200, {'presets':self.server.store.list_packages()})
                 if path == '/api/comments':

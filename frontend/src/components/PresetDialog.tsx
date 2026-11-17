@@ -2,6 +2,9 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } fr
 import { X } from "lucide-react";
 import type { PackageKind } from "../types";
 import { errorMessage } from "../api";
+import { inferPresetIconKey } from "../lib/presetIcons";
+import { PresetIconPicker } from "./PresetIconPicker";
+import { PresetIcon } from "./Sidebar";
 
 export function Modal({ title, onClose, children, busy = false }: {
   title: string; onClose: () => void; children: ReactNode; busy?: boolean;
@@ -37,6 +40,8 @@ const footerClass = "flex flex-wrap justify-end gap-2 pt-1";
 interface PresetFields {
   title: string;
   description: string;
+  /** A lowercase icon name, or empty to follow the title. */
+  icon: string;
   kind: PackageKind;
   workArea: string[];
   usage: string[];
@@ -47,8 +52,10 @@ export function PresetDialog({ initial, defaultKind = "preset", onClose, onSave 
   initial?: PresetFields; defaultKind?: PackageKind; onClose: () => void;
   onSave: (fields: PresetFields) => Promise<void> | void;
 }) {
+  const nameId = useId();
   const [name, setName] = useState(initial?.title || "");
   const [description, setDescription] = useState(initial?.description || "");
+  const [icon, setIcon] = useState(initial?.icon || "");
   const [kind, setKind] = useState(initial?.kind ?? defaultKind);
   const [workArea, setWorkArea] = useState(initial?.workArea.join("\n") || "");
   const [usage, setUsage] = useState(initial?.usage.join("\n") || "");
@@ -61,7 +68,7 @@ export function PresetDialog({ initial, defaultKind = "preset", onClose, onSave 
     setLoading(true);
     setError("");
     try {
-      const fields: PresetFields = { title: name.trim(), description, kind, workArea: split(workArea), usage: split(usage) };
+      const fields: PresetFields = { title: name.trim(), description, icon, kind, workArea: split(workArea), usage: split(usage) };
       await onSave(fields);
       onClose();
     } catch (err) {
@@ -74,10 +81,18 @@ export function PresetDialog({ initial, defaultKind = "preset", onClose, onSave 
   const noun = kind === "stack" ? "stack" : "preset";
   return <Modal title={initial ? `Edit ${noun} details` : `New ${noun}`} onClose={onClose} busy={loading}>
     <form className="space-y-3" onSubmit={submit}>
-      <label className="block"><span className={labelClass}>Name</span>
-        <input required autoFocus value={name} onChange={e => setName(e.target.value)}
-          placeholder={kind === "stack" ? "Stack name" : "Preset name"} className={inputClass} />
-      </label>
+      <div>
+        <label htmlFor={nameId} className={labelClass}>Name</label>
+        <div className="flex items-center gap-2">
+          {/* The same picker as the page header: the icon opens it. */}
+          <PresetIconPicker label={`Change ${noun} icon`} disabled={loading} onChange={setIcon}
+            value={inferPresetIconKey({ name, description, icon })}>
+            <PresetIcon title={name} description={description} icon={icon} active className="h-[38px] w-[38px] rounded-lg [&>svg]:h-4 [&>svg]:w-4" />
+          </PresetIconPicker>
+          <input id={nameId} required autoFocus value={name} onChange={e => setName(e.target.value)}
+            placeholder={kind === "stack" ? "Stack name" : "Preset name"} className={inputClass} />
+        </div>
+      </div>
       <label className="block"><span className={labelClass}>Description</span>
         <textarea rows={2} value={description} onChange={e => setDescription(e.target.value)}
           placeholder="Optional description" className={inputClass} />

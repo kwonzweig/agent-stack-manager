@@ -1,7 +1,6 @@
 ---
 key: dispatching-parallel-agents
 name: dispatching-parallel-agents
-description: Coordinate independent agent work.
 metadata:
   sources:
     - kind: github-dir

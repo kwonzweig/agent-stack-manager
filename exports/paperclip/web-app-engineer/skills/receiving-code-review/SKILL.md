@@ -1,7 +1,6 @@
 ---
 key: receiving-code-review
 name: receiving-code-review
-description: Verify code review feedback before implementing it.
 metadata:
   sources:
     - kind: github-dir

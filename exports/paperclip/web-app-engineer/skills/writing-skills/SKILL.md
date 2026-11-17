@@ -1,7 +1,6 @@
 ---
 key: writing-skills
 name: writing-skills
-description: Author or verify skills before deployment.
 metadata:
   sources:
     - kind: github-dir

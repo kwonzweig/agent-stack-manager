@@ -1,7 +1,6 @@
 ---
 key: deployment
 name: deployment
-description: Deployment runtimes, SSR modes, static prerendering and caching.
 metadata:
   sources:
     - kind: github-dir

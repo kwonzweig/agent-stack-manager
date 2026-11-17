@@ -1,7 +1,6 @@
 import json
 import re
 import unittest
-from datetime import date
 from pathlib import Path
 
 import yaml
@@ -84,14 +83,6 @@ def git_value(row):
     return value if isinstance(value, dict) and isinstance(value.get("git"), str) else None
 
 
-def item_repository(row):
-    """The repository a catalog item comes from: its APM git value, or the source stored for an item without one."""
-    if value := git_value(row):
-        return repository(value["git"])
-    source = row.get("source") or {}
-    return repository(source["repositoryUrl"]) if source.get("repositoryUrl") else None
-
-
 def members_outside_the_catalog(text, rows):
     """The repository and plugin members of one apm.yml that no catalog item names; string entries included."""
     known = {(repository(value["git"]), value.get("path", ""), value.get("ref", ""))
@@ -122,23 +113,6 @@ class CatalogRepositoryTests(unittest.TestCase):
             with self.subTest(entry=line):
                 found = members_outside_the_catalog(text.replace("  apm:\n", f"  apm:\n  - {line}\n", 1), catalog()["items"])
                 self.assertEqual(found, [line] if caught else [])
-
-    def test_every_item_repository_has_one_row_and_every_row_is_used(self):
-        data = catalog()
-        rows = [repository(row["url"]) for row in data["repositories"]]
-        self.assertEqual(len(rows), len(set(rows)), "a repository is listed twice")
-        used = {found for row in data["items"] if (found := item_repository(row))}
-        self.assertEqual(sorted(used - set(rows)), [], "items whose repository has no row")
-        self.assertEqual(sorted(set(rows) - used), [], "rows no item uses")
-
-    def test_every_repository_row_holds_a_star_count_and_the_day_it_was_read(self):
-        for row in catalog()["repositories"]:
-            with self.subTest(repository=row.get("url")):
-                self.assertEqual(set(row), {"url", "stars", "starsCheckedOn"})
-                self.assertRegex(row["url"], r"^https://github\.com/[\w.-]+/[\w.-]+$")
-                self.assertIs(type(row["stars"]), int)
-                self.assertGreaterEqual(row["stars"], 0)
-                self.assertEqual(date.fromisoformat(row["starsCheckedOn"]).isoformat(), row["starsCheckedOn"])
 
     def test_source_is_stored_only_for_items_without_git(self):
         # A git item's source and link are derived from its APM value, so it has one location.

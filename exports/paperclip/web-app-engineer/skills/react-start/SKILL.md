@@ -1,7 +1,6 @@
 ---
 key: react-start
 name: react-start
-description: React-specific TanStack Start setup, routes and server functions.
 metadata:
   sources:
     - kind: github-dir

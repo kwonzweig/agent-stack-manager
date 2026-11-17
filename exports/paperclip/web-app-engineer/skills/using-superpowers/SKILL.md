@@ -1,7 +1,6 @@
 ---
 key: using-superpowers
 name: using-superpowers
-description: Load relevant workflow skills at the start of a conversation.
 metadata:
   sources:
     - kind: github-dir

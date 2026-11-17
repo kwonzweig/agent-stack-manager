@@ -15,10 +15,12 @@ export interface CatalogPageProps {
   onOpenPreset: (id: string) => void;
   onCreatePreset: (componentIds: string[], kind?: PackageKind) => void;
   onAdd: (packageId: string, componentIds: string[]) => Promise<void>;
+  /** Reading descriptions, stars and installs from each source (GET /api/catalog/sources). */
+  sourceStatus: { loading: boolean; error: string; failed: string[]; onRetry: () => void };
 }
 
 export default function CatalogPage({
-  items, presets, isLoading, error, onRetry, onOpenItem, onOpenPreset, onCreatePreset, onAdd,
+  items, presets, isLoading, error, onRetry, onOpenItem, onOpenPreset, onCreatePreset, onAdd, sourceStatus,
 }: CatalogPageProps) {
   const [selection, setSelection] = useState<ReadonlySet<string>>(() => new Set());
   const [onlySelected, setOnlySelected] = useState(false);
@@ -48,6 +50,16 @@ export default function CatalogPage({
 
   return (
     <section className="aitmpl-catalog min-h-full pb-24" aria-label="Catalog">
+      {(sourceStatus.loading || sourceStatus.error || sourceStatus.failed.length > 0) && (
+        <p role="status" className="mx-4 mt-3 text-[12px] text-[var(--color-text-secondary)] sm:mx-6"
+          title={sourceStatus.failed.join('\n') || undefined}>
+          {sourceStatus.loading ? 'Reading descriptions, stars and installs from GitHub and skills.sh…' : <>
+            {sourceStatus.error || 'Could not read ' + sourceStatus.failed.length + (sourceStatus.failed.length === 1 ? ' source' : ' sources')
+              + '; what was read before is shown.'}{' '}
+            <button type="button" className="underline underline-offset-2" onClick={sourceStatus.onRetry}>Retry</button>
+          </>}
+        </p>
+      )}
       <ComponentGrid
         items={items}
         selection={selection}

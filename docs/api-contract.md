@@ -1,14 +1,14 @@
 # Data files and local API
 
-For agents and people who edit ASM data. ASM's data lives in these files; no route contacts a consumer.
+For agents and people who edit ASM data. ASM's data lives in these files; no route contacts a consumer. What a component's source owns (its description, its repository's GitHub stars, its skills.sh installs) is not stored here: ASM reads it from the source when the dashboard shows it.
 
 ## Files
 
 - `packages/<id>/apm.yml` and its `.apm/` files: one stack or preset as an APM package; the folder name is the package id. APM `dependencies` hold the members, `x-preset-labels` holds ASM's labels: `title`, `kind` (`preset` or `stack`), `icon`, `workArea` and `usage`, none of them for one app alone. A repository member names a branch as `ref`, never a commit or a version.
-- `catalog/components.json`: the components that can be added to a stack or preset, and every source repository with its GitHub stars and the day they were read. It does not repeat a preset's members.
+- `catalog/components.json`: the components that can be added to a stack or preset. It does not repeat a preset's members, and holds no description, star count or install count for a component from a repository. A hook defined here has no repository and keeps its own description.
 - `catalog/consumers.json`: what each app supports per component kind (below).
 - `exports/paperclip/<id>/`: each preset's Paperclip package, generated; never edit it by hand. [paperclip.md](paperclip.md) says how to import it.
-- `.asm/`: component comments, ignored by Git.
+- `.asm/`: component comments, and `sources.json`, each source's last answer for `/api/catalog/sources`; ignored by Git.
 - `packages/<id>/apm.lock.yaml`: written by `lock`, ignored by Git and by the store.
 
 ## Conventions
@@ -19,7 +19,7 @@ All JSON errors are `{ "error": "message" }`. A POST or PATCH body is a JSON obj
 
 `Store(root: Path)` where root contains `packages/`, `catalog/`, and ignored `.asm/`.
 
-- `catalog()` -> `{items: [Component or PackageSummary]}`. It refuses a `catalog/components.json` whose `repositories` row lacks `stars` (a non-negative integer read from the repository's GitHub page) or `starsCheckedOn` (`YYYY-MM-DD`), or whose item comes from a repository with no row.
+- `catalog()` -> `{items: [Component or PackageSummary]}`. It refuses a `catalog/components.json` item from a repository that stores a `description`, `stars` or `installs`, since the repository owns them.
 - `list_packages()` -> list of PackageSummary
 - `get(id)` -> Package
 - `create(payload)` -> Package
@@ -34,13 +34,14 @@ PackageSummary: `id,title,description,kind` (`preset` or `stack`), `icon` (a low
 
 Package extends summary: `revision,instruction,components:[],files:[{path,content}]`.
 
-Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`; `ref` names a branch, and an empty `ref` follows the default branch. A component stored as a file in the package also has `file`, its path inside the package (for example `.apm/skills/<name>/SKILL.md`). Catalog components additionally contain `type:"component"` and native `apm` creation metadata, and, when they come from a repository, its `stars` and `starsCheckedOn`. A catalog row with an APM `git` value stores no `source` or `sourceUrl`; `catalog()` derives both from that value, and only rows without `git` (marketplace plugins, MCP servers) store them; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
+Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`; `ref` names a branch, and an empty `ref` follows the default branch. A component stored as a file in the package also has `file`, its path inside the package (for example `.apm/skills/<name>/SKILL.md`). Catalog components additionally contain `type:"component"` and native `apm` creation metadata; what their source says comes from `/api/catalog/sources`. A catalog row with an APM `git` value stores no `source` or `sourceUrl`; `catalog()` derives both from that value, and only rows without `git` (marketplace plugins, MCP servers) store them; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
 
 Create/save payload: `title,description,kind,icon,workArea,usage,instruction,componentIds`; any other field is ignored. A save also carries the `revision` of the Package it edits; every other field may be left out, and a field left out keeps its stored value, so `{"revision":"…","description":"…"}` changes only the description. A field that is sent is written: `kind`, `workArea` and `usage` go into `x-preset-labels` even when they are the defaults `preset` and `[]`, and the dashboard sends every field, so its first save of a package without them adds those lines to `apm.yml`. `componentIds` replaces the member list: the ids of the Package's `components` to keep (a file in the package keeps its own id, such as `skill:.apm/skills/<name>/SKILL.md`; `instruction` is ignored, the `instruction` field holds it) plus catalog ids to add. An empty `icon` removes the stored one. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save retains unsupported native fields unless deliberately removed. A new package id is derived from the title; a collision is rejected rather than replaced.
 
 ## HTTP routes (`asm_app/server.py`)
 
 - GET `/api/catalog` -> store.catalog()
+- GET `/api/catalog/sources` -> `{items: {<component id>: {description, descriptionUrl, descriptionReadAt, stars, starsReadAt, installs, installsReadAt}}, errors: []}`, what each catalog component's source says, read by `asm_app/sources.py`: a skill's description from its `SKILL.md` front matter and a plugin's from its `plugin.json` (raw.githubusercontent.com), any other component's and every repository's stars from the GitHub API, and a skill's installs from skills.sh. A value is absent when its source has none. Answers are reused for an hour from `.asm/sources.json`; a source that cannot be read is listed in `errors` and keeps its last answer. GitHub allows 60 unauthenticated requests an hour; `GITHUB_TOKEN` or `GH_TOKEN` in the server's environment raises that. `sources.py` is the one module that reaches the network, and only those three hosts.
 - GET `/api/presets` -> `{presets: store.list_packages()}`
 - GET `/api/presets/{id}` -> Package
 - POST `/api/presets` -> Package
@@ -67,7 +68,7 @@ The files, named by the package id:
 
 - `COMPANY.md`: `schema: agentcompanies/v1`, `kind: company`, `slug`, `name`, `description`.
 - `agents/<id>/AGENTS.md`: `kind: agent`, `name`, `title`, `slug`, `role: general` and `skills`, the stub keys in member order; no `reportsTo`. The body is the Instruction.
-- `skills/<key>/SKILL.md`: one stub per skill with `key`, `name`, `description` and `metadata.sources[0] = {kind: github-dir, repo, path, trackingRef, url}`, no commit. `path` is the skill's folder, `.` for a skill at the repository root. Paperclip does not read the stubs; [paperclip.md](paperclip.md) turns them into skill sources. `trackingRef` is the member's APM `ref`. A skill the preset holds itself is read from this repository, the `project.urls.Repository` of `pyproject.toml`, at `packages/<id>/.apm/skills/<name>` on `main`; its stub takes `name` and `description` from that `SKILL.md`'s frontmatter, or the folder name when it has none. The key is the folder name, or the repository name for a root skill; when two skills share it, both take `<repo>-<name>`.
+- `skills/<key>/SKILL.md`: one stub per skill with `key`, `name` and `metadata.sources[0] = {kind: github-dir, repo, path, trackingRef, url}`, no commit; a skill from a repository has no `description` in its stub, which Paperclip does not read. `path` is the skill's folder, `.` for a skill at the repository root. Paperclip does not read the stubs; [paperclip.md](paperclip.md) turns them into skill sources. `trackingRef` is the member's APM `ref`. A skill the preset holds itself is read from this repository, the `project.urls.Repository` of `pyproject.toml`, at `packages/<id>/.apm/skills/<name>` on `main`; its stub takes `name` and `description` from that `SKILL.md`'s frontmatter, or the folder name when it has none. The key is the folder name, or the repository name for a root skill; when two skills share it, both take `<repo>-<name>`.
 - `.paperclip.yaml`: `schemaVersion: 7` and, under `agents.<id>`, `role: general`, `runtime.heartbeat.enabled: false` and `metadata.agentStackManagerPackageId` and `metadata.agentStackManagerRevision`, a SHA-256 over the preset's files and those of its nested stacks with LF line endings (`store._export_digest`). No adapter, no permissions and no budget.
 
 Every agent's `role` is `general`, because Paperclip stores a role outside its own list when a package names none. A role or right the company needs is set in Paperclip after the import ([paperclip.md](paperclip.md)).

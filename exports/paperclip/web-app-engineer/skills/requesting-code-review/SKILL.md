@@ -1,7 +1,6 @@
 ---
 key: requesting-code-review
 name: requesting-code-review
-description: Review implementation against its requirements.
 metadata:
   sources:
     - kind: github-dir

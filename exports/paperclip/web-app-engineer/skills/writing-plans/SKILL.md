@@ -1,7 +1,6 @@
 ---
 key: writing-plans
 name: writing-plans
-description: Write an implementation plan before editing code.
 metadata:
   sources:
     - kind: github-dir

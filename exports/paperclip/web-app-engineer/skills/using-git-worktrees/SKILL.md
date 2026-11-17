@@ -1,7 +1,6 @@
 ---
 key: using-git-worktrees
 name: using-git-worktrees
-description: Create or reuse an isolated workspace.
 metadata:
   sources:
     - kind: github-dir

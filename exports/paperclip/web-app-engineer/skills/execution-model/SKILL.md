@@ -1,7 +1,6 @@
 ---
 key: execution-model
 name: execution-model
-description: Isomorphic execution and client/server boundaries.
 metadata:
   sources:
     - kind: github-dir

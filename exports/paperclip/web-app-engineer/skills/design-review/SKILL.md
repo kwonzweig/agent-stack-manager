@@ -1,7 +1,6 @@
 ---
 key: design-review
 name: design-review
-description: Audit and fix visual inconsistency, spacing, hierarchy and slow interactions.
 metadata:
   sources:
     - kind: github-dir

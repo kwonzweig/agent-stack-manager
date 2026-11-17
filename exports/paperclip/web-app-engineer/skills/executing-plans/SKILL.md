@@ -1,7 +1,6 @@
 ---
 key: executing-plans
 name: executing-plans
-description: Execute an implementation plan inline.
 metadata:
   sources:
     - kind: github-dir

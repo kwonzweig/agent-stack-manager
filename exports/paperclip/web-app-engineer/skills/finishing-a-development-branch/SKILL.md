@@ -1,7 +1,6 @@
 ---
 key: finishing-a-development-branch
 name: finishing-a-development-branch
-description: Choose how to integrate tested branch changes.
 metadata:
   sources:
     - kind: github-dir

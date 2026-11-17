@@ -8,9 +8,12 @@ import type { PackageSummary } from "../types";
 export type Route = {
   view: "catalog" | "presets"; id?: string;
   tab?: "components" | "export" | "source"; consumer?: string;
+  /** The Catalog item whose page is open. */
+  item?: string;
 };
-export function hrefFor({ view, id, tab, consumer }: Route) {
+export function hrefFor({ view, id, tab, consumer, item }: Route) {
   const params = new URLSearchParams({ view });
+  if (view === "catalog" && item) params.set("item", item);
   if (id) params.set("preset", id);
   if (tab && tab !== "components") params.set("tab", tab);
   if (tab === "export" && consumer) params.set("consumer", consumer);

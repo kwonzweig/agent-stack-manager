@@ -1,8 +1,6 @@
 ---
 key: supabase
 name: supabase
-description: Build with Supabase Database, Auth, Storage, Realtime, client libraries
-  and CLI.
 metadata:
   sources:
     - kind: github-dir

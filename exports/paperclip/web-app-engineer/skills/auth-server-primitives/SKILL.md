@@ -1,7 +1,6 @@
 ---
 key: auth-server-primitives
 name: auth-server-primitives
-description: Server-side authentication, cookies, sessions, OAuth and CSRF.
 metadata:
   sources:
     - kind: github-dir

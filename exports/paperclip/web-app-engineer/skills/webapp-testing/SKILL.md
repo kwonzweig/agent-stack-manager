@@ -1,7 +1,6 @@
 ---
 key: webapp-testing
 name: webapp-testing
-description: Test local web apps with Python Playwright, screenshots and browser logs.
 metadata:
   sources:
     - kind: github-dir

@@ -1,8 +1,6 @@
 ---
 key: server-functions
 name: server-functions
-description: Server functions, input validation, request utilities, errors and form
-  handling.
 metadata:
   sources:
     - kind: github-dir

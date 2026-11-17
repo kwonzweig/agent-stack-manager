@@ -1,8 +1,6 @@
 ---
 key: supabase-postgres-best-practices
 name: supabase-postgres-best-practices
-description: Author and review Postgres schemas, migrations, queries, indexes and
-  row-level security.
 metadata:
   sources:
     - kind: github-dir

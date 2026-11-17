@@ -1,10 +1,6 @@
 ---
 key: find-tools
 name: find-tools
-description: Find and assess existing internal or external tools, reusable components,
-  libraries, services, workflows, and AI skills. Use when the user asks for tools
-  or skills, or before choosing how to handle unfamiliar, specialized, or recurring
-  work. Skip routine execution with an already chosen tool.
 metadata:
   sources:
     - kind: github-dir

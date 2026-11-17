@@ -1,7 +1,6 @@
 ---
 key: shadcn
 name: shadcn
-description: Find, add, customize and compose shadcn components and design systems.
 metadata:
   sources:
     - kind: github-dir

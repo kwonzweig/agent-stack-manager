@@ -1,4 +1,4 @@
-import type { CatalogItem, Source } from '../types';
+import type { CatalogItem, Source, SourceFacts } from '../types';
 
 export function itemName(item: CatalogItem) {
   return item.title || item.name || item.kind;
@@ -31,12 +31,29 @@ export function byStars(items: CatalogItem[]) {
   return [...items].sort((a, b) => (b.stars ?? -1) - (a.stars ?? -1));
 }
 
-export function starsLabel(stars: number) {
-  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(stars);
+// "318.3K" for stars or installs.
+export function countLabel(count: number) {
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(count);
 }
 
-export function starsTitle(item: CatalogItem) {
-  return (item.stars ?? 0).toLocaleString('en') + ' GitHub stars, read on ' + item.starsCheckedOn;
+// When a value was read from its source, in the viewer's time: "Nov 16, 2026, 10:42 AM".
+export function readAtLabel(iso?: string) {
+  const time = iso ? new Date(iso) : undefined;
+  return time && !Number.isNaN(time.getTime())
+    ? time.toLocaleString('en', { dateStyle: 'medium', timeStyle: 'short' }) : 'unknown';
+}
+
+export function starsTitle(item: SourceFacts) {
+  return (item.stars ?? 0).toLocaleString('en') + ' GitHub stars, read ' + readAtLabel(item.starsReadAt);
+}
+
+export function installsTitle(item: SourceFacts) {
+  return (item.installs ?? 0).toLocaleString('en') + ' skills.sh installs, read ' + readAtLabel(item.installsReadAt);
+}
+
+// Each Catalog item with what its source says, once GET /api/catalog/sources has answered.
+export function withSourceFacts<T extends { id: string }>(items: T[], facts: Record<string, SourceFacts>): T[] {
+  return items.map((item) => (facts[item.id] ? { ...item, ...facts[item.id] } : item));
 }
 
 // "obra/superpowers" for a GitHub URL, otherwise the host and path.

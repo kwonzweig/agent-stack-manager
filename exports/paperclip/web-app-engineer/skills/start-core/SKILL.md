@@ -1,8 +1,6 @@
 ---
 key: start-core
 name: start-core
-description: Framework setup and routing, with references for server functions, HTTP
-  routes, auth and deployment.
 metadata:
   sources:
     - kind: github-dir

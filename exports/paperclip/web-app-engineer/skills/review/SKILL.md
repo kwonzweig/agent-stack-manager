@@ -1,7 +1,6 @@
 ---
 key: review
 name: review
-description: Review the PR diff for production problems before merge.
 metadata:
   sources:
     - kind: github-dir

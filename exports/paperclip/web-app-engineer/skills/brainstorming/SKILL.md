@@ -1,7 +1,6 @@
 ---
 key: brainstorming
 name: brainstorming
-description: Clarify intent and approve a design before implementation.
 metadata:
   sources:
     - kind: github-dir

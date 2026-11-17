@@ -1,82 +1,9 @@
 {
-  "repositories": [
-    {
-      "url": "https://github.com/anthropics/claude-plugins-official",
-      "stars": 47417,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/anthropics/skills",
-      "stars": 195621,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/blader/humanizer",
-      "stars": 69670,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/garrytan/gstack",
-      "stars": 141756,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/kwonzweig/agent-operating-standards",
-      "stars": 0,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/kwonzweig/agent-stack-manager",
-      "stars": 0,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/kwonzweig/ai-slop-prevention",
-      "stars": 0,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/kwonzweig/there-is-a-tool-for-that",
-      "stars": 0,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/microsoft/playwright-mcp",
-      "stars": 39718,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/obra/superpowers",
-      "stars": 318282,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/shadcn-ui/ui",
-      "stars": 128293,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/supabase/agent-skills",
-      "stars": 3090,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/TanStack/router",
-      "stars": 15317,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/vercel-labs/skills",
-      "stars": 39592,
-      "starsCheckedOn": "2026-11-16"
-    }
-  ],
   "items": [
     {
       "id": "brainstorming-84f46f",
       "name": "brainstorming",
       "kind": "skill",
-      "description": "Clarify intent and approve a design before implementation.",
       "apm": {
         "section": "apm",
         "value": {
@@ -90,7 +17,6 @@
       "id": "diagnosing-superpowers-5c62ce",
       "name": "diagnosing-superpowers",
       "kind": "skill",
-      "description": "Diagnose a Superpowers session from its transcript.",
       "apm": {
         "section": "apm",
         "value": {
@@ -104,7 +30,6 @@
       "id": "dispatching-parallel-agents-da2a30",
       "name": "dispatching-parallel-agents",
       "kind": "skill",
-      "description": "Coordinate independent agent work.",
       "apm": {
         "section": "apm",
         "value": {
@@ -118,7 +43,6 @@
       "id": "executing-plans-7fe4c6",
       "name": "executing-plans",
       "kind": "skill",
-      "description": "Execute an implementation plan inline.",
       "apm": {
         "section": "apm",
         "value": {
@@ -132,7 +56,6 @@
       "id": "finishing-a-development-branch-565bf5",
       "name": "finishing-a-development-branch",
       "kind": "skill",
-      "description": "Choose how to integrate tested branch changes.",
       "apm": {
         "section": "apm",
         "value": {
@@ -146,7 +69,6 @@
       "id": "receiving-code-review-716a9a",
       "name": "receiving-code-review",
       "kind": "skill",
-      "description": "Verify code review feedback before implementing it.",
       "apm": {
         "section": "apm",
         "value": {
@@ -160,7 +82,6 @@
       "id": "requesting-code-review-9a630e",
       "name": "requesting-code-review",
       "kind": "skill",
-      "description": "Review implementation against its requirements.",
       "apm": {
         "section": "apm",
         "value": {
@@ -174,7 +95,6 @@
       "id": "subagent-driven-development-b3dda0",
       "name": "subagent-driven-development",
       "kind": "skill",
-      "description": "Execute independent implementation tasks with subagents.",
       "apm": {
         "section": "apm",
         "value": {
@@ -188,7 +108,6 @@
       "id": "systematic-debugging-efdd01",
       "name": "systematic-debugging",
       "kind": "skill",
-      "description": "Identify a root cause before choosing a fix.",
       "apm": {
         "section": "apm",
         "value": {
@@ -202,7 +121,6 @@
       "id": "test-driven-development-a7f5a6",
       "name": "test-driven-development",
       "kind": "skill",
-      "description": "Write a failing test before implementing a feature or fix.",
       "apm": {
         "section": "apm",
         "value": {
@@ -216,7 +134,6 @@
       "id": "using-git-worktrees-4081e4",
       "name": "using-git-worktrees",
       "kind": "skill",
-      "description": "Create or reuse an isolated workspace.",
       "apm": {
         "section": "apm",
         "value": {
@@ -230,7 +147,6 @@
       "id": "using-superpowers-1d1cd4",
       "name": "using-superpowers",
       "kind": "skill",
-      "description": "Load relevant workflow skills at the start of a conversation.",
       "apm": {
         "section": "apm",
         "value": {
@@ -244,7 +160,6 @@
       "id": "verification-before-completion-8b04df",
       "name": "verification-before-completion",
       "kind": "skill",
-      "description": "Verify evidence before making a completion claim.",
       "apm": {
         "section": "apm",
         "value": {
@@ -258,7 +173,6 @@
       "id": "writing-plans-c89510",
       "name": "writing-plans",
       "kind": "skill",
-      "description": "Write an implementation plan before editing code.",
       "apm": {
         "section": "apm",
         "value": {
@@ -272,7 +186,6 @@
       "id": "writing-skills-bc8fde",
       "name": "writing-skills",
       "kind": "skill",
-      "description": "Author or verify skills before deployment.",
       "apm": {
         "section": "apm",
         "value": {
@@ -286,7 +199,6 @@
       "id": "gstack-qa-fec045",
       "name": "qa",
       "kind": "skill",
-      "description": "Test the site, API or CLI and fix confirmed bugs.",
       "apm": {
         "section": "apm",
         "value": {
@@ -300,7 +212,6 @@
       "id": "gstack-review-0c4759",
       "name": "review",
       "kind": "skill",
-      "description": "Review the PR diff for production problems before merge.",
       "apm": {
         "section": "apm",
         "value": {
@@ -314,7 +225,6 @@
       "id": "gstack-design-review-f815cd",
       "name": "design-review",
       "kind": "skill",
-      "description": "Audit and fix visual inconsistency, spacing, hierarchy and slow interactions.",
       "apm": {
         "section": "apm",
         "value": {
@@ -328,7 +238,6 @@
       "id": "react-start-intent-skill-dbdc8c",
       "name": "react-start",
       "kind": "skill",
-      "description": "React-specific TanStack Start setup, routes and server functions.",
       "apm": {
         "section": "apm",
         "value": {
@@ -342,7 +251,6 @@
       "id": "start-core-intent-skill-fc4931",
       "name": "start-core",
       "kind": "skill",
-      "description": "Framework setup and routing, with references for server functions, HTTP routes, auth and deployment.",
       "apm": {
         "section": "apm",
         "value": {
@@ -356,7 +264,6 @@
       "id": "server-functions-e64c5a",
       "name": "server-functions",
       "kind": "skill",
-      "description": "Server functions, input validation, request utilities, errors and form handling.",
       "apm": {
         "section": "apm",
         "value": {
@@ -370,7 +277,6 @@
       "id": "server-routes-75abd9",
       "name": "server-routes",
       "kind": "skill",
-      "description": "Raw HTTP routes, handlers, context and request parsing.",
       "apm": {
         "section": "apm",
         "value": {
@@ -384,7 +290,6 @@
       "id": "auth-server-primitives-58af15",
       "name": "auth-server-primitives",
       "kind": "skill",
-      "description": "Server-side authentication, cookies, sessions, OAuth and CSRF.",
       "apm": {
         "section": "apm",
         "value": {
@@ -398,7 +303,6 @@
       "id": "deployment-7088f5",
       "name": "deployment",
       "kind": "skill",
-      "description": "Deployment runtimes, SSR modes, static prerendering and caching.",
       "apm": {
         "section": "apm",
         "value": {
@@ -412,7 +316,6 @@
       "id": "execution-model-8c8465",
       "name": "execution-model",
       "kind": "skill",
-      "description": "Isomorphic execution and client/server boundaries.",
       "apm": {
         "section": "apm",
         "value": {
@@ -426,7 +329,6 @@
       "id": "middleware-69624e",
       "name": "middleware",
       "kind": "skill",
-      "description": "Request and function middleware and shared context.",
       "apm": {
         "section": "apm",
         "value": {
@@ -440,7 +342,6 @@
       "id": "shadcn-252c72",
       "name": "shadcn",
       "kind": "skill",
-      "description": "Find, add, customize and compose shadcn components and design systems.",
       "apm": {
         "section": "apm",
         "value": {
@@ -454,7 +355,6 @@
       "id": "supabase-20db22",
       "name": "supabase",
       "kind": "skill",
-      "description": "Build with Supabase Database, Auth, Storage, Realtime, client libraries and CLI.",
       "apm": {
         "section": "apm",
         "value": {
@@ -468,7 +368,6 @@
       "id": "supabase-postgres-best-practices-0bc8df",
       "name": "supabase-postgres-best-practices",
       "kind": "skill",
-      "description": "Author and review Postgres schemas, migrations, queries, indexes and row-level security.",
       "apm": {
         "section": "apm",
         "value": {
@@ -482,7 +381,6 @@
       "id": "web-app-testing-09d636",
       "name": "webapp-testing",
       "kind": "skill",
-      "description": "Test local web apps with Python Playwright, screenshots and browser logs.",
       "apm": {
         "section": "apm",
         "value": {
@@ -496,7 +394,6 @@
       "id": "ai-slop-prevention-bcb1db",
       "name": "ai-slop-prevention",
       "kind": "skill",
-      "description": "Apply house rules to UI, prose, schemas and code.",
       "apm": {
         "section": "apm",
         "value": {
@@ -509,7 +406,6 @@
       "id": "frontend-design",
       "name": "frontend-design",
       "kind": "plugin",
-      "description": "Anthropic's frontend design plugin for UI implementation.",
       "sourceUrl": "https://github.com/anthropics/claude-plugins-official/blob/main/plugins/frontend-design/.claude-plugin/plugin.json",
       "source": {
         "repositoryUrl": "https://github.com/anthropics/claude-plugins-official",
@@ -528,7 +424,6 @@
       "id": "playwright-mcp-0640ed",
       "name": "playwright",
       "kind": "mcp",
-      "description": "Browser automation tools through MCP.",
       "sourceUrl": "https://github.com/microsoft/playwright-mcp/blob/main/README.md",
       "source": {
         "repositoryUrl": "https://github.com/microsoft/playwright-mcp",
@@ -564,7 +459,6 @@
       "id": "agent-operating-standards",
       "name": "agent-operating-standards",
       "kind": "skill",
-      "description": "Shared operating rules for authorized action, capability checks, completion reports and maintained guidance. Use at task intake and when these decisions arise during work.",
       "apm": {
         "section": "apm",
         "value": {
@@ -578,7 +472,6 @@
       "id": "find-tools",
       "name": "find-tools",
       "kind": "skill",
-      "description": "Find and assess existing internal or external tools, reusable components, libraries, services, workflows, and AI skills. Use when the user asks for tools or skills, or before choosing how to handle unfamiliar, specialized, or recurring work. Skip routine execution with an already chosen tool.",
       "apm": {
         "section": "apm",
         "value": {
@@ -592,7 +485,6 @@
       "id": "find-skills",
       "name": "find-skills",
       "kind": "skill",
-      "description": "Helps users discover and install agent skills when they ask questions like \"how do I do X\", \"find a skill for X\", \"is there a skill that can...\", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.",
       "apm": {
         "section": "apm",
         "value": {
@@ -606,7 +498,6 @@
       "id": "humanizer",
       "name": "humanizer",
       "kind": "skill",
-      "description": "Rewrite AI-sounding text so it reads like the writer without changing what it says. Use when editing or reviewing prose for AI tells: not-X-but-Y contrasts, one-line closers, staged openers, forced triads, dashes everywhere, inflated claims, sales language, stock AI words, bold labels, or filler. Based on Wikipedia's \"Signs of AI writing.\"",
       "apm": {
         "section": "apm",
         "value": {
@@ -619,7 +510,6 @@
       "id": "technology-research",
       "name": "technology-research",
       "kind": "skill",
-      "description": "Use when a decision needs factual investigation, background, alternatives or evidence of effectiveness, or when a company requests a technology assessment, an adoption recommendation, or a recurring scan of AI tools, agent stacks, or its technical domain. Routine implementation under an accepted specification does not require a separate research project.",
       "apm": {
         "section": "apm",
         "value": {
@@ -633,7 +523,6 @@
       "id": "session-report",
       "name": "session-report",
       "kind": "plugin",
-      "description": "Anthropic's on-demand report for Claude Code session and subagent usage.",
       "sourceUrl": "https://github.com/anthropics/claude-plugins-official/blob/main/plugins/session-report/.claude-plugin/plugin.json",
       "source": {
         "repositoryUrl": "https://github.com/anthropics/claude-plugins-official",

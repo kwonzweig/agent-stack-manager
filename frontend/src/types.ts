@@ -16,7 +16,25 @@ export interface PackageSummary {
   usage: string[];
   componentCount: number;
 }
-export interface CatalogItem {
+/** What an item's source says now, from GET /api/catalog/sources; each value carries when it was read (ISO time). */
+export interface SourceFacts {
+  /** The item's own description, read from descriptionUrl. */
+  description?: string;
+  descriptionUrl?: string;
+  descriptionReadAt?: string;
+  /** GitHub stars of the source repository. */
+  stars?: number;
+  starsReadAt?: string;
+  /** skills.sh installs; absent when skills.sh does not list the skill. */
+  installs?: number;
+  installsReadAt?: string;
+}
+export interface SourceData {
+  items: Record<string, SourceFacts>;
+  /** Sources that could not be read; their last answer, if any, is still shown. */
+  errors: string[];
+}
+export interface CatalogItem extends SourceFacts {
   id: string;
   type: "component" | PackageKind;
   kind: Kind | PackageKind;
@@ -27,15 +45,13 @@ export interface CatalogItem {
   source?: Source | null;
   configuration?: unknown;
   componentCount?: number;
-  /** GitHub stars of the source repository and the day they were read; absent without a repository. */
-  stars?: number;
-  starsCheckedOn?: string;
   version?: string;
   packageId?: string;
   workArea?: string[];
   usage?: string[];
 }
-export interface Component {
+/** A preset member or a Catalog item, with what its source says once that has been read. */
+export interface Component extends SourceFacts {
   id: string;
   name: string;
   kind: Kind;

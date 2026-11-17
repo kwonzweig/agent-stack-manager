@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { api, ApiError, catalogMember, errorMessage, packagePath } from "./api";
-import type { CatalogItem, Component, ConsumerData, Package, PackageKind, PackageSummary } from "./types";
+import type { CatalogItem, Component, ConsumerData, Package, PackageKind, PackageSummary, SourceData } from "./types";
+import { withSourceFacts } from "./catalog/catalogItem";
 import { createDraft, isDirty, makePayload, overlappingChanges, rebaseDraft, withMembers, type Draft } from "./draft";
 import CatalogPage from "./catalog/CatalogPage";
 import { hrefFor, Sidebar, type Route } from "./components/Sidebar";
@@ -56,6 +57,10 @@ export function App() {
   const [theme, setTheme] = useState<"light" | "dark">(() => localStorage.getItem("asm:theme") === "dark" ? "dark" : "light");
   const presets = useList("/api/presets", { presets: [] as PackageSummary[] });
   const catalog = useList("/api/catalog", defaultCatalog);
+  // Descriptions, stars and installs come from each item's source, read when the dashboard opens.
+  const sourceFacts = useList<SourceData>("/api/catalog/sources", { items: {}, errors: [] });
+  const catalogItems = useMemo(() => withSourceFacts(catalog.data.items, sourceFacts.data.items),
+    [catalog.data.items, sourceFacts.data.items]);
   const consumers = useList<ConsumerData>("/api/consumers", { kinds: [], consumers: [] });
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [loadErrors, setLoadErrors] = useState<Record<string, string>>({});
@@ -121,8 +126,20 @@ export function App() {
     setRoute(next);
   }
   const openPreset = (id: string) => navigate({ view: "presets", id });
+  // A Catalog item's page has its own address. Back returns to the Catalog as it was left,
+  // through history when the Catalog opened it, so the browser's Back button does the same.
+  const catalogItem = route.view === "catalog" && route.item ? catalogItems.find(item => item.id === route.item) : undefined;
+  function openCatalogItem(id: string) {
+    setOverlay(undefined);
+    history.pushState({ fromCatalog: true }, "", hrefFor({ view: "catalog", item: id }));
+    setRoute({ view: "catalog", item: id });
+  }
+  function closeCatalogItem() {
+    if (history.state?.fromCatalog) history.back();
+    else navigate({ view: "catalog" });
+  }
   const createPreset = () => setOverlay({ type: "create", selected: [], kind: "preset" });
-  const pickerItems = catalog.data.items.filter(item => item.type !== "preset").map(catalogMember)
+  const pickerItems = catalogItems.filter(item => item.type !== "preset").map(catalogMember)
     .filter(item => item.id !== "package:" + routeId && item.id !== "instruction");
   const currentItems = new Map(pickerItems.map(item => [item.id, item]));
   function chosen(ids: string[]) {
@@ -186,11 +203,12 @@ export function App() {
     <Sidebar route={route} presets={presets.data.presets} onNavigate={navigate}
       onCreate={createPreset} theme={theme}
       onTheme={() => setTheme(value => value === "light" ? "dark" : "light")} />
-    <main ref={main} inert={overlay?.type === "component"} className="min-h-0 min-w-0 flex-1 overflow-y-auto" id="main">
+    <main ref={main} inert={overlay?.type === "component" || !!catalogItem} className="min-h-0 min-w-0 flex-1 overflow-y-auto" id="main">
       {presets.error && <div className="mx-auto max-w-[1240px] px-5 pt-5"><ErrorBox message={presets.error} onRetry={presets.refresh} /></div>}
       {route.view === "catalog" ? <CatalogPage
-        items={catalog.data.items} presets={presets.data.presets}
-        onOpenItem={item => setOverlay({ type: "component", item: catalogMember(item) })}
+        items={catalogItems} presets={presets.data.presets}
+        onOpenItem={item => openCatalogItem(item.id)}
+        sourceStatus={{ loading: sourceFacts.loading, error: sourceFacts.error, failed: sourceFacts.data.errors, onRetry: sourceFacts.refresh }}
         onOpenPreset={openPreset}
         onCreatePreset={(selected, kind = "preset") => setOverlay({ type: "create", selected, kind })}
         onAdd={addToPackage} isLoading={catalog.loading} error={catalog.error} onRetry={catalog.refresh}
@@ -211,7 +229,7 @@ export function App() {
                 dirty={isDirty(draft)} data={consumers.data} loading={consumers.loading} error={consumers.error}
                 onRetry={consumers.refresh} route={{ ...route, id: draft.original.id }} onNavigate={navigate} />
               : route.tab === "source" ? <SourceFiles id={draft.original.id} files={draft.original.files} dirty={isDirty(draft)} />
-              : <PresetContents draft={draft} busy={activeLoading}
+              : <PresetContents draft={draft} busy={activeLoading} facts={sourceFacts.data.items}
                 onOpen={item => setOverlay({ type: "component", item, id: draft.original.id })}
                 onAdd={() => setOverlay({ type: "picker", id: draft.original.id })}
                 onRemove={ids => updateDraft(draft.original.id, before => ({ ...before, members: before.members.filter(item => !ids.includes(item.id)) }))} />}
@@ -229,7 +247,9 @@ export function App() {
       existing={new Set(drafts[overlay.id].members.map(item => item.id))} packageKind={drafts[overlay.id].kind} onClose={closeOverlay}
       onAdd={items => { addMembers(overlay.id, items); closeOverlay(); }}
       error={catalog.error} loading={catalog.loading} onRetry={catalog.refresh} />}
-    {overlay?.type === "component" && <ComponentDetails item={overlay.item} onClose={closeOverlay}
+    {catalogItem && <ComponentDetails item={catalogMember(catalogItem)} backLabel="Catalog" onClose={closeCatalogItem} />}
+    {overlay?.type === "component" && <ComponentDetails item={{ ...overlay.item, ...sourceFacts.data.items[overlay.item.id] }} onClose={closeOverlay}
+      backLabel={overlay.id ? drafts[overlay.id].title : "Catalog"}
       presetId={overlay.id && drafts[overlay.id].original.components.some(item => item.id === overlay.item.id) ? overlay.id : undefined}
       instruction={overlay.id ? drafts[overlay.id].instruction : undefined}
       onInstruction={overlay.id && overlay.item.id === "instruction" ? instruction =>

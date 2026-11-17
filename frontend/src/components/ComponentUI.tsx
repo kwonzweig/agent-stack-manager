@@ -12,9 +12,10 @@ export function KindIcon({ kind, className = "h-4 w-4", style }: { kind: Kind | 
   return <Icon className={className} style={style} aria-hidden="true" />;
 }
 
-export function KindBadge({ kind }: { kind: Kind }) {
-  return <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-    KIND_STYLES[kind].chip)}>{KIND_LABELS[kind]}</span>;
+// The one kind label: Presets, Catalog, the detail page and the export report all use it.
+export function KindBadge({ kind }: { kind: Kind | PackageKind }) {
+  return <span className={cn("inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+    KIND_STYLES[kind].chip)}>{KIND_STYLES[kind].singular}</span>;
 }
 
 export function SearchField({ value, onChange, label = "Search components" }: { value: string; onChange: (value: string) => void; label?: string }) {

@@ -1,7 +1,6 @@
 ---
 key: qa
 name: qa
-description: Test the site, API or CLI and fix confirmed bugs.
 metadata:
   sources:
     - kind: github-dir

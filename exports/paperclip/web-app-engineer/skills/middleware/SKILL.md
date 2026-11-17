@@ -1,7 +1,6 @@
 ---
 key: middleware
 name: middleware
-description: Request and function middleware and shared context.
 metadata:
   sources:
     - kind: github-dir

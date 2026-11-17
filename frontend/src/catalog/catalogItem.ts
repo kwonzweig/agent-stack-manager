@@ -8,6 +8,24 @@ export function itemRepository(item: CatalogItem) {
   return item.source?.repositoryUrl || '';
 }
 
+export type CatalogKind = 'all' | CatalogItem['kind'];
+
+export function filterCatalogFacets(
+  items: CatalogItem[],
+  kind: CatalogKind,
+  repositories: readonly string[],
+  minimumStars: number | null,
+) {
+  if (kind === 'all' && !repositories.length && minimumStars === null) return items;
+
+  const selected = new Set(repositories);
+  return items.filter((item) =>
+    (kind === 'all' || item.kind === kind)
+    && (!selected.size || selected.has(itemRepository(item)))
+    && (minimumStars === null || (item.stars != null && item.stars >= minimumStars)),
+  );
+}
+
 // Most stars first; entries without a repository go last, and catalog order holds among equal counts.
 export function byStars(items: CatalogItem[]) {
   return [...items].sort((a, b) => (b.stars ?? -1) - (a.stars ?? -1));

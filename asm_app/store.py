@@ -414,7 +414,7 @@ class Store:
     def _catalog(self):
         path = self._checked(self.root / "catalog" / "components.json")
         if not path.is_file():
-            return {"items": [], "sources": [], "repositories": []}
+            return {"items": [], "repositories": []}
         catalog = _read_json(path.read_bytes(), "component catalog")
         catalog.setdefault("repositories", [])
         stars = _repository_stars(catalog["repositories"])
@@ -577,7 +577,7 @@ class Store:
                 if source:
                     item.update(stars[_repository_key(source["repositoryUrl"])])
                 items.append(item)
-            return {"sources": catalog["sources"], "items": [
+            return {"items": [
                 *items, *({**row, "id": f"package:{row['id']}", "packageId": row["id"],
                            "type": row["kind"]} for row in self.list_packages()),
             ]}

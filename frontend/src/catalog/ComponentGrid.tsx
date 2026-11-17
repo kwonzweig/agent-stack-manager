@@ -306,7 +306,8 @@ export default function ComponentGrid({
                   <input type="number" min={0} step={1} inputMode="numeric" placeholder="Any"
                     value={minimumStars ?? ''} className="catalog-filter-control"
                     onChange={(event) => {
-                      const { value, valueAsNumber } = event.currentTarget;
+                      const { value, valueAsNumber, validity } = event.currentTarget;
+                      if (validity.badInput) return;
                       if (value && (!Number.isSafeInteger(valueAsNumber) || valueAsNumber < 0)) return;
                       setMinimumStars(value ? valueAsNumber : null);
                       setPage(1);

@@ -16,14 +16,17 @@ export default function RepositoryFilter({ repositories, selected, onToggle, onC
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [selectedOnly, setSelectedOnly] = useState(false);
   const optionsId = useId();
   const labelId = useId();
   const summaryId = useId();
   const trigger = useRef<HTMLButtonElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const options = selectedOnly ? selected : repositories;
   const matches = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return query ? repositories.filter((url) => url.toLowerCase().includes(query)) : repositories;
-  }, [repositories, search]);
+    return query ? options.filter((url) => url.toLowerCase().includes(query)) : options;
+  }, [options, search]);
   const selection = useMemo(() => new Set(selected), [selected]);
   const totalPages = Math.max(1, Math.ceil(matches.length / REPOSITORIES_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
@@ -51,9 +54,22 @@ export default function RepositoryFilter({ repositories, selected, onToggle, onC
               setOpen(false);
               trigger.current?.focus();
             }}>
-            <input type="search" aria-label="Search repositories" placeholder="Search repositories…" autoFocus
-              value={search} onChange={(event) => { setSearch(event.currentTarget.value); setPage(1); }}
-              className="catalog-filter-control" />
+            <div className="flex items-center gap-2">
+              <input ref={searchInput} type="search" aria-label="Search repositories" placeholder="Search repositories…" autoFocus
+                value={search} onChange={(event) => { setSearch(event.currentTarget.value); setPage(1); }}
+                className="catalog-filter-control min-w-0 flex-1" />
+              {(selected.length > 0 || selectedOnly) && (
+                <button type="button" aria-pressed={selectedOnly} onClick={() => {
+                  setSelectedOnly((current) => !current);
+                  setSearch('');
+                  setPage(1);
+                }} className={'shrink-0 rounded-md border px-2 py-2 text-xs font-medium ' + (selectedOnly
+                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)]'
+                  : 'border-[var(--color-border)] hover:border-[var(--color-accent)]')}>
+                  Selected ({selected.length})
+                </button>
+              )}
+            </div>
             {visible.length > 0 ? (
               <ul className="divide-y divide-[var(--color-border)]">
                 {visible.map((repository) => {
@@ -61,14 +77,21 @@ export default function RepositoryFilter({ repositories, selected, onToggle, onC
                   return (
                     <li key={repository}>
                       <label className="flex min-w-0 cursor-pointer items-center gap-2 rounded px-1.5 py-1.5 text-sm hover:bg-[var(--color-surface-2)]">
-                        <Checkbox checked={selection.has(repository)} label={label} onChange={() => onToggle(repository)} />
+                        <Checkbox checked={selection.has(repository)} label={label} onChange={() => {
+                          onToggle(repository);
+                          if (selectedOnly) searchInput.current?.focus();
+                        }} />
                         <span className="truncate" title={label}>{label}</span>
                       </label>
                     </li>
                   );
                 })}
               </ul>
-            ) : <p role="status" className="px-1.5 py-2 text-sm text-[var(--color-text-secondary)]">No matching repositories</p>}
+            ) : (
+              <p role="status" className="px-1.5 py-2 text-sm text-[var(--color-text-secondary)]">
+                {selectedOnly && !selected.length ? 'No selected repositories' : 'No matching repositories'}
+              </p>
+            )}
             {(totalPages > 1 || selected.length > 0) && (
               <div className="flex flex-wrap items-center justify-between gap-1.5 px-1">
                 {totalPages > 1 && (
@@ -85,7 +108,12 @@ export default function RepositoryFilter({ repositories, selected, onToggle, onC
                   </div>
                 )}
                 {selected.length > 0 && (
-                  <button type="button" onClick={onClear} className="ml-auto rounded px-1 py-1 text-xs font-medium underline hover:text-[var(--color-accent)]">
+                  <button type="button" onClick={() => {
+                    onClear();
+                    setSelectedOnly(false);
+                    setPage(1);
+                    searchInput.current?.focus();
+                  }} className="ml-auto rounded px-1 py-1 text-xs font-medium underline hover:text-[var(--color-accent)]">
                     Clear repositories
                   </button>
                 )}

@@ -55,7 +55,6 @@ export interface Package extends PackageSummary {
   instruction: string;
   components: Component[];
   files: NativeFile[];
-  paperclip: { role: string | null; canCreateAgents: boolean };
 }
 /** The rows of the support table: the component kinds, with Plugin split by the manifest each app reads. */
 export type SupportKind = "instruction" | "skill" | "mcp" | "hook" | "claude-code-plugin" | "codex-plugin";
@@ -74,7 +73,6 @@ export interface Consumer {
   export: boolean;
   /** For an app that manages other tools, the tools its column covers. */
   tools?: string[];
-  roles?: { values: string[]; doc: string };
   support: Record<SupportKind, SupportCell>;
 }
 export interface ConsumerData {

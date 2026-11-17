@@ -224,7 +224,6 @@ export function App() {
         recordSave(pkg); openPreset(pkg.id); feedback("Created " + pkg.title + ".");
       }} />}
     {overlay?.type === "edit" && drafts[overlay.id] && <PresetDialog initial={drafts[overlay.id]} onClose={closeOverlay}
-      roles={consumers.data.consumers.find(consumer => consumer.id === "paperclip")?.roles?.values}
       onSave={fields => updateDraft(overlay.id, before => ({ ...before, ...fields }))} />}
     {overlay?.type === "picker" && drafts[overlay.id] && <ComponentPicker items={pickerItems}
       existing={new Set(drafts[overlay.id].members.map(item => item.id))} packageKind={drafts[overlay.id].kind} onClose={closeOverlay}
@@ -262,7 +261,7 @@ function ConflictDialog({ draft, onClose, onResolve }: { draft: Draft; onClose: 
     }).catch(err => { if (!pending.signal.aborted) setError(errorMessage(err)); });
     return () => pending.abort();
   }, [id, attempt]);
-  const fieldNames = { title: "Name", description: "Description", kind: "Type", icon: "Icon", workArea: "Work area", usage: "Usage", instruction: "Instruction", paperclip: "Paperclip" };
+  const fieldNames = { title: "Name", description: "Description", kind: "Type", icon: "Icon", workArea: "Work area", usage: "Usage", instruction: "Instruction" };
   return <Modal title="Review saved version" onClose={onClose}>
     {error ? <ErrorBox message={error} onRetry={() => setAttempt(v => v + 1)} /> : latest ?
       <div className="space-y-3 text-[13px] text-secondary">

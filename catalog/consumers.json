@@ -5,10 +5,6 @@
       "id": "paperclip",
       "name": "Paperclip",
       "export": true,
-      "roles": {
-        "values": ["ceo", "cto", "cmo", "cfo", "security", "engineer", "designer", "pm", "qa", "devops", "researcher", "general"],
-        "doc": "https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/constants.ts"
-      },
       "support": {
         "instruction": {"value": "yes", "name": "AGENTS.md", "note": "The body of an agent's AGENTS.md is its instruction.", "doc": "https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md"},
         "skill": {"value": "yes", "name": "Skills", "note": "An import from GitHub omits files over 1 MiB, past 9,990 files or 61 MiB per repository, and files its execution or secret-disclosure checks reject; unsafe content, secrets and invalid paths are rejected.", "doc": "https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/skills-store.md"},

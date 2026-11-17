@@ -16,7 +16,7 @@ It works in three units:
 - **Stack**: components that are used together.
 - **Agent preset**: one role. Its Instruction, its components and the stacks it includes, more than a list of skills.
 
-Every stack and preset is a [Microsoft APM](https://github.com/microsoft/apm) package in `packages/`, the common language. ASM keeps its own labels (title, icon, Paperclip role) under `x-preset-labels` in `apm.yml`; there is no second preset format. The aim is that ASM exports each preset from APM into the formats apps such as Paperclip and CC Switch read, and imports their formats back into APM.
+Every stack and preset is a [Microsoft APM](https://github.com/microsoft/apm) package in `packages/`, the common language. ASM keeps its own labels (title, icon, work area, usage) under `x-preset-labels` in `apm.yml`; there is no second preset format. The aim is that ASM exports each preset from APM into the formats apps such as Paperclip and CC Switch read, and imports their formats back into APM.
 
 ## What each app supports
 

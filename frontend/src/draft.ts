@@ -9,17 +9,16 @@ export interface Draft {
   workArea: string[];
   usage: string[];
   instruction: string;
-  paperclip: Package["paperclip"];
   members: Component[];
 }
 
-const fields = ["title", "description", "kind", "icon", "workArea", "usage", "instruction", "paperclip"] as const;
+const fields = ["title", "description", "kind", "icon", "workArea", "usage", "instruction"] as const;
 type Field = (typeof fields)[number];
 const equal = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 export function createDraft(pkg: Package): Draft {
-  const { title, description, kind, icon, workArea, usage, instruction, paperclip, components } = pkg;
-  return { original: pkg, title, description, kind, icon, workArea, usage, instruction, paperclip,
+  const { title, description, kind, icon, workArea, usage, instruction, components } = pkg;
+  return { original: pkg, title, description, kind, icon, workArea, usage, instruction,
     members: components.filter(item => item.id !== "instruction") };
 }
 
@@ -31,8 +30,8 @@ export function withMembers(pkg: Package, items: Component[]) {
   return { added, draft: { ...base, members: [...base.members, ...added] } };
 }
 
-export function makePayload({ original, members, title, description, kind, icon, workArea, usage, instruction, paperclip }: Draft) {
-  return { revision: original.revision, title, description, kind, icon, workArea, usage, instruction, paperclip,
+export function makePayload({ original, members, title, description, kind, icon, workArea, usage, instruction }: Draft) {
+  return { revision: original.revision, title, description, kind, icon, workArea, usage, instruction,
     componentIds: members.map(item => item.id) };
 }
 

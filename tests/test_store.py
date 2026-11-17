@@ -256,83 +256,14 @@ class StoreTests(unittest.TestCase):
         self.store.save(package["id"], {"revision": saved["revision"], "componentIds": []})
         self.assertNotIn("hooks", yaml.safe_load(manifest.read_text()))
 
-    def test_paperclip_labels_are_read_from_preset_labels(self):
-        store = Store(ROOT)
-        self.assertEqual(store.get("cao")["paperclip"], {"role": "ceo", "canCreateAgents": False})
-        self.assertEqual(store.get("web-app-engineer")["paperclip"], {"role": None, "canCreateAgents": False})
-        self.assertEqual(store.get("ar")["paperclip"], {"role": "general", "canCreateAgents": True})
-
-    def test_save_keeps_the_paperclip_labels(self):
-        package = self.create()
-        manifest = self.root / "packages/checkout-engineer/apm.yml"
-        data = yaml.safe_load(manifest.read_text())
-        data["x-preset-labels"]["paperclip"] = {"role": "researcher", "canCreateAgents": True}
-        manifest.write_text(yaml.safe_dump(data), encoding="utf-8")
-        package = self.store.get(package["id"])
-        self.assertEqual(package["paperclip"], {"role": "researcher", "canCreateAgents": True})
-        saved = self.store.save(package["id"], {"revision": package["revision"], "title": "Checkout lead"})
-        self.assertEqual(saved["paperclip"], {"role": "researcher", "canCreateAgents": True})
-        self.assertEqual(yaml.safe_load(manifest.read_text())["x-preset-labels"]["paperclip"],
-                         {"role": "researcher", "canCreateAgents": True})
-
-    def use_consumers(self):
-        (self.root / "catalog/consumers.json").write_bytes((ROOT / "catalog/consumers.json").read_bytes())
-
-    def test_save_writes_the_paperclip_fields_from_the_payload(self):
-        self.use_consumers()
-        package = self.create()
-        manifest = self.root / "packages/checkout-engineer/apm.yml"
-        saved = self.store.save(package["id"], {"revision": package["revision"],
-                                                "paperclip": {"role": "engineer", "canCreateAgents": True}})
-        self.assertEqual(saved["paperclip"], {"role": "engineer", "canCreateAgents": True})
-        self.assertEqual(yaml.safe_load(manifest.read_text())["x-preset-labels"]["paperclip"],
-                         {"role": "engineer", "canCreateAgents": True})
-        saved = self.store.save(package["id"], {"revision": saved["revision"],
-                                                "paperclip": {"role": "engineer", "canCreateAgents": False}})
-        self.assertEqual(yaml.safe_load(manifest.read_text())["x-preset-labels"]["paperclip"], {"role": "engineer"})
-        saved = self.store.save(package["id"], {"revision": saved["revision"],
-                                                "paperclip": {"role": "", "canCreateAgents": False}})
-        self.assertEqual(saved["paperclip"], {"role": None, "canCreateAgents": False})
-        self.assertNotIn("paperclip", yaml.safe_load(manifest.read_text())["x-preset-labels"])
-
-    def test_an_unchanged_empty_paperclip_payload_writes_no_block(self):
-        self.use_consumers()
+    def test_a_payload_field_the_store_does_not_know_is_ignored(self):
         package = self.create()
         manifest = self.root / "packages/checkout-engineer/apm.yml"
         before = manifest.read_bytes()
-        self.store.save(package["id"], {"revision": package["revision"],
-                                        "paperclip": {"role": None, "canCreateAgents": False}})
+        saved = self.store.save(package["id"], {"revision": package["revision"],
+                                                "paperclip": {"role": "ceo", "canCreateAgents": True}})
         self.assertEqual(manifest.read_bytes(), before)
-
-    def test_save_refuses_a_paperclip_payload_outside_the_role_list(self):
-        self.use_consumers()
-        package = self.create()
-        for value in ({"role": "agent", "canCreateAgents": False}, {"role": "general", "canCreateAgents": "yes"},
-                      {"role": 3}, {"role": "general", "adapter": "codex_local"}, ["general"]):
-            with self.subTest(value=value):
-                # The current revision, so a payload wrongly accepted earlier cannot fail this one with 409.
-                revision = self.store.get(package["id"])["revision"]
-                with self.assertRaises(StoreError) as caught:
-                    self.store.save(package["id"], {"revision": revision, "paperclip": value})
-                self.assertEqual(caught.exception.status, 400)
-        self.assertEqual(self.store.get(package["id"])["paperclip"], {"role": None, "canCreateAgents": False})
-
-    def test_a_hand_written_role_outside_the_list_does_not_block_other_edits(self):
-        self.use_consumers()
-        package = self.create()
-        manifest = self.root / "packages/checkout-engineer/apm.yml"
-        data = yaml.safe_load(manifest.read_text())
-        data["x-preset-labels"]["paperclip"] = {"role": "wizard"}
-        manifest.write_text(yaml.safe_dump(data), encoding="utf-8")
-        package = self.store.get(package["id"])
-        saved = self.store.save(package["id"], {"revision": package["revision"], "title": "Checkout lead",
-                                                "paperclip": package["paperclip"]})
-        self.assertEqual(saved["paperclip"], {"role": "wizard", "canCreateAgents": False})
-
-    def test_a_paperclip_role_needs_the_role_list(self):
-        package = self.create()
-        with self.assertRaises(StoreError):
-            self.store.save(package["id"], {"revision": package["revision"], "paperclip": {"role": "general"}})
+        self.assertNotIn("paperclip", saved)
 
     def test_a_component_stored_in_the_package_names_its_file(self):
         package = self.create(names=["brainstorming", "web-session-start"])

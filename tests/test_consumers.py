@@ -73,7 +73,6 @@ class ConsumerValidationTests(unittest.TestCase):
         self.refused(lambda data: data["consumers"][1]["support"].update(lsp=cell(data)))
         self.refused(lambda data: data.update(kinds=["skill"]))
         self.refused(lambda data: data["consumers"][0].update(export="yes"))
-        self.refused(lambda data: data["consumers"][0]["roles"].update(values=["general", 3]))
         self.refused(lambda data: data["consumers"].append(copy.deepcopy(data["consumers"][0])))
 
 

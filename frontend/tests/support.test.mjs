@@ -63,6 +63,6 @@ test("a plugin with no known manifest is listed apart", () => {
   const items = [row("p", null, { status: "unconverted", cause: "not-in-format" }, "plugin"),
     row("q", "claude-code-plugin", { status: "unconverted", cause: "not-in-format" }, "plugin"),
     row("stack", null, { status: "converted" }, "package"),
-    row("paperclip:role", null, { status: "converted" }, "other")];
+    row("prompt", null, { status: "unconverted" }, "other")];
   assert.deepEqual(unplacedPlugins(items).map(entry => entry.id), ["p"]);
 });

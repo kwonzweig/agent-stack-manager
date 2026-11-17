@@ -259,12 +259,6 @@ def _consumers(data):
         tools = consumer.get("tools", [])
         if not isinstance(tools, list) or any(not _text(tool).strip() for tool in tools):
             raise StoreError(f"Consumer {identifier} tools must be a list of names.")
-        if "roles" in consumer:
-            roles = _mapping(consumer["roles"])
-            values = roles.get("values")
-            if (not isinstance(values, list) or not values or any(not isinstance(v, str) or not v for v in values)
-                    or not _https(roles.get("doc"))):
-                raise StoreError(f"Consumer {identifier} roles need values and the doc that lists them.")
         support = consumer.get("support")
         if not isinstance(support, dict) or list(support) != list(SUPPORT_KINDS):
             raise StoreError(f"Consumer {identifier} needs one support cell per kind, in the order of kinds.")
@@ -432,12 +426,6 @@ class Store:
             return {"kinds": list(SUPPORT_KINDS), "consumers": []}
         return _consumers(_read_json(path.read_bytes(), "consumer support data"))
 
-    def _paperclip_roles(self):
-        for consumer in self.consumers()["consumers"]:
-            if consumer["id"] == "paperclip" and "roles" in consumer:
-                return consumer["roles"]["values"]
-        raise StoreError("catalog/consumers.json lists no Paperclip roles to check the role against.")
-
     def _entries(self, identifier, model, files, catalog):
         entries = []
         seen = set()
@@ -525,7 +513,6 @@ class Store:
         entries = self._entries(identifier, model, files, catalog)
         _, instruction = _instruction(files.get(_PRIMARY.format(identifier), b""))
         kind = labels.get("kind")
-        paperclip = _mapping(labels.get("paperclip"))
         package = {
             "id": identifier, "title": _text(labels.get("title")) or _text(model.get("name")) or identifier,
             "description": _text(model.get("description")), "kind": "stack" if kind == "stack" else "preset",
@@ -533,8 +520,6 @@ class Store:
             "version": str(model.get("version", "")), "componentCount": 1 + len(entries),
             **{key: [value for value in labels[key] if isinstance(value, str)]
                if isinstance(labels.get(key), list) else [] for key in ("workArea", "usage")},
-            "paperclip": {"role": _text(paperclip.get("role")) or None,
-                          "canCreateAgents": paperclip.get("canCreateAgents") is True},
             "revision": _revision(files), "instruction": instruction,
             "components": [_component("instruction", "Instruction", "instruction", instruction),
                            *(entry.item for entry in entries)],
@@ -637,8 +622,6 @@ class Store:
         for field in ("workArea", "usage"):
             if field in payload:
                 labels[field] = self._strings(payload[field], field)
-        if "paperclip" in payload:
-            self._paperclip(labels, payload["paperclip"])
         if "instruction" in payload:
             path = _PRIMARY.format(identifier)
             old = files.get(path, b"")
@@ -675,33 +658,6 @@ class Store:
         from .paperclip import write_exports
         write_exports(self.root)
         return result
-
-    def _paperclip(self, labels, value):
-        """Write x-preset-labels.paperclip from the payload; an empty role or false removes its key."""
-        if not isinstance(value, dict) or set(value) - {"role", "canCreateAgents"}:
-            raise StoreError("paperclip must be an object with role and canCreateAgents.")
-        role = value.get("role")
-        if role is not None and not isinstance(role, str):
-            raise StoreError("paperclip.role must be text.")
-        allowed = value.get("canCreateAgents", False)
-        if not isinstance(allowed, bool):
-            raise StoreError("paperclip.canCreateAgents must be true or false.")
-        stored = labels.get("paperclip")
-        block = dict(stored) if isinstance(stored, dict) else {}
-        # A role already in apm.yml is kept even when it is not Paperclip's, so other edits still save;
-        # the export reports it as needing attention.
-        if role and role != block.get("role") and role not in (roles := self._paperclip_roles()):
-            raise StoreError(f"Role {role} is not one of Paperclip's roles: {', '.join(roles)}.")
-        block.pop("role", None)
-        block.pop("canCreateAgents", None)
-        if role:
-            block["role"] = role
-        if allowed:
-            block["canCreateAgents"] = True
-        if block:
-            labels["paperclip"] = block
-        else:
-            labels.pop("paperclip", None)
 
     @staticmethod
     def _strings(values, field):

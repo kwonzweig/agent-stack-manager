@@ -214,5 +214,23 @@
 .asm-preset .support-good { color: var(--ink); }
 .asm-preset .support-neutral { color: var(--muted); }
 .asm-preset .support-bad { color: var(--red); }
-.asm-preset .support-info { color: var(--color-text-faint); }
-.asm-preset .support-info:hover, .asm-preset .support-info:focus-visible { color: var(--blue); }
+.asm-preset .support-info-wrap { display: inline-flex; }
+.asm-preset .support-info { display: inline-flex; color: var(--color-text-faint); border-radius: 4px; }
+.asm-preset .support-info:hover, .asm-preset .support-info:focus-visible, .asm-preset .support-info[aria-expanded="true"] { color: var(--blue); }
+.asm-preset .support-popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.asm-preset .support-popover p + p { margin-top: 4px; }
+.asm-preset .support-popover-source { color: var(--muted); overflow-wrap: anywhere; }
+.asm-preset .support-popover a { color: var(--blue); text-decoration: underline; }

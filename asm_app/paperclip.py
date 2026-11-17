@@ -1,7 +1,6 @@
 """Convert an APM preset into a company package that Paperclip can import."""
 
 from io import BytesIO
-import json
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -12,7 +11,9 @@ import yaml
 
 
 GITHUB = re.compile(r"https://github\.com/([\w.-]+)/([\w.-]+)", re.IGNORECASE | re.ASCII)
-DEFAULT_ROLE = "general"
+# Paperclip stores a role outside its own list when a package names none, so every agent names `general`.
+# A role or right the company needs is set in Paperclip after the import.
+ROLE = "general"
 # Every preset's export is committed here, one folder per package id, and Paperclip imports it by URL.
 EXPORTS = "exports/paperclip"
 # A preset's own skill is read from this repository's main branch once it is committed there.
@@ -51,19 +52,6 @@ def _repository(root):
         return None
     url = project.get("urls", {}).get("Repository") if isinstance(project.get("urls"), dict) else None
     return url.rstrip("/").removesuffix(".git") if isinstance(url, str) else None
-
-
-def _roles(root):
-    """Paperclip's role list from catalog/consumers.json, or None when the file does not hold one."""
-    try:
-        data = json.loads((Path(root) / "catalog" / "consumers.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    for consumer in data.get("consumers", []):
-        if consumer.get("id") == "paperclip":
-            values = (consumer.get("roles") or {}).get("values")
-            return values if isinstance(values, list) else None
-    return None
 
 
 class _Reason(str):
@@ -261,19 +249,6 @@ def _stubs(skills):
     return stubs
 
 
-def _role(package, root):
-    """The role written to both files, and the report row when the preset's role is not Paperclip's."""
-    labels = package.get("paperclip") or {}
-    role = labels.get("role") or DEFAULT_ROLE
-    roles = _roles(root)
-    if roles is None or role in roles:
-        return role, None
-    row = {"id": "paperclip:role", "name": "Paperclip role", "kind": "other", "supportKind": None, "source": role, "target": None,
-           "conversion": _status("unconverted", f"Role {role} is not one of Paperclip's roles, so {DEFAULT_ROLE} "
-                                                f"was written; choose one of {', '.join(roles)}.")}
-    return DEFAULT_ROLE, row
-
-
 def _skill_labels(component, key):
     """A stub's name and description: the catalog row's, or for a preset's own skill its SKILL.md's."""
     name = component["name"]
@@ -294,14 +269,12 @@ def _skill_labels(component, key):
     return name, description
 
 
-def _files(package, role, stubs, bundle):
+def _files(package, stubs, bundle):
     from .store import _export_digest
 
     slug, title = package["id"], package["title"]
-    labels = package.get("paperclip") or {}
     config = {
-        "role": role,
-        "permissions": {"canCreateAgents": labels.get("canCreateAgents") is True},
+        "role": ROLE,
         "runtime": {"heartbeat": {"enabled": False}},
         "metadata": {"agentStackManagerPackageId": slug, "agentStackManagerRevision": _export_digest(bundle)},
     }
@@ -309,7 +282,7 @@ def _files(package, role, stubs, bundle):
         "COMPANY.md": _frontmatter({"schema": "agentcompanies/v1", "kind": "company", "slug": slug,
                                     "name": title, "description": package["description"] or title}),
         f"agents/{slug}/AGENTS.md": _frontmatter(
-            {"kind": "agent", "name": title, "title": title, "slug": slug, "role": role, "skills": list(stubs)},
+            {"kind": "agent", "name": title, "title": title, "slug": slug, "role": ROLE, "skills": list(stubs)},
             _instruction(package["instruction"]),
         ),
         ".paperclip.yaml": _yaml({"schemaVersion": 7, "agents": {slug: config}}),
@@ -327,15 +300,12 @@ def _files(package, role, stubs, bundle):
 def convert(package, *, root: Path):
     """Produce the Paperclip company package of a preset and the report of every component."""
     items, stubs, bundle = _report(package, root)
-    role, role_row = _role(package, root)
-    if role_row:
-        items.append(role_row)
     converted = sum(row["conversion"]["status"] == "converted" for row in items)
     return {
         "consumer": "paperclip", "items": items,
         "summary": {"total": len(items), "converted": converted, "unconverted": len(items) - converted},
         "files": [{"path": path, "content": content}
-                  for path, content in _files(package, role, stubs, bundle).items()],
+                  for path, content in _files(package, stubs, bundle).items()],
         "folder": _folder_of(package, root),
     }
 

@@ -21,6 +21,3 @@ x-preset-labels:
   title: AI Resources
   kind: preset
   icon: search
-  paperclip:
-    role: general
-    canCreateAgents: true

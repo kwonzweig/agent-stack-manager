@@ -89,6 +89,18 @@ class ServerTests(unittest.TestCase):
                 code, body, _ = self.request('/api/presets', data=data, headers={'Content-Type':'application/json'})
                 self.assertEqual((code, json.loads(body)), (400, {'error': 'Request body must be valid JSON.'}))
 
+    def test_catalog_loads_items_with_or_without_legacy_source_list(self):
+        catalog_file = Path(self.temp.name) / 'catalog' / 'components.json'
+        catalog_file.parent.mkdir()
+        for catalog in (
+            {'items': [], 'repositories': []},
+            {'items': [], 'repositories': [], 'sources': [{'name': 'Example', 'url': 'https://example.com'}]},
+        ):
+            with self.subTest(legacy='sources' in catalog):
+                catalog_file.write_text(json.dumps(catalog), encoding='utf-8')
+                code, body, _ = self.request('/api/catalog')
+                self.assertEqual((code, json.loads(body)), (200, {'items': []}))
+
     def test_a_local_file_error_is_a_server_error(self):
         # ASM contacts no other service, so a disk or permission error is its own failure, not a gateway's.
         with patch('asm_app.store.Store.catalog', side_effect=PermissionError('denied')), \

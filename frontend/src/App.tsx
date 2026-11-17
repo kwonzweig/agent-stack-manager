@@ -16,9 +16,8 @@ import { SourceFiles } from "./components/SourceFiles";
 
 interface CatalogData {
   items: CatalogItem[];
-  sources: { name: string; url: string }[];
 }
-const defaultCatalog: CatalogData = { items: [], sources: [] };
+const defaultCatalog: CatalogData = { items: [] };
 
 type ListState<T> = { data: T; loading: boolean; error: string };
 function useList<T>(path: string, initial: T) {
@@ -163,7 +162,7 @@ export function App() {
     showSaved(pkg);
   }
   function showSaved(pkg: Package) {
-    // Keep the newly saved title/count visible while reloading catalog sources.
+    // Keep the newly saved title and count visible while reloading the catalog.
     presets.setCurrent(prev => ({ ...prev, data: { presets: [...prev.data.presets.filter(item => item.id !== pkg.id), pkg].sort((a, b) => a.id.localeCompare(b.id)) } }));
     void presets.refresh(); void catalog.refresh();
   }
@@ -190,7 +189,7 @@ export function App() {
     <main ref={main} inert={overlay?.type === "component"} className="min-h-0 min-w-0 flex-1 overflow-y-auto" id="main">
       {presets.error && <div className="mx-auto max-w-[1240px] px-5 pt-5"><ErrorBox message={presets.error} onRetry={presets.refresh} /></div>}
       {route.view === "catalog" ? <CatalogPage
-        items={catalog.data.items} sources={catalog.data.sources} presets={presets.data.presets}
+        items={catalog.data.items} presets={presets.data.presets}
         onOpenItem={item => setOverlay({ type: "component", item: catalogMember(item) })}
         onOpenPreset={openPreset}
         onCreatePreset={(selected, kind = "preset") => setOverlay({ type: "create", selected, kind })}

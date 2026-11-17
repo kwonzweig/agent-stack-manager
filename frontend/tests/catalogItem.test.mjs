@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { byStars, sourceLabel, starsLabel, starsTitle } from "../src/catalog/catalogItem.ts";
+import { byStars, filterCatalogFacets, sourceLabel, starsLabel, starsTitle } from "../src/catalog/catalogItem.ts";
 
 const item = (id, stars) => ({ id, type: "component", kind: "skill", name: id, ...(stars === undefined ? {} : { stars, starsCheckedOn: "2026-11-16" }) });
 
@@ -33,4 +33,26 @@ test("a preset's component names its repository as the Catalog card does", () =>
   assert.equal(sourceLabel({ kind: "skill", sourceUrl: "https://example.com/docs/skill" }), "example.com");
   assert.equal(sourceLabel({ kind: "skill" }), "Local");
   assert.equal(sourceLabel({ kind: "package", source: null }), "Local stack");
+});
+
+test("kind and minimum stars narrow the results across all selected repositories", () => {
+  const firstRepo = "https://github.com/example/first";
+  const secondRepo = "https://github.com/example/second";
+  const thirdRepo = "https://github.com/example/third";
+  const items = [
+    { ...item("at-threshold", 500), source: { repositoryUrl: firstRepo } },
+    { ...item("other-selected-repo", 700), source: { repositoryUrl: secondRepo } },
+    { ...item("low-stars", 499), source: { repositoryUrl: firstRepo } },
+    { ...item("wrong-kind", 900), kind: "hook", source: { repositoryUrl: firstRepo } },
+    { ...item("unselected-repo", 900), source: { repositoryUrl: thirdRepo } },
+  ];
+  const results = filterCatalogFacets(items, "skill", [firstRepo, secondRepo], 500);
+  assert.deepEqual(results.map((entry) => entry.id), ["at-threshold", "other-selected-repo"]);
+});
+
+test("a zero-star minimum includes known zero counts and excludes missing counts", () => {
+  const items = [item("zero", 0), item("unknown"), item("popular", 100)];
+  const results = filterCatalogFacets(items, "all", [], 0);
+  assert.deepEqual(results.map((entry) => entry.id), ["zero", "popular"]);
+  assert.deepEqual(filterCatalogFacets(items, "all", [], null).map((entry) => entry.id), ["zero", "unknown", "popular"]);
 });

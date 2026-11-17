@@ -8,7 +8,6 @@ import './catalog.css';
 export interface CatalogPageProps {
   items: CatalogItem[];
   presets: PackageSummary[];
-  sources: { name: string; url: string }[];
   isLoading?: boolean;
   error?: string | null;
   onRetry?: () => void;
@@ -19,7 +18,7 @@ export interface CatalogPageProps {
 }
 
 export default function CatalogPage({
-  items, presets, sources, isLoading, error, onRetry, onOpenItem, onOpenPreset, onCreatePreset, onAdd,
+  items, presets, isLoading, error, onRetry, onOpenItem, onOpenPreset, onCreatePreset, onAdd,
 }: CatalogPageProps) {
   const [selection, setSelection] = useState<ReadonlySet<string>>(() => new Set());
   const [onlySelected, setOnlySelected] = useState(false);
@@ -62,20 +61,6 @@ export default function CatalogPage({
         onAdd={onAdd}
         onCreate={onCreatePreset}
       />
-      {sources.length > 0 && (
-        <details className="mx-4 sm:mx-6 text-[12px] text-[var(--color-text-secondary)]">
-          <summary className="w-fit cursor-pointer">Catalog sources</summary>
-          <ul className="flex flex-wrap gap-3 pt-2">
-            {sources.map((source) => (
-              <li key={source.url}>
-                {/^https?:\/\//i.test(source.url)
-                  ? <a className="underline underline-offset-2" href={source.url} rel="noreferrer" target="_blank">{source.name}</a>
-                  : source.name}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
       {selectedIds.length > 0 && (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 md:left-[220px]">
           <div role="region" aria-label="Selected components"

@@ -19,7 +19,7 @@ All JSON errors are `{ "error": "message" }`. A POST or PATCH body is a JSON obj
 
 `Store(root: Path)` where root contains `packages/`, `catalog/`, and ignored `.asm/`.
 
-- `catalog()` -> `{items: [Component or PackageSummary], sources: [{name,url}]}`. It refuses a `catalog/components.json` whose `repositories` row lacks `stars` (a non-negative integer read from the repository's GitHub page) or `starsCheckedOn` (`YYYY-MM-DD`), or whose item comes from a repository with no row.
+- `catalog()` -> `{items: [Component or PackageSummary]}`. It refuses a `catalog/components.json` whose `repositories` row lacks `stars` (a non-negative integer read from the repository's GitHub page) or `starsCheckedOn` (`YYYY-MM-DD`), or whose item comes from a repository with no row.
 - `list_packages()` -> list of PackageSummary
 - `get(id)` -> Package
 - `create(payload)` -> Package

@@ -5,12 +5,12 @@ import type { CatalogItem, PackageKind, PackageSummary } from '../types';
 import { KIND_STYLES } from '../lib/kinds';
 import Checkbox from './Checkbox';
 import ComponentCard from './ComponentCard';
-import { byStars, itemName, itemRepository, repositoryLabel } from './catalogItem';
+import RepositoryFilter from './RepositoryFilter';
+import { byStars, filterCatalogFacets, itemName, itemRepository, repositoryLabel, type CatalogKind } from './catalogItem';
 
 const ITEMS_PER_PAGE = 24;
 const CATALOG_TYPES = { all: 'All', component: 'Components', stack: 'Stacks', preset: 'Presets' };
 type CatalogType = keyof typeof CATALOG_TYPES;
-type Category = 'all' | CatalogItem['kind'];
 type Sort = 'catalog' | 'name' | 'repository' | 'stars';
 const SORTS = [['catalog', 'Catalog order'], ['name', 'Alphabetical'], ['repository', 'Repository'], ['stars', 'Stars']] as const;
 
@@ -44,7 +44,8 @@ export default function ComponentGrid({
   items, selection, onlySelected, targets, isLoading, error, onRetry, onOpen, onSelect, onAdd, onCreate,
 }: Props) {
   const [activeType, setActiveType] = useState<CatalogType>('all');
-  const [category, setCategory] = useState<Category>('all');
+  const [category, setCategory] = useState<CatalogKind>('all');
+  const [minimumStars, setMinimumStars] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<Sort>('catalog');
   const [page, setPage] = useState(1);
@@ -75,15 +76,13 @@ export default function ComponentGrid({
   const categories = [...new Set(typeComponents.map((item) => item.kind))].sort((a, b) =>
     KIND_STYLES[a].singular.localeCompare(KIND_STYLES[b].singular),
   );
-  const repositories = [...new Set(typeComponents.flatMap((item) => item.source?.repositoryUrl || []))].sort();
+  const hasStarCounts = useMemo(() => typeComponents.some((item) => item.stars != null), [typeComponents]);
+  const repositories = useMemo(() => [...new Set(typeComponents.map(itemRepository).filter(Boolean))]
+    .sort((a, b) => repositoryLabel(a).localeCompare(repositoryLabel(b))), [typeComponents]);
 
   const filtered = useMemo(() => {
-    let results = typeComponents;
+    let results = filterCatalogFacets(typeComponents, category, selectedRepositories, minimumStars);
     if (onlySelected) results = results.filter((item) => selection.has(item.id));
-    if (category !== 'all') results = results.filter((item) => item.kind === category);
-    if (selectedRepositories.length) {
-      results = results.filter((item) => selectedRepositories.includes(item.source?.repositoryUrl ?? ''));
-    }
     const query = search.trim().toLowerCase();
     if (query) {
       results = results.filter((item) =>
@@ -101,7 +100,7 @@ export default function ComponentGrid({
       return [...results].sort((a, b) => key(a).localeCompare(key(b)));
     }
     return results;
-  }, [typeComponents, onlySelected, selection, category, selectedRepositories, search, sortBy]);
+  }, [typeComponents, onlySelected, selection, category, selectedRepositories, minimumStars, search, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
@@ -113,7 +112,8 @@ export default function ComponentGrid({
     stack: ['stack', 'stacks'],
     preset: ['preset', 'presets'],
   }[activeType];
-  const hasActiveFilters = Boolean(search || category !== 'all' || selectedRepositories.length);
+  const activeFilterCount = Number(category !== 'all') + Number(selectedRepositories.length > 0) + Number(minimumStars !== null);
+  const hasActiveFilters = Boolean(search || activeFilterCount);
 
   function toggleRepositoryFilter(repository: string) {
     setSelectedRepositories((previous) => previous.includes(repository)
@@ -132,6 +132,7 @@ export default function ComponentGrid({
     setSearch('');
     setCategory('all');
     setSelectedRepositories([]);
+    setMinimumStars(null);
     setPage(1);
   }
 
@@ -177,6 +178,7 @@ export default function ComponentGrid({
                 setActiveType(type as CatalogType);
                 setCategory('all');
                 setSelectedRepositories([]);
+                setMinimumStars(null);
                 setPage(1);
               }}
               className={'shrink-0 px-3 py-1.5 rounded-full border text-[12px] font-ui-mono font-semibold transition-colors ' + (
@@ -218,43 +220,25 @@ export default function ComponentGrid({
             )}
           </div>
 
-          {/* Category select + advanced filters toggle: share a row on mobile,
-              flow individually as flex items from sm: up (display:contents
-              unwraps this grouping div so it doesn't affect desktop layout) */}
-          <div className="flex items-center gap-2.5 sm:contents">
-            <select
-              aria-label="Component kind"
-              value={category}
-              onChange={(e) => { setCategory(e.target.value as Category); setPage(1); }}
-              className="flex-1 sm:flex-none min-w-0 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg text-[16px] sm:text-[13px] text-[var(--color-text-secondary)] font-medium px-3.5 py-2 sm:py-2.5 pr-9 outline-none focus:bg-[var(--color-surface-3)] focus:border-[var(--color-primary-500)] focus:ring-2 focus:ring-[var(--color-primary-500)]/20 cursor-pointer transition-all appearance-none hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%23737373%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
-            >
-              <option value="all">All kinds</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{KIND_STYLES[cat].singular}</option>
-              ))}
-            </select>
-
-            {/* Advanced Filters Toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              aria-expanded={showFilters}
-              aria-controls="aitmpl-filters"
-              className={`shrink-0 flex items-center gap-2 px-3 py-2 text-[13px] font-mono font-semibold rounded border transition-all ${
-                showFilters || hasActiveFilters
-                  ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
-                  : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-accent)] hover:text-[var(--color-text-primary)]'
-              }`}
-            >
-              <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
-              <span className="hidden sm:inline">Filters</span>
-              <span className="sr-only sm:hidden">Filters and sort</span>
-              {hasActiveFilters && (
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowFilters((open) => !open)}
+            aria-expanded={showFilters}
+            aria-controls="aitmpl-filters"
+            className={'flex w-fit shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-[13px] font-semibold transition-colors ' + (
+              showFilters || activeFilterCount
+                ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-text-primary)]'
+                : 'border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)]'
+            )}
+          >
+            <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="rounded-md bg-[var(--color-surface-2)] px-1.5 py-0.5 text-xs tabular-nums">{activeFilterCount}</span>
+            )}
+          </button>
 
           {/* View Mode Toggle */}
           <div role="group" aria-label="Catalog view" className="flex w-fit items-center gap-1 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg p-1">
@@ -304,69 +288,51 @@ export default function ComponentGrid({
           </div>
         </div>
 
-        {/* Advanced Filters Panel */}
         {showFilters && (
-          <div id="aitmpl-filters" className="px-4 sm:px-6 py-4 sm:py-5 border-t border-[var(--color-border)] bg-[var(--color-surface-1)] animate-fade-in-up">
-            <div className="flex flex-col sm:flex-row sm:items-start gap-5 sm:gap-6">
-              {/* Sort: on phones it lives here instead of in the bar */}
-              <div className="sm:hidden">
-                <label className="text-[11px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-3 block">
-                  Sort by
+          <div id="aitmpl-filters" className="border-t border-[var(--color-border)] bg-[var(--color-surface-1)] px-4 py-3 sm:max-h-[55dvh] sm:overflow-y-auto sm:px-6">
+            <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
+              <label className="min-w-0 space-y-1.5">
+                <span className="block text-xs font-medium text-[var(--color-text-secondary)]">Kind</span>
+                <select value={category}
+                  onChange={(event) => { setCategory(event.currentTarget.value as CatalogKind); setPage(1); }}
+                  className="catalog-filter-control">
+                  <option value="all">All kinds</option>
+                  {categories.map((kind) => <option key={kind} value={kind}>{KIND_STYLES[kind].singular}</option>)}
+                </select>
+              </label>
+              {hasStarCounts && (
+                <label className="min-w-0 space-y-1.5">
+                  <span className="block text-xs font-medium text-[var(--color-text-secondary)]">Minimum GitHub stars</span>
+                  <input type="number" min={0} step={1} inputMode="numeric" placeholder="Any"
+                    value={minimumStars ?? ''} className="catalog-filter-control"
+                    onChange={(event) => {
+                      const { value, valueAsNumber, validity } = event.currentTarget;
+                      if (validity.badInput) return;
+                      if (value && (!Number.isSafeInteger(valueAsNumber) || valueAsNumber < 0)) return;
+                      setMinimumStars(value ? valueAsNumber : null);
+                      setPage(1);
+                    }} />
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {SORTS.map(([value, label]) => (
-                    <button
-                      key={value}
-                      onClick={() => { setSortBy(value); setPage(1); }}
-                      aria-pressed={sortBy === value}
-                      className={`px-3 py-1 text-[11px] font-mono font-semibold rounded border transition-all ${
-                        sortBy === value
-                          ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
-                          : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-accent)] hover:text-[var(--color-text-primary)]'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Repository filter */}
+              )}
               {repositories.length > 0 && (
-                <div className="flex-1">
-                  <label className="text-[11px] font-bold text-[var(--color-text-tertiary)] uppercase tracking-wider mb-3 block">
-                    Source repositories
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {repositories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => toggleRepositoryFilter(cat)}
-                        aria-pressed={selectedRepositories.includes(cat)}
-                        className={`px-3 py-1 text-[11px] font-mono font-semibold rounded border transition-all ${
-                          selectedRepositories.includes(cat)
-                            ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
-                            : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-accent)] hover:text-[var(--color-text-primary)]'
-                        }`}
-                      >
-                        {cat.replace(/^https?:\/\/github\.com\//, '')}
-                      </button>
-                    ))}
-                  </div>
-
+                <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+                  <RepositoryFilter repositories={repositories} selected={selectedRepositories}
+                    onToggle={toggleRepositoryFilter} onClear={() => { setSelectedRepositories([]); setPage(1); }} />
                 </div>
               )}
-
-              {/* Clear filters */}
-              {hasActiveFilters && (
-                <button
-                  onClick={clearAllFilters}
-                  className="self-start px-4 py-2 text-[12px] font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg transition-all active:scale-95"
-                >
-                  Clear All
-                </button>
-              )}
+              <label className="min-w-0 space-y-1.5 sm:hidden">
+                <span className="block text-xs font-medium text-[var(--color-text-secondary)]">Sort by</span>
+                <select value={sortBy} onChange={(event) => { setSortBy(event.currentTarget.value as Sort); setPage(1); }}
+                  className="catalog-filter-control">
+                  {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
             </div>
+            {hasActiveFilters && (
+              <button type="button" onClick={clearAllFilters} className="mt-2 rounded px-1 py-1 text-xs font-medium underline hover:text-[var(--color-accent)]">
+                Clear filters
+              </button>
+            )}
           </div>
         )}
       </div>

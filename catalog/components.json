@@ -1,18 +1,4 @@
 {
-  "sources": [
-    {
-      "name": "AITMPL",
-      "url": "https://www.aitmpl.com/"
-    },
-    {
-      "name": "skills.sh",
-      "url": "https://skills.sh/"
-    },
-    {
-      "name": "Claude Code official marketplace",
-      "url": "https://github.com/anthropics/claude-plugins-official"
-    }
-  ],
   "repositories": [
     {
       "url": "https://github.com/anthropics/claude-plugins-official",

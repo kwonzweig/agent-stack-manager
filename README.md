@@ -107,3 +107,7 @@ Get Node.js from [nodejs.org/download](https://nodejs.org/en/download); a Linux 
 ## Contributing
 
 Open an [issue](https://github.com/kwonzweig/agent-stack-manager/issues) before changing behaviour. A pull request passes the commands in [Development](#development). The [Check workflow](.github/workflows/check.yml) runs them on every push and pull request, and fails when `asm_app/web/` is not the build of `frontend/`.
+
+## Licence
+
+[MIT](LICENSE). The frontend code reused from other projects keeps its own licences, listed in [frontend/IMPLEMENTATION.md](frontend/IMPLEMENTATION.md).

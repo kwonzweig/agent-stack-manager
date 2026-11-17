@@ -7,6 +7,7 @@ name = "agent-stack-manager"
 version = "0.1.0"
 description = "Agent skills, stacks and presets kept in one place as Microsoft APM packages, with a local dashboard and automatic export to Paperclip."
 readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.11"
 dependencies = ["PyYAML>=6.0.2,<7"]
 

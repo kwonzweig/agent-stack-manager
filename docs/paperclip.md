@@ -7,9 +7,9 @@
 | `COMPANY.md` | The package's slug, name and description. |
 | `agents/<id>/AGENTS.md` | The agent's name, title, role `general` and skill names; the body is the preset's Instruction. |
 | `.paperclip.yaml` | Role `general`, heartbeat off, and `metadata.agentStackManagerPackageId` and `agentStackManagerRevision`. No adapter and no permissions. |
+| `skills/<key>/SKILL.md` | One stub per skill: repository, path and branch, no commit. |
 
 A preset holds nothing for one app alone, so the export takes no role or right from it. Every agent gets the role `general`, because Paperclip stores a role outside its own list when a package names none, and no permissions. Whoever imports gives the company what it needs in Paperclip (step 5 below).
-| `skills/<key>/SKILL.md` | One stub per skill: repository, path and branch, no commit. |
 
 ## Import a preset
 

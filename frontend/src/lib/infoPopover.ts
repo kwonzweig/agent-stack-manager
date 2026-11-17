@@ -18,6 +18,13 @@ export function nextPopover(state: PopoverState, event: PopoverEvent): PopoverSt
   }
 }
 
+// What a key pressed anywhere on the page does to the popover. Escape closes an open one, even one opened by hover
+// while focus is elsewhere; focus goes back to the button only when it was inside the icon or the popover.
+export function escapeKey(key: string, open: boolean, focusInside: boolean) {
+  if (key !== "Escape" || !open) return null;
+  return { close: true, refocus: focusInside };
+}
+
 // A link's text: the page's host and path.
 export function sourceLinkText(url: string) {
   try {

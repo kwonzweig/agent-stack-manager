@@ -1,6 +1,6 @@
-import { useEffect, useId, useLayoutEffect, useReducer, useRef, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useReducer, useRef, type PointerEvent } from "react";
 import { Info } from "lucide-react";
-import { CLOSED, nextPopover, sourceLinkText } from "../lib/infoPopover";
+import { CLOSED, escapeKey, nextPopover, sourceLinkText } from "../lib/infoPopover";
 
 // Leaving the icon for the popover crosses a small gap; a pointer that comes back in time keeps it open.
 const LEAVE_DELAY_MS = 150;
@@ -40,8 +40,24 @@ export function InfoPopover({ label, note, doc }: { label: string; note?: string
     const outside = (event: globalThis.PointerEvent) => {
       if (!wrapper.current?.contains(event.target as Node)) dispatch("outside");
     };
+    // Escape is heard on the whole page, so a popover opened by hover closes while focus is elsewhere.
+    const key = (event: globalThis.KeyboardEvent) => {
+      const outcome = escapeKey(event.key, true, !!wrapper.current?.contains(document.activeElement));
+      if (!outcome) return;
+      event.stopPropagation();
+      dispatch("escape");
+      if (!outcome.refocus) return;
+      // Focus goes back to the button without opening the popover again.
+      returning.current = true;
+      button.current?.focus();
+      returning.current = false;
+    };
     document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", key);
+    };
   }, [state.open]);
 
   useEffect(() => () => window.clearTimeout(leaving.current), []);
@@ -57,17 +73,8 @@ export function InfoPopover({ label, note, doc }: { label: string; note?: string
     window.clearTimeout(leaving.current);
     leaving.current = window.setTimeout(() => dispatch("pointer-leave"), LEAVE_DELAY_MS);
   };
-  const key = (event: KeyboardEvent) => {
-    if (event.key !== "Escape" || !state.open) return;
-    event.stopPropagation();
-    dispatch("escape");
-    // Focus goes back to the button without opening the popover again.
-    returning.current = true;
-    button.current?.focus();
-    returning.current = false;
-  };
 
-  return <span ref={wrapper} className="support-info-wrap" onPointerEnter={enter} onPointerLeave={leave} onKeyDown={key}
+  return <span ref={wrapper} className="support-info-wrap" onPointerEnter={enter} onPointerLeave={leave}
     onBlur={event => { if (!wrapper.current?.contains(event.relatedTarget as Node | null)) dispatch("focus-out"); }}>
     <button ref={button} type="button" className="support-info" aria-label={label} aria-expanded={state.open}
       aria-controls={state.open ? id : undefined} onFocus={() => { if (!returning.current) dispatch("focus-in"); }} onClick={() => dispatch("click")}>

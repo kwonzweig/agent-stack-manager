@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CLOSED, nextPopover, sourceLinkText } from "../src/lib/infoPopover.ts";
+import { CLOSED, escapeKey, nextPopover, sourceLinkText } from "../src/lib/infoPopover.ts";
 
 const run = (...events) => events.reduce(nextPopover, CLOSED);
 
@@ -48,4 +48,12 @@ test("Escape and a click elsewhere close it however it opened", () => {
 
 test("after it closes, hover opens it again", () => {
   assert.deepEqual(run("click", "click", "pointer-enter"), { open: true, by: "hover" });
+});
+
+test("Escape anywhere on the page closes an open popover; focus goes back only from inside it", () => {
+  assert.equal(escapeKey("Enter", true, true), null);
+  assert.equal(escapeKey("Escape", false, true), null);
+  // Opened by hover, with focus elsewhere on the page: it closes and focus stays where it is.
+  assert.deepEqual(escapeKey("Escape", true, false), { close: true, refocus: false });
+  assert.deepEqual(escapeKey("Escape", true, true), { close: true, refocus: true });
 });

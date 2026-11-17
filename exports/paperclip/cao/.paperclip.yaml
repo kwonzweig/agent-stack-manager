@@ -7,4 +7,4 @@ agents:
         enabled: false
     metadata:
       agentStackManagerPackageId: cao
-      agentStackManagerRevision: 1ee881d1379f7109cce10aff73d40c96e7891c3d51d3ba461c588e75a8a5cfbe
+      agentStackManagerRevision: 3836aa40c7dc2b9239c44dda328d5d1811308e6b43e4a54d9bde575a724762b7

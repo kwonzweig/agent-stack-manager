@@ -14,8 +14,10 @@ beyond them with find-tools and its sources. GitHub stars are the primary metric
 other signals only cross-check them. Choose the skill stack first, then the stack that
 fits it. Without a better reason, pick the stack whose most-starred major skill has the
 most stars, and say why when you pick another. When choosing stacks, the trending
-modern stack wins. Use technology-research when a choice needs factual investigation or
-evidence.
+modern stack wins. When CAO asks for a role on another stack after a result the human
+did not like, start from the stacks and presets in ASM in the same way, and pick a stack
+other than the one behind that result. Use technology-research when a choice needs
+factual investigation or evidence.
 
 Run the company's own ASM from https://github.com/kwonzweig/agent-stack-manager, set
 up as its README says. A role is an ASM preset: an APM package in `packages/<id>/`

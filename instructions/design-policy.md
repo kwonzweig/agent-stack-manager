@@ -19,7 +19,3 @@ Cards in one grid row share a height. The title and description sit at the top o
 ## A page opened from a list has a way back
 
 A page opened from a list has a back button at its top left that names where it returns to, such as "Catalog" or the preset's name. A Catalog item's page has its own address, the browser's Back button does the same as the back button, and returning keeps the list's filters and scroll position.
-
-## Text from a source is the source's own
-
-A description, star count or install count that comes from a component's source is copied from it, never written or summarized by hand, and shows the day it was read. `scripts/refresh_catalog.py` makes these copies; [docs/api-contract.md](../docs/api-contract.md) lists the fields.

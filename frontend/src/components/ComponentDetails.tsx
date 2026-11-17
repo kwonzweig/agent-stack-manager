@@ -4,7 +4,7 @@ import { api, errorMessage, packagePath, externalUrl } from "../api";
 import type { Comment, Component } from "../types";
 import { DetailSheet } from "./DetailSheet";
 import ItemProperties from "../catalog/ItemProperties";
-import { sourceLabel } from "../catalog/catalogItem";
+import { readAtLabel, sourceLabel } from "../catalog/catalogItem";
 const SkillMarkdown = lazy(() => import("./SkillMarkdown").then(module => ({ default: module.SkillMarkdown })));
 
 export const displayValue = (value: unknown): string => typeof value === "string" ? value : JSON.stringify(value, null, 2) ?? "";
@@ -72,8 +72,8 @@ function Comments({ presetId, componentId }: { presetId: string; componentId: st
   </section>;
 }
 
-// Where a Catalog description was copied from: the file's name, or the repository whose GitHub description it is.
-function copiedFrom(url: URL) {
+// Where a description was read: the file's name, or the repository whose GitHub description it is.
+function readFrom(url: URL) {
   const [owner, repository, blob, ...rest] = url.pathname.split("/").filter(Boolean);
   return blob === "blob" ? rest[rest.length - 1] : `the GitHub description of ${owner}/${repository}`;
 }
@@ -84,12 +84,12 @@ export function ComponentDetails({ item, presetId, backLabel, onClose, instructi
 }) {
   const [editing, setEditing] = useState(false);
   const sourceUrl = externalUrl(item.sourceUrl || item.source?.repositoryUrl);
-  const copied = item.descriptionCheckedOn ? externalUrl(item.descriptionUrl) : undefined;
+  const read = externalUrl(item.descriptionUrl);
   return <DetailSheet open title={item.name} backLabel={backLabel} onClose={onClose}
     description={item.id !== "instruction" && item.description ? <>
       <p>{item.description}</p>
-      {copied && <p className="mt-1 text-[12px] leading-5 text-muted">
-        Copied word for word from <a href={copied.href} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-secondary">{copiedFrom(copied)}</a>, read on {item.descriptionCheckedOn}.
+      {read && <p className="mt-1 text-[12px] leading-5 text-muted">
+        From <a href={read.href} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-secondary">{readFrom(read)}</a>, read {readAtLabel(item.descriptionReadAt)}.
       </p>}
     </> : undefined}
     meta={<div className="flex flex-wrap items-center gap-2"><ItemProperties item={item} repository="link" /></div>}>

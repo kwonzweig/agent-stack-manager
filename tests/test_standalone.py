@@ -69,14 +69,22 @@ def python_modules():
 class StandaloneTests(unittest.TestCase):
     maxDiff = None
 
-    def test_no_module_imports_a_network_client(self):
+    def test_only_the_source_reader_imports_a_network_client(self):
+        # asm_app/sources.py reads what a component's source says (GitHub, skills.sh); no module reaches a consumer.
         found = {}
         for path, tree in python_modules():
             clients = sorted({module for module in imported_modules(tree)
                               if any(module == client or module.startswith(client + ".") for client in NETWORK_CLIENTS)})
             if clients:
                 found[path.relative_to(ROOT).as_posix()] = clients
-        self.assertEqual(found, {}, WHAT_ASM_IS)
+        self.assertEqual(found, {"asm_app/sources.py": ["urllib.request", "urllib.request.Request", "urllib.request.urlopen"]},
+                         WHAT_ASM_IS)
+
+    def test_the_source_reader_asks_only_source_hosts(self):
+        from asm_app import sources
+        self.assertEqual(sources.HOSTS, {"api.github.com", "raw.githubusercontent.com", "skills.sh"})
+        with self.assertRaisesRegex(ValueError, "not paperclip.example"):
+            sources.fetch("https://paperclip.example/api/companies")
 
     def test_no_module_opens_a_connection_another_way(self):
         found = {}

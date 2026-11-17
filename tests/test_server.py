@@ -101,6 +101,18 @@ class ServerTests(unittest.TestCase):
                 code, body, _ = self.request('/api/catalog')
                 self.assertEqual((code, json.loads(body)), (200, {'items': []}))
 
+    def test_catalog_sources_report_an_unreachable_source_instead_of_failing(self):
+        root = Path(self.temp.name)
+        (root/'catalog').mkdir()
+        (root/'catalog/components.json').write_bytes((Path(__file__).resolve().parents[1]/'catalog/components.json').read_bytes())
+        with patch('asm_app.sources.urlopen', side_effect=OSError('offline')) as opened:
+            code, body, _ = self.request('/api/catalog/sources')
+        self.assertEqual(code, 200)
+        found = json.loads(body)
+        self.assertTrue(opened.called)
+        self.assertTrue(found['errors'])
+        self.assertNotIn('stars', found['items'].get('brainstorming-84f46f', {}))
+
     def test_a_local_file_error_is_a_server_error(self):
         # ASM contacts no other service, so a disk or permission error is its own failure, not a gateway's.
         with patch('asm_app.store.Store.catalog', side_effect=PermissionError('denied')), \
@@ -194,7 +206,8 @@ class ServerTests(unittest.TestCase):
         # The stored row names only its APM value; the API fills what the Catalog reads.
         self.assertEqual(item['source']['repositoryUrl'], 'https://github.com/obra/superpowers')
         self.assertEqual(item['sourceUrl'], 'https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md')
-        self.assertIsInstance(item['stars'], int)
+        # Stars, installs and the description come from /api/catalog/sources, read from the source.
+        self.assertNotIn('stars', item)
         code, body, _ = write('/api/presets', {'title':'API example','kind':'preset',
             'description':'Example','instruction':'Original','componentIds':[item['id']]})
         self.assertEqual(code,201)

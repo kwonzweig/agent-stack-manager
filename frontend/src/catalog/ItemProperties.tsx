@@ -1,5 +1,5 @@
 import { Download, FolderGit2, Star } from 'lucide-react';
-import type { Kind, PackageKind, Source, SourceCopies } from '../types';
+import type { Kind, PackageKind, Source, SourceFacts } from '../types';
 import { KindBadge } from '../components/ComponentUI';
 import { countLabel, installsTitle, repositoryLabel, starsTitle } from './catalogItem';
 
@@ -10,7 +10,7 @@ const countClass = 'inline-flex shrink-0 items-center gap-1 font-mono text-[11px
 // A Catalog item's properties under its title. The card and the detail page both render this,
 // so the detail page shows everything the card does (instructions/design-policy.md).
 export default function ItemProperties({ item, repository }: {
-  item: SourceCopies & { kind: Kind | PackageKind; source?: Source | null; componentCount?: number };
+  item: SourceFacts & { kind: Kind | PackageKind; source?: Source | null; componentCount?: number };
   /** A function filters the Catalog to the repository; "link" opens it; unset hides it where a group heading names it. */
   repository?: 'link' | ((url: string) => void);
 }) {

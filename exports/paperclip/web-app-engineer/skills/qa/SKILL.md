@@ -1,7 +1,6 @@
 ---
 key: qa
 name: qa
-description: Use when you test the site, API or CLI and fix bugs. (gstack)
 metadata:
   sources:
     - kind: github-dir

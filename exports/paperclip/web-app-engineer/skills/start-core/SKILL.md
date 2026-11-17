@@ -1,10 +1,6 @@
 ---
 key: start-core
 name: start-core
-description: 'Core overview for TanStack Start: tanstackStart() Vite plugin, getRouter()
-  factory, root route document shell (HeadContent, Scripts, Outlet), client/server
-  entry points, routeTree.gen.ts, tsconfig configuration. Entry point for all Start
-  skills.'
 metadata:
   sources:
     - kind: github-dir

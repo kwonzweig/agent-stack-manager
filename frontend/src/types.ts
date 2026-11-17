@@ -16,19 +16,25 @@ export interface PackageSummary {
   usage: string[];
   componentCount: number;
 }
-/** What the catalog copies from an item's source, each with the day it was read (scripts/refresh_catalog.py). */
-export interface SourceCopies {
-  /** GitHub stars of the source repository; absent without a repository. */
-  stars?: number;
-  starsCheckedOn?: string;
-  /** The page the description was copied from. */
+/** What an item's source says now, from GET /api/catalog/sources; each value carries when it was read (ISO time). */
+export interface SourceFacts {
+  /** The item's own description, read from descriptionUrl. */
+  description?: string;
   descriptionUrl?: string;
-  descriptionCheckedOn?: string;
+  descriptionReadAt?: string;
+  /** GitHub stars of the source repository. */
+  stars?: number;
+  starsReadAt?: string;
   /** skills.sh installs; absent when skills.sh does not list the skill. */
   installs?: number;
-  installsCheckedOn?: string;
+  installsReadAt?: string;
 }
-export interface CatalogItem extends SourceCopies {
+export interface SourceData {
+  items: Record<string, SourceFacts>;
+  /** Sources that could not be read; their last answer, if any, is still shown. */
+  errors: string[];
+}
+export interface CatalogItem extends SourceFacts {
   id: string;
   type: "component" | PackageKind;
   kind: Kind | PackageKind;
@@ -44,8 +50,8 @@ export interface CatalogItem extends SourceCopies {
   workArea?: string[];
   usage?: string[];
 }
-/** A preset member, or a Catalog item with its source copies when opened from the Catalog. */
-export interface Component extends SourceCopies {
+/** A preset member or a Catalog item, with what its source says once that has been read. */
+export interface Component extends SourceFacts {
   id: string;
   name: string;
   kind: Kind;

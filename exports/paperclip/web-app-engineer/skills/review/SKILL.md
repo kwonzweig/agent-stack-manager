@@ -1,7 +1,6 @@
 ---
 key: review
 name: review
-description: Use when you review this PR's diff. (gstack)
 metadata:
   sources:
     - kind: github-dir

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { byStars, countLabel, filterCatalogFacets, installsTitle, sourceLabel, starsTitle } from "../src/catalog/catalogItem.ts";
+import { byStars, countLabel, filterCatalogFacets, installsTitle, sourceLabel, starsTitle, withSourceFacts } from "../src/catalog/catalogItem.ts";
 
-const item = (id, stars) => ({ id, type: "component", kind: "skill", name: id, ...(stars === undefined ? {} : { stars, starsCheckedOn: "2026-11-16" }) });
+const READ_AT = "2026-11-16T10:42:00+00:00";
+const item = (id, stars) => ({ id, type: "component", kind: "skill", name: id, ...(stars === undefined ? {} : { stars, starsReadAt: READ_AT }) });
 
 test("the Stars order puts the most-starred repository first", () => {
   const items = [item("a", 10), item("b", 300), item("c", 0)];
@@ -20,11 +21,19 @@ test("the Stars order leaves the given list as it was", () => {
   assert.deepEqual(items.map((entry) => entry.id), ["a", "b"]);
 });
 
-test("a card shows the count short and names the exact count and the day it was read", () => {
+test("a card shows the count short and names the exact count and when it was read", () => {
   assert.equal(countLabel(318282), "318.3K");
   assert.equal(countLabel(0), "0");
-  assert.equal(starsTitle(item("a", 318282)), "318,282 GitHub stars, read on 2026-11-16");
-  assert.equal(installsTitle({ installs: 432022, installsCheckedOn: "2026-11-16" }), "432,022 skills.sh installs, read on 2026-11-16");
+  assert.match(starsTitle(item("a", 318282)), /^318,282 GitHub stars, read Nov 1[56], 2026, /);
+  assert.match(installsTitle({ installs: 432022, installsReadAt: READ_AT }), /^432,022 skills.sh installs, read Nov 1[56], 2026, /);
+  assert.equal(installsTitle({ installs: 5 }), "5 skills.sh installs, read unknown");
+});
+
+test("items take what their source says once it has been read", () => {
+  const items = [item("a"), item("b")];
+  const merged = withSourceFacts(items, { a: { description: "From SKILL.md", stars: 7 } });
+  assert.deepEqual(merged.map((entry) => [entry.id, entry.description, entry.stars]), [["a", "From SKILL.md", 7], ["b", undefined, undefined]]);
+  assert.equal(merged[1], items[1]);
 });
 
 test("a preset's component names its repository as the Catalog card does", () => {

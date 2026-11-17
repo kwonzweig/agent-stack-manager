@@ -1,8 +1,6 @@
 ---
 key: finishing-a-development-branch
 name: finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to
-  decide how to integrate the work
 metadata:
   sources:
     - kind: github-dir

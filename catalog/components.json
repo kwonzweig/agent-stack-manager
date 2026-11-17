@@ -1,86 +1,9 @@
 {
-  "repositories": [
-    {
-      "url": "https://github.com/anthropics/claude-plugins-official",
-      "stars": 47483,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/anthropics/skills",
-      "stars": 196098,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/blader/humanizer",
-      "stars": 69941,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/garrytan/gstack",
-      "stars": 141826,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/kwonzweig/agent-operating-standards",
-      "stars": 0,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/kwonzweig/agent-stack-manager",
-      "stars": 0,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/kwonzweig/ai-slop-prevention",
-      "stars": 0,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/kwonzweig/there-is-a-tool-for-that",
-      "stars": 0,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/microsoft/playwright-mcp",
-      "stars": 39753,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/obra/superpowers",
-      "stars": 318722,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/shadcn-ui/ui",
-      "stars": 128349,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/supabase/agent-skills",
-      "stars": 3096,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/TanStack/router",
-      "stars": 15318,
-      "starsCheckedOn": "2026-11-16"
-    },
-    {
-      "url": "https://github.com/vercel-labs/skills",
-      "stars": 39710,
-      "starsCheckedOn": "2026-11-16"
-    }
-  ],
   "items": [
     {
       "id": "brainstorming-84f46f",
       "name": "brainstorming",
       "kind": "skill",
-      "description": "You MUST use this before any creative work - creating features, building components, adding functionality, modifying behavior, or planning anything new, in software or out of it (a talk, a business, a renovation).",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 432022,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -94,11 +17,6 @@
       "id": "diagnosing-superpowers-5c62ce",
       "name": "diagnosing-superpowers",
       "kind": "skill",
-      "description": "Use when a superpowers session went wrong and your human partner wants to know why — repeated work, ignored plans, stumbles, poor results, a skill that didn't fire, \"it took too long\", \"why is it so expensive\", \"what is it doing\" — or wants to build a bug report for the superpowers maintainers, for the current session or a past one identified by id or path, on any harness.",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/diagnosing-superpowers/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 36552,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -112,11 +30,6 @@
       "id": "dispatching-parallel-agents-da2a30",
       "name": "dispatching-parallel-agents",
       "kind": "skill",
-      "description": "Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/dispatching-parallel-agents/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 238009,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -130,11 +43,6 @@
       "id": "executing-plans-7fe4c6",
       "name": "executing-plans",
       "kind": "skill",
-      "description": "Use when executing an implementation plan in the current session as the implementer yourself — your human partner chose inline execution, or no subagent tool is available",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/executing-plans/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 264503,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -148,11 +56,6 @@
       "id": "finishing-a-development-branch-565bf5",
       "name": "finishing-a-development-branch",
       "kind": "skill",
-      "description": "Use when implementation is complete, all tests pass, and you need to decide how to integrate the work",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/finishing-a-development-branch/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 234393,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -166,11 +69,6 @@
       "id": "receiving-code-review-716a9a",
       "name": "receiving-code-review",
       "kind": "skill",
-      "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/receiving-code-review/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 241820,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -184,11 +82,6 @@
       "id": "requesting-code-review-9a630e",
       "name": "requesting-code-review",
       "kind": "skill",
-      "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/requesting-code-review/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 283585,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -202,11 +95,6 @@
       "id": "subagent-driven-development-b3dda0",
       "name": "subagent-driven-development",
       "kind": "skill",
-      "description": "Use when executing implementation plans with independent tasks in the current session",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/subagent-driven-development/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 258481,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -220,11 +108,6 @@
       "id": "systematic-debugging-efdd01",
       "name": "systematic-debugging",
       "kind": "skill",
-      "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 335842,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -238,11 +121,6 @@
       "id": "test-driven-development-a7f5a6",
       "name": "test-driven-development",
       "kind": "skill",
-      "description": "Use when implementing any feature or bugfix, before writing implementation code",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 282271,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -256,11 +134,6 @@
       "id": "using-git-worktrees-4081e4",
       "name": "using-git-worktrees",
       "kind": "skill",
-      "description": "Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/using-git-worktrees/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 236560,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -274,11 +147,6 @@
       "id": "using-superpowers-1d1cd4",
       "name": "using-superpowers",
       "kind": "skill",
-      "description": "Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/using-superpowers/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 289587,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -292,11 +160,6 @@
       "id": "verification-before-completion-8b04df",
       "name": "verification-before-completion",
       "kind": "skill",
-      "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/verification-before-completion/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 278871,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -310,11 +173,6 @@
       "id": "writing-plans-c89510",
       "name": "writing-plans",
       "kind": "skill",
-      "description": "Use when you have a spec or requirements for a multi-step task, before touching code",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 305954,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -328,11 +186,6 @@
       "id": "writing-skills-bc8fde",
       "name": "writing-skills",
       "kind": "skill",
-      "description": "Use when creating new skills, editing existing skills, or verifying skills work before deployment",
-      "descriptionUrl": "https://github.com/obra/superpowers/blob/main/skills/writing-skills/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 237401,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -346,11 +199,6 @@
       "id": "gstack-qa-fec045",
       "name": "qa",
       "kind": "skill",
-      "description": "Use when you test the site, API or CLI and fix bugs. (gstack)",
-      "descriptionUrl": "https://github.com/garrytan/gstack/blob/main/qa/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 510,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -364,11 +212,6 @@
       "id": "gstack-review-0c4759",
       "name": "review",
       "kind": "skill",
-      "description": "Use when you review this PR's diff. (gstack)",
-      "descriptionUrl": "https://github.com/garrytan/gstack/blob/main/review/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 512,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -382,11 +225,6 @@
       "id": "gstack-design-review-f815cd",
       "name": "design-review",
       "kind": "skill",
-      "description": "Designer's eye QA: finds visual inconsistency, spacing issues, hierarchy problems, AI slop patterns, and slow interactions — then fixes them; --build checks UI while you build it. (gstack)",
-      "descriptionUrl": "https://github.com/garrytan/gstack/blob/main/design-review/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 641,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -400,11 +238,6 @@
       "id": "react-start-intent-skill-dbdc8c",
       "name": "react-start",
       "kind": "skill",
-      "description": "React bindings for TanStack Start: createStart, StartClient, StartServer, React-specific imports, re-exports from @tanstack/react-router, full project setup with React, useServerFn hook.",
-      "descriptionUrl": "https://github.com/TanStack/router/blob/main/packages/react-start/skills/react-start/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 525,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -418,11 +251,6 @@
       "id": "start-core-intent-skill-fc4931",
       "name": "start-core",
       "kind": "skill",
-      "description": "Core overview for TanStack Start: tanstackStart() Vite plugin, getRouter() factory, root route document shell (HeadContent, Scripts, Outlet), client/server entry points, routeTree.gen.ts, tsconfig configuration. Entry point for all Start skills.",
-      "descriptionUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 520,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -436,11 +264,6 @@
       "id": "server-functions-e64c5a",
       "name": "server-functions",
       "kind": "skill",
-      "description": "createServerFn (GET/POST), validator (Zod or function), useServerFn hook, server context utilities (getRequest, getRequestHeader, setResponseHeader, setResponseStatus), error handling (throw errors, redirect, notFound), streaming, FormData handling, file organization (.functions.ts, .server.ts).",
-      "descriptionUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/server-functions/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 219,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -454,11 +277,6 @@
       "id": "server-routes-75abd9",
       "name": "server-routes",
       "kind": "skill",
-      "description": "Server-side API endpoints using the server property on createFileRoute, HTTP method handlers (GET, POST, PUT, DELETE), createHandlers for per-handler middleware, handler context (request, params, context), request body parsing, response helpers, file naming for API routes.",
-      "descriptionUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/server-routes/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 203,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -472,11 +290,6 @@
       "id": "auth-server-primitives-58af15",
       "name": "auth-server-primitives",
       "kind": "skill",
-      "description": "Server-side authentication primitives for TanStack Start: session cookies (HttpOnly, Secure, SameSite, __Host- prefix), session read/issue/destroy via createServerFn and middleware, OAuth authorization-code flow with state and PKCE, password-reset enumeration defense, CSRF for non-GET RPCs, rate limiting auth endpoints, session rotation on privilege change. Pairs with router-core/auth-and-guards for the routing side.",
-      "descriptionUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/auth-server-primitives/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 199,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -490,11 +303,6 @@
       "id": "deployment-7088f5",
       "name": "deployment",
       "kind": "skill",
-      "description": "Deploy to Cloudflare Workers, Netlify, Vercel, Node.js/Docker, Bun, Railway. Selective SSR (ssr option per route), SPA mode, static prerendering, ISR with Cache-Control headers, SEO and head management.",
-      "descriptionUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/deployment/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 208,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -508,11 +316,6 @@
       "id": "execution-model-8c8465",
       "name": "execution-model",
       "kind": "skill",
-      "description": "Isomorphic-by-default principle, environment boundary functions (createServerFn, createServerOnlyFn, createClientOnlyFn, createIsomorphicFn), ClientOnly component, useHydrated hook, import protection, dead code elimination, environment variable safety (VITE_ prefix, process.env).",
-      "descriptionUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/execution-model/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 213,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -526,11 +329,6 @@
       "id": "middleware-69624e",
       "name": "middleware",
       "kind": "skill",
-      "description": "createMiddleware, request middleware (.server only), server function middleware (.client + .server), context passing via next({ context }), sendContext for client-server transfer, global middleware via createStart in src/start.ts, middleware factories, method order enforcement, fetch override precedence.",
-      "descriptionUrl": "https://github.com/TanStack/router/blob/main/packages/start-client-core/skills/start-core/middleware/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 205,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -544,11 +342,6 @@
       "id": "shadcn-252c72",
       "name": "shadcn",
       "kind": "skill",
-      "description": "Manages shadcn components and projects — adding, searching, fixing, debugging, styling, and composing UI, including chat interfaces. Provides project context, component docs, and usage examples. Applies when working with shadcn/ui, component registries, presets, --preset codes, or any project with a components.json file. Also triggers for \"shadcn init\", \"create an app with --preset\", \"switch to --preset\", and for building a design system or applying a DESIGN.md or brand spec to shadcn/ui.",
-      "descriptionUrl": "https://github.com/shadcn-ui/ui/blob/main/skills/shadcn/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 421090,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -562,11 +355,6 @@
       "id": "supabase-20db22",
       "name": "supabase",
       "kind": "skill",
-      "description": "Use when doing ANY task involving Supabase. Triggers: Supabase products (Database, Auth, Edge Functions, Realtime, Storage, Vectors, Cron, Queues); client libraries and SSR integrations (supabase-js, @supabase/ssr) in Next.js, React, SvelteKit, Astro, Remix; auth issues (login, logout, sessions, JWT, cookies, getSession, getUser, getClaims, RLS); Supabase CLI or MCP server; schema changes, migrations, declarative schemas, security audits, Postgres extensions (pg_graphql, pg_cron, pg_vector); debugging and troubleshooting errors or unexpected behavior on Supabase projects (HTTP errors, Postgres errors, RLS surprises, permission denied, schema cache issues, timeouts, Edge Function crashes, Realtime drops, Storage failures) and reading or querying logs (Logs Explorer, ClickHouse).",
-      "descriptionUrl": "https://github.com/supabase/agent-skills/blob/main/skills/supabase/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 367336,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -580,11 +368,6 @@
       "id": "supabase-postgres-best-practices-0bc8df",
       "name": "supabase-postgres-best-practices",
       "kind": "skill",
-      "description": "Postgres best practices maintained by Supabase, for Postgres running anywhere. Load this skill BEFORE writing or changing anything that lives in a Postgres database: creating or altering tables and columns (including choosing column types), schema design, migrations and declarative schema files, RLS policies and the tests that verify them, indexes, triggers, database functions, queues and scheduled jobs (pg_cron, pgmq), vector/semantic search (pgvector), and restoring dumps (pg_restore) or importing data. Also load it when diagnosing slow queries, high CPU, timeouts, EXPLAIN plans, connection exhaustion, locking, bloat, or rows visible to the wrong user or tenant. This is not just a performance guide — schema, migration, security, and SQL authoring tasks need these rules too, even for a one-column change or a single query.",
-      "descriptionUrl": "https://github.com/supabase/agent-skills/blob/main/skills/supabase-postgres-best-practices/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 487813,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -598,11 +381,6 @@
       "id": "web-app-testing-09d636",
       "name": "webapp-testing",
       "kind": "skill",
-      "description": "Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.",
-      "descriptionUrl": "https://github.com/anthropics/skills/blob/main/skills/webapp-testing/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 206786,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -616,11 +394,6 @@
       "id": "ai-slop-prevention-bcb1db",
       "name": "ai-slop-prevention",
       "kind": "skill",
-      "description": "Use when building, modifying, or reviewing UI, including work based on supplied examples; when reviewing other deliverables; and before showing or handing off a document, message, prompt, spec, game content, data model, or code. Triggers include unlabeled fields, off-target content, redundant explanations, copied source lists, or stack choices based on familiarity.",
-      "descriptionUrl": "https://github.com/kwonzweig/ai-slop-prevention/blob/main/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 5,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -633,9 +406,6 @@
       "id": "frontend-design",
       "name": "frontend-design",
       "kind": "plugin",
-      "description": "Frontend design skill for UI/UX implementation",
-      "descriptionUrl": "https://github.com/anthropics/claude-plugins-official/blob/main/plugins/frontend-design/.claude-plugin/plugin.json",
-      "descriptionCheckedOn": "2026-11-16",
       "sourceUrl": "https://github.com/anthropics/claude-plugins-official/blob/main/plugins/frontend-design/.claude-plugin/plugin.json",
       "source": {
         "repositoryUrl": "https://github.com/anthropics/claude-plugins-official",
@@ -654,9 +424,6 @@
       "id": "playwright-mcp-0640ed",
       "name": "playwright",
       "kind": "mcp",
-      "description": "Playwright MCP server",
-      "descriptionUrl": "https://github.com/microsoft/playwright-mcp",
-      "descriptionCheckedOn": "2026-11-16",
       "sourceUrl": "https://github.com/microsoft/playwright-mcp/blob/main/README.md",
       "source": {
         "repositoryUrl": "https://github.com/microsoft/playwright-mcp",
@@ -692,9 +459,6 @@
       "id": "agent-operating-standards",
       "name": "agent-operating-standards",
       "kind": "skill",
-      "description": "Shared operating rules for authorized action, capability checks, completion reports and maintained guidance. Use at task intake and when these decisions arise during work.",
-      "descriptionUrl": "https://github.com/kwonzweig/agent-operating-standards/blob/main/skills/agent-operating-standards/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -708,11 +472,6 @@
       "id": "find-tools",
       "name": "find-tools",
       "kind": "skill",
-      "description": "Find and assess existing internal or external tools, reusable components, libraries, services, workflows, and AI skills. Use when the user asks for tools or skills, when choosing a stack, framework or library that agents will build with, or before choosing how to handle unfamiliar, specialized, or recurring work. Skip routine execution with an already chosen tool.",
-      "descriptionUrl": "https://github.com/kwonzweig/there-is-a-tool-for-that/blob/main/skills/find-tools/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 5,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -726,11 +485,6 @@
       "id": "find-skills",
       "name": "find-skills",
       "kind": "skill",
-      "description": "Helps users discover and install agent skills when they ask questions like \"how do I do X\", \"find a skill for X\", \"is there a skill that can...\", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.",
-      "descriptionUrl": "https://github.com/vercel-labs/skills/blob/main/skills/find-skills/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 4395021,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -744,11 +498,6 @@
       "id": "humanizer",
       "name": "humanizer",
       "kind": "skill",
-      "description": "Rewrite AI-sounding text so it reads like the writer without changing what it says. Use when editing or reviewing prose for AI tells: not-X-but-Y contrasts, one-line closers, staged openers, forced triads, dashes everywhere, inflated claims, sales language, stock AI words, bold labels, or filler.",
-      "descriptionUrl": "https://github.com/blader/humanizer/blob/main/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
-      "installs": 13387,
-      "installsCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -761,9 +510,6 @@
       "id": "technology-research",
       "name": "technology-research",
       "kind": "skill",
-      "description": "Use when a decision needs factual investigation, background, alternatives or evidence of effectiveness, or when a company requests a technology assessment, an adoption recommendation, or a recurring scan of AI tools, agent stacks, or its technical domain. Routine implementation under an accepted specification does not require a separate research project.",
-      "descriptionUrl": "https://github.com/kwonzweig/agent-stack-manager/blob/main/packages/ar/.apm/skills/technology-research/SKILL.md",
-      "descriptionCheckedOn": "2026-11-16",
       "apm": {
         "section": "apm",
         "value": {
@@ -777,9 +523,6 @@
       "id": "session-report",
       "name": "session-report",
       "kind": "plugin",
-      "description": "Generate an explorable HTML report of Claude Code session usage — tokens, cache efficiency, subagents, skills, and the most expensive prompts — from local ~/.claude/projects transcripts.",
-      "descriptionUrl": "https://github.com/anthropics/claude-plugins-official/blob/main/plugins/session-report/.claude-plugin/plugin.json",
-      "descriptionCheckedOn": "2026-11-16",
       "sourceUrl": "https://github.com/anthropics/claude-plugins-official/blob/main/plugins/session-report/.claude-plugin/plugin.json",
       "source": {
         "repositoryUrl": "https://github.com/anthropics/claude-plugins-official",

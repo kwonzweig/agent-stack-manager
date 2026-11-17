@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { CheckSquare, ChevronRight, LayoutGrid, List, MessageSquare, Pencil, Plus, Save, Square, Trash2 } from "lucide-react";
-import { sourceLabel } from "../catalog/catalogItem";
+import { sourceLabel, withSourceFacts } from "../catalog/catalogItem";
 import { isDirty, type Draft } from "../draft";
-import type { Component, Kind } from "../types";
+import type { Component, Kind, SourceFacts } from "../types";
 import { cn } from "../utils";
 import { CardActionMenu } from "./CardActionMenu";
 import { KindBadge, KindIcon, KINDS, SearchField, TypeFilter } from "./ComponentUI";
@@ -100,8 +100,10 @@ export function WorkspaceHeader({ draft, route, onNavigate, onEdit, onIcon, onSa
   </header>;
 }
 
-export function PresetContents({ draft, onOpen, onAdd, onRemove, busy }: {
+export function PresetContents({ draft, facts, onOpen, onAdd, onRemove, busy }: {
   draft: Draft; onOpen: (item: Component) => void; onAdd: () => void;
+  /** What each member's source says, from GET /api/catalog/sources. */
+  facts: Record<string, SourceFacts>;
   onRemove: (ids: string[]) => void; busy: boolean;
 }) {
   const [query, setQuery] = useState("");
@@ -113,7 +115,7 @@ export function PresetContents({ draft, onOpen, onAdd, onRemove, busy }: {
   const instruction: Component = { id: "instruction", name: "Instruction", kind: "instruction",
     description: draft.instruction ? draft.instruction.replace(/\s+/g, " ").trim() : `Add instructions for this ${noun}.`,
     configuration: draft.instruction };
-  const all = [instruction, ...draft.members];
+  const all = [instruction, ...withSourceFacts(draft.members, facts)];
   const kinds = KINDS.filter(type => all.some(item => item.kind === type));
   const active = kind === "all" || kinds.includes(kind) ? kind : "all";
   const q = query.trim().toLowerCase();

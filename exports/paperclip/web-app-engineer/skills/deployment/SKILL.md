@@ -1,9 +1,6 @@
 ---
 key: deployment
 name: deployment
-description: Deploy to Cloudflare Workers, Netlify, Vercel, Node.js/Docker, Bun, Railway.
-  Selective SSR (ssr option per route), SPA mode, static prerendering, ISR with Cache-Control
-  headers, SEO and head management.
 metadata:
   sources:
     - kind: github-dir

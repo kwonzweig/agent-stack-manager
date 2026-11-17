@@ -16,7 +16,7 @@ import threading
 import unicodedata
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from urllib.parse import quote, urlsplit
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -225,9 +225,6 @@ def _source_url(source):
     return repo
 
 
-def _repository_key(url):
-    return url.rstrip("/").removesuffix(".git").casefold()
-
 
 # The rows of the support table: the component kinds, with Plugin split by the manifest each app reads.
 SUPPORT_KINDS = ("instruction", "skill", "mcp", "hook", "claude-code-plugin", "codex-plugin")
@@ -279,41 +276,9 @@ def _consumers(data):
     return data
 
 
-def _repository_stars(rows):
-    """Each catalog repository's stars and the day they were read, keyed by URL. Both are must-fill."""
-    if not isinstance(rows, list):
-        raise StoreError("Catalog repositories must be a list.")
-    found = {}
-    for row in rows:
-        row = _mapping(row)
-        url = row.get("url")
-        if not isinstance(url, str) or not url:
-            raise StoreError("Every catalog repository needs its url.")
-        stars, checked = row.get("stars"), row.get("starsCheckedOn")
-        if type(stars) is not int or stars < 0:
-            raise StoreError(f"Catalog repository {url} needs stars, a count read from its page.")
-        if not _day(checked):
-            raise StoreError(f"Catalog repository {url} needs starsCheckedOn, the day its stars were read (YYYY-MM-DD).")
-        found[_repository_key(url)] = {"stars": stars, "starsCheckedOn": checked}
-    return found
-
-
-def _day(value):
-    try:
-        return isinstance(value, str) and date.fromisoformat(value).isoformat() == value
-    except ValueError:
-        return False
-
-
-def _check_copies(row):
-    """A sourced item's description and skills.sh installs are copies that scripts/refresh_catalog.py reads."""
-    if not (isinstance(row.get("description"), str) and _https(row.get("descriptionUrl")) and _day(row.get("descriptionCheckedOn"))):
-        raise StoreError(f"Catalog item {row['id']} needs description, descriptionUrl and descriptionCheckedOn, "
-                         "copied from its source by scripts/refresh_catalog.py.")
-    if ("installs" in row or "installsCheckedOn" in row) and not (
-            type(row.get("installs")) is int and row["installs"] >= 0 and _day(row.get("installsCheckedOn"))):
-        raise StoreError(f"Catalog item {row['id']} needs installs, its skills.sh count, "
-                         "with installsCheckedOn, the day it was read (YYYY-MM-DD).")
+# What a repository owns. ASM reads these from the source when it shows them (asm_app/sources.py).
+_READ_FROM_SOURCE = ("description", "stars", "starsCheckedOn", "installs", "installsCheckedOn",
+                     "descriptionUrl", "descriptionCheckedOn")
 
 
 def _item_source(row):
@@ -422,17 +387,13 @@ class Store:
     def _catalog(self):
         path = self._checked(self.root / "catalog" / "components.json")
         if not path.is_file():
-            return {"items": [], "repositories": []}
+            return {"items": []}
         catalog = _read_json(path.read_bytes(), "component catalog")
-        catalog.setdefault("repositories", [])
-        stars = _repository_stars(catalog["repositories"])
         for row in catalog["items"]:
-            repository = _item_source(row)
-            if repository and _repository_key(repository["repositoryUrl"]) not in stars:
-                raise StoreError(f"Catalog item {row['id']} comes from {repository['repositoryUrl']}, "
-                                 "which has no repositories row with its stars.")
-            if repository:
-                _check_copies(row)
+            stored = [field for field in _READ_FROM_SOURCE if field in row]
+            if _item_source(row) and stored:
+                raise StoreError(f"Catalog item {row['id']} stores {', '.join(stored)}, which its repository owns. "
+                                 "Remove them: ASM reads them from the source.")
         return catalog
 
     def consumers(self):
@@ -488,7 +449,7 @@ class Store:
                                       kind, {"packageId": name}, description=_text(stored.get("description")))
                 elif entry:
                     item = _component(entry["id"], name, kind, config, source=entry.get("source") or source,
-                                      description=entry["description"], source_url=entry.get("sourceUrl") or _source_url(source))
+                                      description=entry.get("description", ""), source_url=entry.get("sourceUrl") or _source_url(source))
                 else:
                     digest = hashlib.sha256(_yaml(value)).hexdigest()[:16]
                     item = _component(f"{kind}:{digest}", name, kind, config,
@@ -512,7 +473,7 @@ class Store:
             entry = by_path.get(path)
             name, description = PurePosixPath(path).stem, ""
             if entry:
-                name, description = entry["name"], entry["description"]
+                name, description = entry["name"], entry.get("description", "")
             elif kind == "skill" and PurePosixPath(path).name == "SKILL.md":
                 name, description = _skill_labels(path, data)
             config = _file_content(path, data)
@@ -567,17 +528,13 @@ class Store:
     def catalog(self):
         with _MUTEX:
             catalog = self._catalog()
-            stars = _repository_stars(catalog["repositories"])
             items = []
             for row in catalog["items"]:
                 spec = row["apm"]
                 config = _file_content(spec["path"], spec["content"].encode("utf-8")) if "path" in spec else spec["value"]
                 source = _item_source(row)
-                item = {**row, "type": "component", "configuration": config,
-                        "source": source, "sourceUrl": row.get("sourceUrl") or _source_url(source)}
-                if source:
-                    item.update(stars[_repository_key(source["repositoryUrl"])])
-                items.append(item)
+                items.append({**row, "type": "component", "configuration": config,
+                              "source": source, "sourceUrl": row.get("sourceUrl") or _source_url(source)})
             return {"items": [
                 *items, *({**row, "id": f"package:{row['id']}", "packageId": row["id"],
                            "type": row["kind"]} for row in self.list_packages()),

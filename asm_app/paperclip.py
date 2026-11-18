@@ -37,12 +37,6 @@ def _instruction(text):
     return text.replace("\r\n", "\n").strip()
 
 
-def _read_package(root, package_id):
-    from .store import Store
-
-    return Store(root).get(package_id)
-
-
 def _repository(root):
     """This repository's GitHub URL, from `project.urls.Repository` in its pyproject.toml."""
     try:
@@ -137,7 +131,7 @@ def _base_key(stub):
     return stub["repo"].split("/")[1] if folder == "." else folder.rsplit("/", 1)[-1]
 
 
-def _report(package, root):
+def _report(package, store):
     items, skills, bundle = [], [], {}
     seen = {}
     instruction_path = f"agents/{package['id']}/AGENTS.md"
@@ -169,7 +163,8 @@ def _report(package, root):
         elif kind == "instruction":
             reason = "Paperclip takes one Instruction per agent; merge it into the Instruction."
         elif kind == "skill":
-            stub, reason = _skill_source(component, ancestry[-1], root)
+            owner = ancestry[-1]
+            stub, reason = _skill_source(component, owner, store._package_root(owner))
         elif kind == "mcp":
             reason = _because("Paperclip's company package has no MCP entry; "
                               "set it in the agent's adapter after import.", "adapter")
@@ -198,7 +193,7 @@ def _report(package, root):
             reason = f"Stack dependency cycle at {package_id}."
         else:
             try:
-                child = _read_package(root, package_id)
+                child = store.get(package_id)
             except (ValueError, LookupError, FileNotFoundError):
                 reason = f"Local stack {package_id} could not be read."
             else:
@@ -297,16 +292,19 @@ def _files(package, stubs, bundle):
     return files
 
 
-def convert(package, *, root: Path):
+def convert(package, *, root: Path, store=None):
     """Produce the Paperclip company package of a preset and the report of every component."""
-    items, stubs, bundle = _report(package, root)
+    from .store import Store
+
+    store = store or Store(root)
+    items, stubs, bundle = _report(package, store)
     converted = sum(row["conversion"]["status"] == "converted" for row in items)
     return {
         "consumer": "paperclip", "items": items,
         "summary": {"total": len(items), "converted": converted, "unconverted": len(items) - converted},
         "files": [{"path": path, "content": content}
                   for path, content in _files(package, stubs, bundle).items()],
-        "folder": _folder_of(package, root),
+        "folder": _folder_of(package, store._package_root(package["id"])),
     }
 
 
@@ -333,17 +331,17 @@ def needs_attention(row):
     return row["conversion"]["status"] == "unconverted" and not row["conversion"].get("cause")
 
 
-def _exports(root):
+def _exports(root, store=None):
     """The export of every preset: `{id, report}`, or `{id, error}` for a package that cannot be read."""
     from .store import Store
 
-    store = Store(root)
+    store = store or Store(root)
     results = []
     for identifier in store._ids():
         try:
             package = store.get(identifier)
             if package["kind"] == "preset":
-                results.append({"id": identifier, "report": convert(package, root=store.root)})
+                results.append({"id": identifier, "report": convert(package, root=store.root, store=store)})
         except (ValueError, OSError) as error:
             results.append({"id": identifier, "error": str(error)})
     return store, results
@@ -368,14 +366,16 @@ def _differences(store, results):
                                  "extra": sorted(actual.keys() - expected.keys())}
 
 
-def write_exports(root):
+def write_exports(root, *, store=None):
     """Write exports/paperclip/<id>/ for every preset, exactly the converted files, and remove the rest."""
-    store, results = _exports(root)
+    from .store import _atomic_write
+
+    store, results = _exports(root, store)
     directory, expected, differences = _differences(store, results)
     for name in (*differences["changed"], *differences["missing"]):
-        target = directory / name
+        target = store._checked(directory / name)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(expected[name])
+        _atomic_write(target, expected[name])
     for name in differences["extra"]:
         (directory / name).unlink()
     for current, _, _ in os.walk(directory, topdown=False):
@@ -384,7 +384,7 @@ def write_exports(root):
     return results
 
 
-def check_exports(root):
+def check_exports(root, *, store=None):
     """The exports and how exports/paperclip/ differs from them, writing nothing."""
-    store, results = _exports(root)
+    store, results = _exports(root, store)
     return results, _differences(store, results)[2]

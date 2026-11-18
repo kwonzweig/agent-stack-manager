@@ -241,7 +241,7 @@ class PaperclipTests(unittest.TestCase):
             deepcopy(PACKAGE["components"][1]),
             deepcopy(self.package["components"][1]),
         ]}
-        with patch.object(paperclip, "_read_package", return_value=child):
+        with patch.object(Store, "get", return_value=child):
             report = self.convert()
         self.assertEqual(by_id(report)["check"]["conversion"]["status"], "converted")
         self.assertEqual(by_id(report)["package:web"]["conversion"]["reason"], "Stack members exported.")

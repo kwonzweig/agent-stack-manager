@@ -437,23 +437,40 @@ def _native_file_kind(path):
 
 
 class Store:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, *, base_root: Path | None = None):
         self.root = Path(root).resolve()
+        self.base_root = Path(base_root).resolve() if base_root is not None else None
+        if self.base_root is not None:
+            if self.root.is_relative_to(self.base_root) or self.base_root.is_relative_to(self.root):
+                raise StoreError("The private root and read-only base must be separate folders.")
+            if not self._checked(self.base_root / "packages", root=self.base_root).is_dir():
+                raise StoreError("The read-only base must contain a packages folder.")
 
-    def _checked(self, path):
-        cursor = self.root
-        for part in path.relative_to(self.root).parts:
+    def _checked(self, path, *, root=None):
+        root = self.root if root is None else root
+        cursor = root
+        for part in path.relative_to(root).parts:
             cursor /= part
             if cursor.is_symlink() or (hasattr(cursor, "is_junction") and cursor.is_junction()):
-                raise StoreError(f"Linked paths are not supported: {cursor.relative_to(self.root).as_posix()}")
+                raise StoreError(f"Linked paths are not supported: {cursor.relative_to(root).as_posix()}")
         return path
 
-    def _directory(self, identifier):
-        return self._checked(self.root / "packages" / _package_id(identifier))
+    def _directory(self, identifier, *, root=None):
+        root = self.root if root is None else root
+        return self._checked(root / "packages" / _package_id(identifier), root=root)
+
+    def _package_root(self, identifier):
+        local = self._directory(identifier)
+        if self.base_root is not None and not self._checked(local / "apm.yml").is_file():
+            directory = self._directory(identifier, root=self.base_root)
+            if self._checked(directory / "apm.yml", root=self.base_root).is_file():
+                return self.base_root
+        return self.root
 
     def _snapshot(self, identifier):
-        directory = self._directory(identifier)
-        if not self._checked(directory / "apm.yml").is_file():
+        root = self._package_root(identifier)
+        directory = self._directory(identifier, root=root)
+        if not self._checked(directory / "apm.yml", root=root).is_file():
             raise StoreError(f"Package {identifier} was not found.", 404)
         files = {}
         for current, dirs, names in os.walk(directory):
@@ -462,14 +479,15 @@ class Store:
             for name in (*dirs, *names):
                 if name in _SKIPPED or name.startswith("_asm-tmp-"):
                     continue
-                path = self._checked(current / name)
+                path = self._checked(current / name, root=root)
                 relative = _relative(path.relative_to(directory).as_posix())
                 if name in names and path.is_file():
                     files[relative] = path.read_bytes()
         return files
 
     def _catalog(self):
-        path = self._checked(self.root / "catalog" / "components.json")
+        root = self.base_root if self.base_root is not None else self.root
+        path = self._checked(root / "catalog" / "components.json", root=root)
         if not path.is_file():
             return {"items": []}
         catalog = _read_json(path.read_bytes(), "component catalog")
@@ -482,7 +500,8 @@ class Store:
 
     def consumers(self):
         """What each app supports per component kind, from catalog/consumers.json; none without the file."""
-        path = self._checked(self.root / "catalog" / "consumers.json")
+        root = self.base_root if self.base_root is not None else self.root
+        path = self._checked(root / "catalog" / "consumers.json", root=root)
         if not path.is_file():
             return {"kinds": list(SUPPORT_KINDS), "consumers": []}
         return _consumers(_read_json(path.read_bytes(), "consumer support data"))
@@ -530,8 +549,9 @@ class Store:
                 name = entry["name"] if entry else _name(kind, value, source)
                 config = value
                 if kind == "package":
-                    target = self._directory(name) / "apm.yml"
-                    stored = _load_manifest(self._checked(target).read_bytes()) if target.is_file() else {}
+                    root = self._package_root(name)
+                    target = self._checked(self._directory(name, root=root) / "apm.yml", root=root)
+                    stored = _load_manifest(target.read_bytes()) if target.is_file() else {}
                     item = _component(f"package:{name}",
                                       _mapping(stored.get("x-preset-labels")).get("title", name),
                                       kind, {"packageId": name}, description=_text(stored.get("description")))
@@ -605,11 +625,16 @@ class Store:
         return package, model, entries
 
     def _ids(self):
-        directory = self._checked(self.root / "packages")
-        if directory.is_dir():
-            for path in sorted(directory.iterdir()):
-                if _ID.fullmatch(path.name) and self._checked(path / "apm.yml").is_file():
-                    yield path.name
+        packages = set()
+        for root in dict.fromkeys((self.root, self.base_root)):
+            if root is None:
+                continue
+            directory = self._checked(root / "packages", root=root)
+            if directory.is_dir():
+                for path in directory.iterdir():
+                    if _ID.fullmatch(path.name) and self._checked(path / "apm.yml", root=root).is_file():
+                        packages.add(path.name)
+        yield from sorted(packages)
 
     def get(self, identifier):
         with _MUTEX:
@@ -648,7 +673,7 @@ class Store:
         identifier = _package_id(slug or f"package-{hashlib.sha256(title.encode('utf-8')).hexdigest()[:12]}")
         with _MUTEX:
             directory = self._directory(identifier)
-            if directory.exists():
+            if directory.exists() or self._package_root(identifier) != self.root:
                 raise StoreError(f"Package {identifier} already exists.", 409)
             model = {"name": identifier, "version": "0.1.0", "description": "",
                      "dependencies": {"apm": [], "mcp": []}, "x-preset-labels": {"title": title, "kind": "preset",
@@ -715,6 +740,7 @@ class Store:
         self._bundle(identifier, files)
         result = self._package(identifier, files, catalog)[0]
         directory = self._directory(identifier)
+        inherited = self._package_root(identifier) != self.root
         if previous is None:
             try:
                 directory.mkdir(parents=True)
@@ -722,16 +748,30 @@ class Store:
                 raise StoreError(f"Package {identifier} already exists.", 409) from exc
         elif previous != self._snapshot(identifier):
             raise StoreError("This package changed. Reload it before saving.", 409)
-        for path, data in files.items():
-            if previous is None or previous.get(path) != data:
-                target = self._checked(directory / _relative(path))
-                target.parent.mkdir(parents=True, exist_ok=True)
-                _atomic_write(target, data)
-        for path in (previous or {}).keys() - files.keys():
-            self._checked(directory / path).unlink()
+        if inherited:
+            if previous == files:
+                return result
+            directory.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryDirectory(prefix="_asm-tmp-", dir=directory.parent) as temporary:
+                staged = Path(temporary) / "package"
+                for path, data in files.items():
+                    target = staged / _relative(path)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(data)
+                if previous != self._snapshot(identifier) or directory.exists():
+                    raise StoreError("This package changed. Reload it before saving.", 409)
+                staged.rename(directory)
+        else:
+            for path, data in files.items():
+                if previous is None or previous.get(path) != data:
+                    target = self._checked(directory / _relative(path))
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    _atomic_write(target, data)
+            for path in (previous or {}).keys() - files.keys():
+                self._checked(directory / path).unlink()
         # A saved stack changes the export of every preset that includes it, so every preset is rewritten.
         from .paperclip import write_exports
-        write_exports(self.root)
+        write_exports(self.root, store=self)
         return result
 
     @staticmethod
@@ -858,16 +898,50 @@ class Store:
         if not command:
             return {"ok": False, "output": "Microsoft APM CLI was not found on this machine."}
         with _APM_RUN:
-            try:
-                result = subprocess.run([*command, "lock", *(["--update"] if update else [])],
-                                        cwd=directory, stdin=subprocess.DEVNULL,
-                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False,
-                                        timeout=_LOCK_SECONDS, encoding="utf-8", errors="replace")
-            except subprocess.TimeoutExpired:
-                return {"ok": False, "output": f"APM lock timed out after {_LOCK_SECONDS} seconds."}
-            except OSError as exc:
-                return {"ok": False, "output": f"Could not start Microsoft APM CLI: {exc}"}
-            return {"ok": result.returncode == 0, "output": result.stdout.strip()}
+            if self.base_root is None:
+                return self._run_lock(command, directory, update)
+            return self._lock_overlay(identifier, bundle, command, update)
+
+    @staticmethod
+    def _run_lock(command, directory, update):
+        try:
+            result = subprocess.run([*command, "lock", *(["--update"] if update else [])],
+                                    cwd=directory, stdin=subprocess.DEVNULL,
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False,
+                                    timeout=_LOCK_SECONDS, encoding="utf-8", errors="replace")
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "output": f"APM lock timed out after {_LOCK_SECONDS} seconds."}
+        except OSError as exc:
+            return {"ok": False, "output": f"Could not start Microsoft APM CLI: {exc}"}
+        return {"ok": result.returncode == 0, "output": result.stdout.strip()}
+
+    def _lock_overlay(self, identifier, bundle, command, update):
+        scratch = self._checked(self.root / ".asm")
+        scratch.mkdir(parents=True, exist_ok=True)
+        cache = self._checked(scratch / "locks" / identifier / "apm.lock.yaml")
+        with tempfile.TemporaryDirectory(prefix="lock-", dir=scratch) as temporary:
+            staged = Path(temporary)
+            for package, files in bundle.items():
+                for path, data in files.items():
+                    target = staged / package / path
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(data)
+            directory = staged / identifier
+            staged_lock = directory / "apm.lock.yaml"
+            origin = self._package_root(identifier)
+            source = self._checked(self._directory(identifier, root=origin) / staged_lock.name, root=origin)
+            output = source if origin == self.root else cache
+            previous = next((path for path in (output, cache, source) if path.is_file()), None)
+            if previous is not None:
+                staged_lock.write_bytes(previous.read_bytes())
+            result = self._run_lock(command, directory, update)
+            if result["ok"] and staged_lock.is_file():
+                with _MUTEX:
+                    if self._bundle(identifier, self._snapshot(identifier)) != bundle:
+                        return {"ok": False, "output": "This package or a dependency changed during APM lock. Run it again."}
+                    self._checked(output).parent.mkdir(parents=True, exist_ok=True)
+                    _atomic_write(output, staged_lock.read_bytes())
+            return result
 
     @staticmethod
     def _check_lock_paths(files, bundle):

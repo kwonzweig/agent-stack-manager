@@ -26,8 +26,9 @@ class DashboardServer(ThreadingHTTPServer):
     # would serve the other program without an error. Elsewhere it only allows a quick restart.
     allow_reuse_address = os.name != 'nt'
 
-    def __init__(self, address, root):
+    def __init__(self, address, root, *, base_root=None):
         self.root = Path(root).resolve()
+        self.base_root = base_root
         self.io_lock = threading.RLock()
         self._store = None
         self._sources = None
@@ -37,14 +38,14 @@ class DashboardServer(ThreadingHTTPServer):
     def store(self):
         if self._store is None:
             from .store import Store
-            self._store = Store(self.root)
+            self._store = Store(self.root, base_root=self.base_root)
         return self._store
 
     @property
     def sources(self):
         if self._sources is None:
             from .sources import SourceReader
-            self._sources = SourceReader(self.root / '.asm' / 'sources.json')
+            self._sources = SourceReader(self.store._checked(self.root / '.asm' / 'sources.json'))
         return self._sources
 
 
@@ -159,7 +160,7 @@ class Handler(BaseHTTPRequestHandler):
                     if suffix in ('/paperclip','/paperclip/export'):
                         from .paperclip import convert, export_package
                         package = self.server.store.get(pid)
-                        report = convert(package,root=self.server.root)
+                        report = convert(package,root=self.server.root,store=self.server.store)
                         if suffix.endswith('/export'):
                             return self.send(200,export_package(report),'application/zip',pid+'-paperclip.zip')
                         return self.send(200,report)
@@ -193,7 +194,7 @@ class Handler(BaseHTTPRequestHandler):
     do_PATCH = dispatch
 
 
-def create_server(root, host='127.0.0.1', port=4319):
+def create_server(root, host='127.0.0.1', port=4319, *, base_root=None):
     if host not in ('127.0.0.1','localhost'):
         raise ValueError('This local server binds to loopback only.')
-    return DashboardServer((host,port),root)
+    return DashboardServer((host,port),root,base_root=base_root)

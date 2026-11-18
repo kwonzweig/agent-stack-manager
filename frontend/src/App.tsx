@@ -3,7 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { api, ApiError, catalogMember, errorMessage, packagePath } from "./api";
 import type { CatalogItem, Component, ConsumerData, Package, PackageKind, PackageSummary, SourceData } from "./types";
 import { withSourceFacts } from "./catalog/catalogItem";
-import { createDraft, isDirty, makePayload, overlappingChanges, rebaseDraft, withInventorySelection, withMembers, type Draft } from "./draft";
+import { createDraft, isDirty, makePayload, managedInventoryMember, overlappingChanges, rebaseDraft, withInventorySelection, withMembers, type Draft } from "./draft";
 import CatalogPage from "./catalog/CatalogPage";
 import { hrefFor, Sidebar, type Route } from "./components/Sidebar";
 import { readRoute } from "./lib/route";
@@ -14,7 +14,7 @@ import { ComponentDetails } from "./components/ComponentDetails";
 import { PresetExportTab } from "./components/PresetExport";
 import { PresetList } from "./components/PresetList";
 import { SourceFiles } from "./components/SourceFiles";
-import { InventoryContents, InventoryExport } from "./components/InventoryContents";
+import { InventoryMembership } from "./components/InventoryMembership";
 
 interface CatalogData {
   items: CatalogItem[];
@@ -78,6 +78,9 @@ export function App() {
   const main = useRef<HTMLElement>(null);
   const routeId = route.view === "presets" ? route.id : undefined;
   const draft = routeId && Object.hasOwn(drafts, routeId) ? drafts[routeId] : undefined;
+  const componentDraft = overlay?.type === "component" && overlay.id ? drafts[overlay.id] : undefined;
+  const inventoryItem = overlay?.type === "component" && overlay.item.inventoryId
+    ? componentDraft?.original.appInventory?.find(item => item.id === overlay.item.inventoryId) : undefined;
   const activeSave = routeId && Object.hasOwn(saveErrors, routeId) ? saveErrors[routeId] : undefined;
   const activeLoadError = routeId && Object.hasOwn(loadErrors, routeId) ? loadErrors[routeId] : "";
   const activeLoading = routeId ? saving.includes(routeId) : false;
@@ -152,7 +155,8 @@ export function App() {
   function addMembers(id: string, items: Component[]) {
     updateDraft(id, before => {
       const existing = new Set(before.members.map(item => item.id));
-      return { ...before, members: [...before.members, ...items.filter(item => !existing.has(item.id))] };
+      return { ...before, members: [...before.members, ...items.filter(item =>
+        !existing.has(item.id) && !managedInventoryMember(before.original, item))] };
     });
   }
   // Catalog adds save straight onto the latest saved version; an open draft keeps its own unsaved edits.
@@ -226,21 +230,15 @@ export function App() {
               <ErrorBox message={activeSave.message} />
               {activeSave.conflict && <button type="button" className="app-button-secondary" onClick={() => setOverlay({ type: "conflict", id: draft.original.id })}>Review saved version</button>}
             </div>}
-            {route.tab === "export" ? draft.original.appInventory
-              ? <InventoryExport key={draft.original.revision} id={draft.original.id} dirty={isDirty(draft)} />
-              : <PresetExportTab id={draft.original.id} kind={draft.original.kind} revision={draft.original.revision}
+            {route.tab === "export" ? <PresetExportTab id={draft.original.id} kind={draft.original.kind}
+                inventory={!!draft.original.appInventory} revision={draft.original.revision}
                 dirty={isDirty(draft)} data={consumers.data} loading={consumers.loading} error={consumers.error}
                 onRetry={consumers.refresh} route={{ ...route, id: draft.original.id }} onNavigate={navigate} />
               : route.tab === "source" ? <SourceFiles id={draft.original.id} files={draft.original.files} dirty={isDirty(draft)} />
-              : <>
-              {draft.original.appInventory && <InventoryContents draft={draft}
-                onSelect={(item, app, selected) => updateDraft(draft.original.id, before => withInventorySelection(before, item, app, selected))} />}
-              {(!draft.original.appInventory || draft.members.length > 0 || draft.instruction) &&
-              <PresetContents draft={draft} busy={activeLoading} facts={sourceFacts.data.items}
+              : <PresetContents draft={draft} busy={activeLoading} facts={sourceFacts.data.items}
                 onOpen={item => setOverlay({ type: "component", item, id: draft.original.id })}
                 onAdd={() => setOverlay({ type: "picker", id: draft.original.id })}
                 onRemove={ids => updateDraft(draft.original.id, before => ({ ...before, members: before.members.filter(item => !ids.includes(item.id)) }))} />}
-              </>}
           </div>}
       </div>}
     </main>
@@ -252,16 +250,22 @@ export function App() {
     {overlay?.type === "edit" && drafts[overlay.id] && <PresetDialog initial={drafts[overlay.id]} onClose={closeOverlay}
       onSave={fields => updateDraft(overlay.id, before => ({ ...before, ...fields }))} />}
     {overlay?.type === "picker" && drafts[overlay.id] && <ComponentPicker items={pickerItems}
-      existing={new Set(drafts[overlay.id].members.map(item => item.id))} packageKind={drafts[overlay.id].kind} onClose={closeOverlay}
+      existing={new Set([...drafts[overlay.id].members.map(item => item.id),
+        ...pickerItems.filter(item => managedInventoryMember(drafts[overlay.id].original, item)).map(item => item.id)])}
+      packageKind={drafts[overlay.id].kind} onClose={closeOverlay}
       onAdd={items => { addMembers(overlay.id, items); closeOverlay(); }}
       error={catalog.error} loading={catalog.loading} onRetry={catalog.refresh} />}
     {catalogItem && <ComponentDetails item={catalogMember(catalogItem)} backLabel="Catalog" onClose={closeCatalogItem} />}
-    {overlay?.type === "component" && <ComponentDetails item={{ ...overlay.item, ...sourceFacts.data.items[overlay.item.id] }} onClose={closeOverlay}
+    {overlay?.type === "component" && <ComponentDetails
+      item={inventoryItem ? overlay.item : { ...overlay.item, ...sourceFacts.data.items[overlay.item.id] }} onClose={closeOverlay}
       backLabel={overlay.id ? drafts[overlay.id].title : "Catalog"}
       presetId={overlay.id && drafts[overlay.id].original.components.some(item => item.id === overlay.item.id) ? overlay.id : undefined}
       instruction={overlay.id ? drafts[overlay.id].instruction : undefined}
       onInstruction={overlay.id && overlay.item.id === "instruction" ? instruction =>
         updateDraft(overlay.id!, before => ({ ...before, instruction })) : undefined}
+      membership={inventoryItem && componentDraft ?
+        <InventoryMembership draft={componentDraft} item={inventoryItem} onSelect={(app, selected) =>
+          updateDraft(componentDraft.original.id, before => withInventorySelection(before, inventoryItem, app, selected))} /> : undefined}
       onBrowseStack={overlay.item.kind === "package" && overlay.item.id.startsWith("package:") ?
         () => openPreset(overlay.item.id.slice(8)) : undefined} />}
     {overlay?.type === "conflict" && drafts[overlay.id] && <ConflictDialog draft={drafts[overlay.id]} onClose={closeOverlay}

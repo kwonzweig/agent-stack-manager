@@ -4,7 +4,7 @@ import { KIND_STYLES } from "../lib/kinds";
 import { cn } from "../utils";
 import type { Kind, PackageKind } from "../types";
 
-export const KINDS: Kind[] = ["instruction", "skill", "mcp", "hook", "plugin", "package", "other"];
+export const KINDS: Kind[] = ["instruction", "skill", "mcp", "hook", "plugin", "package", "connector", "provider", "setting", "lsp", "other"];
 export const KIND_LABELS = Object.fromEntries(KINDS.map(kind => [kind, KIND_STYLES[kind].singular])) as Record<Kind, string>;
 
 export function KindIcon({ kind, className = "h-4 w-4", style }: { kind: Kind | PackageKind; className?: string; style?: CSSProperties }) {

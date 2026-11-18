@@ -1,5 +1,5 @@
 export type PackageKind = "preset" | "stack";
-export type Kind = "skill" | "mcp" | "hook" | "plugin" | "instruction" | "package" | "other";
+export type Kind = "skill" | "mcp" | "hook" | "plugin" | "instruction" | "package" | "connector" | "provider" | "setting" | "lsp" | "other";
 export interface Source {
   repositoryUrl?: string;
   path?: string;
@@ -62,6 +62,7 @@ export interface Component extends SourceFacts {
   /** The file inside the package, for a component stored there. */
   file?: string;
   managedByInventory?: boolean;
+  inventoryId?: string;
 }
 export interface NativeFile {
   path: string;
@@ -82,6 +83,9 @@ export interface InventoryItem {
   kind: string;
   description: string;
   source?: string;
+  sourcePath?: string;
+  sourceRef?: string;
+  apm?: { git: string; ref: string; path?: string };
   apps: Partial<Record<InventoryApp, InventoryAppState>>;
 }
 export interface InventoryCoverage {

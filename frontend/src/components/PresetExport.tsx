@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { Download } from "lucide-react";
+import { packagePath } from "../api";
 import type { Consumer, ConsumerData, PackageKind } from "../types";
 import { cn } from "../utils";
 import { hrefFor, type Route } from "./Sidebar";
@@ -7,7 +9,7 @@ import { SupportTable } from "./SupportTable";
 
 // One tab per consumer ASM exports to. The consumer's view places the tabs in its own heading row.
 export function PresetExport({ consumers, loading, error, onRetry, route, onNavigate, render }: {
-  consumers: Consumer[]; loading: boolean; error: string; onRetry: () => void;
+  consumers: Pick<Consumer, "id" | "name">[]; loading: boolean; error: string; onRetry: () => void;
   route: Route; onNavigate: (route: Route) => void;
   render: (consumer: string, tabs: ReactNode) => ReactNode;
 }) {
@@ -27,10 +29,31 @@ export function PresetExport({ consumers, loading, error, onRetry, route, onNavi
 }
 
 // The Export tab: what each app supports for this preset, then one tab per app ASM exports to.
-export function PresetExportTab({ id, kind, revision, dirty, data, loading, error, onRetry, route, onNavigate }: {
+interface ExportTabProps {
   id: string; kind: PackageKind; revision: string; dirty: boolean; data: ConsumerData; loading: boolean; error: string;
   onRetry: () => void; route: Route; onNavigate: (route: Route) => void;
-}) {
+  inventory?: boolean;
+}
+
+export function PresetExportTab(props: ExportTabProps) {
+  if (props.inventory) {
+    const { id, dirty, onRetry, route, onNavigate } = props;
+    return <PresetExport consumers={[{ id: "ccswitch", name: "CC Switch" }]} loading={false} error=""
+      onRetry={onRetry} route={route} onNavigate={onNavigate} render={(_, tabs) =>
+        <section className="asm-preset" aria-label="CC Switch review">
+          <div className="section-heading flex-wrap">
+            {tabs}
+            {dirty ? <p className="text-[12px] text-muted">Save changes to download.</p> :
+              <a className="app-button-secondary" href={packagePath(id, "/cc-switch")} download>
+                <Download className="h-4 w-4" aria-hidden /> Download CC Switch review
+              </a>}
+          </div>
+        </section>} />;
+  }
+  return <PaperclipExportTab {...props} />;
+}
+
+function PaperclipExportTab({ id, kind, revision, dirty, data, loading, error, onRetry, route, onNavigate }: ExportTabProps) {
   const conversion = useConversion(id, revision);
   return <>
     <SupportTable data={data} report={conversion.report} packageKind={kind} />

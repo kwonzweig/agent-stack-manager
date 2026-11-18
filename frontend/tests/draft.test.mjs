@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDraft, makePayload, rebaseDraft, withInventorySelection, withMembers } from "../src/draft.ts";
+import { createDraft, inventoryComponents, makePayload, rebaseDraft, withInventorySelection, withMembers } from "../src/draft.ts";
 
 const component = (id) => ({ id, name: id, kind: "skill" });
 const saved = (revision, fields = {}, members = ["a", "b"]) => ({
@@ -76,4 +76,28 @@ test("a selection changed back while saving survives alongside other app observa
   const rebased = rebaseDraft(editedWhileSaving, latest, submitting);
   assert.deepEqual(makePayload(rebased).appInventorySelections, { example: { codex: true } });
   assert.equal(rebased.original.appInventory[0].apps.claude.enabled, true);
+});
+
+test("inventory rows retain their own identity and original repository coordinates in the workspace", () => {
+  const rows = inventoryComponents([
+    { id: "instruction", name: "Local instructions", kind: "instruction", description: "Project rules.", apps: {} },
+    { id: "git-skill", name: "Skill", kind: "skill", description: "Reviews code.", apps: {},
+      source: "https://github.com/example/skills", sourcePath: "skills/review/SKILL.md", sourceRef: "stable" },
+  ]);
+  assert.equal(rows[0].inventoryId, "instruction");
+  assert.notEqual(rows[0].id, "instruction");
+  assert.deepEqual(rows[1].source, {
+    repositoryUrl: "https://github.com/example/skills", path: "skills/review/SKILL.md", ref: "stable",
+  });
+  assert.equal(rows[1].description, "Reviews code.");
+});
+
+test("adding from the Catalog leaves an inventory-managed skill under its per-app selections", () => {
+  const appInventory = [{ id: "skill", name: "Skill", kind: "skill", apps: {},
+    apm: { git: "https://github.com/example/skills", ref: "main", path: "skills/code" } }];
+  const pkg = saved("current", { appInventory });
+  const managed = { id: "catalog-different-id", kind: "skill", name: "Skill",
+    source: { repositoryUrl: "https://github.com/Example/Skills.git", ref: "main", path: "skills/code/SKILL.md" } };
+  const differentRef = { ...managed, id: "another-ref", source: { ...managed.source, ref: "preview" } };
+  assert.deepEqual(withMembers(pkg, [managed, differentRef]).added, [differentRef]);
 });

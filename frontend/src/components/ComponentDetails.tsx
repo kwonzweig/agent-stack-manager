@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ExternalLink, FileText, MessageSquare, Pencil } from "lucide-react";
 import { api, errorMessage, packagePath, externalUrl } from "../api";
 import type { Comment, Component } from "../types";
@@ -78,9 +78,10 @@ function readFrom(url: URL) {
   return blob === "blob" ? rest[rest.length - 1] : `the GitHub description of ${owner}/${repository}`;
 }
 
-export function ComponentDetails({ item, presetId, backLabel, onClose, instruction, onInstruction, onBrowseStack }: {
+export function ComponentDetails({ item, presetId, backLabel, onClose, instruction, onInstruction, onBrowseStack, membership }: {
   item: Component; presetId?: string; backLabel: string; onClose: () => void;
   instruction?: string; onInstruction?: (value: string) => void; onBrowseStack?: () => void;
+  membership?: ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const sourceUrl = externalUrl(item.sourceUrl || item.source?.repositoryUrl);
@@ -105,6 +106,7 @@ export function ComponentDetails({ item, presetId, backLabel, onClose, instructi
           : instruction ? <div className="app-panel p-4"><Suspense fallback={<p className="text-muted">Loading Instruction…</p>}><SkillMarkdown content={instruction} /></Suspense></div>
             : <p className="empty">No Instruction yet.</p>}
       </section> : <>
+        {membership}
         {onBrowseStack && <button className="app-button-secondary" type="button" onClick={onBrowseStack}>Open stack</button>}
         {sourceUrl && <section className="inspector-section">
           <h3>Source</h3>

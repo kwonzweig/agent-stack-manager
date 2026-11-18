@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CheckSquare, ChevronRight, LayoutGrid, List, MessageSquare, Pencil, Plus, Save, Square, Trash2 } from "lucide-react";
 import { sourceLabel, withSourceFacts } from "../catalog/catalogItem";
-import { isDirty, type Draft } from "../draft";
+import { inventoryComponents, isDirty, type Draft } from "../draft";
 import type { Component, Kind, SourceFacts } from "../types";
 import { cn } from "../utils";
 import { CardActionMenu } from "./CardActionMenu";
@@ -42,7 +42,8 @@ function WorkspaceCard({ item, selected, selectable, onSelect, onOpen, onRemove,
       <div className="relative z-10">
         <CardActionMenu label={`Actions for ${item.name}`} actions={[
           ...(canComment ? [{ key: "comment", label: "Comments", icon: <MessageSquare className="h-3.5 w-3.5" />, onSelect: onOpen }] : []),
-          ...(item.id === "instruction" ? [] : [{ key: "remove", label: "Remove", icon: <Trash2 className="h-3.5 w-3.5" />, onSelect: onRemove, danger: true }]),
+          ...(item.inventoryId ? [{ key: "membership", label: "Edit membership", icon: <Pencil className="h-3.5 w-3.5" />, onSelect: onOpen }] :
+            item.id === "instruction" ? [] : [{ key: "remove", label: "Remove", icon: <Trash2 className="h-3.5 w-3.5" />, onSelect: onRemove, danger: true }]),
         ]} />
       </div>
     </div>
@@ -118,7 +119,11 @@ export function PresetContents({ draft, facts, onOpen, onAdd, onRemove, busy }: 
   const instruction: Component = { id: "instruction", name: "Instruction", kind: "instruction",
     description: draft.instruction ? draft.instruction.replace(/\s+/g, " ").trim() : `Add instructions for this ${noun}.`,
     configuration: draft.instruction };
-  const all = [instruction, ...withSourceFacts(draft.members, facts)];
+  const all = [
+    ...(!draft.original.appInventory || draft.instruction.trim() ? [instruction] : []),
+    ...inventoryComponents(draft.original.appInventory ?? []),
+    ...withSourceFacts(draft.members, facts),
+  ];
   const kinds = KINDS.filter(type => all.some(item => item.kind === type));
   const active = kind === "all" || kinds.includes(kind) ? kind : "all";
   const q = query.trim().toLowerCase();
@@ -160,7 +165,7 @@ export function PresetContents({ draft, facts, onOpen, onAdd, onRemove, busy }: 
     {selectMode && <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface px-3 py-2 text-[13px] text-muted">
       <span>{chosen.length} selected</span>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => setSelection(prev => new Set([...prev, ...visible.filter(item => item.id !== "instruction").map(item => item.id)]))}
+        <button type="button" onClick={() => setSelection(prev => new Set([...prev, ...visible.filter(item => item.id !== "instruction" && !item.inventoryId).map(item => item.id)]))}
           className="text-tertiary hover:text-secondary">Select visible</button>
         <button type="button" onClick={() => remove(chosen.map(item => item.id))} disabled={!chosen.length || busy}
           className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-danger hover:bg-danger-bg disabled:opacity-50">
@@ -170,12 +175,12 @@ export function PresetContents({ draft, facts, onOpen, onAdd, onRemove, busy }: 
     </div>}
     {!visible.length ? <p className="asm-preset empty">No matching components.</p> :
       view === "grid" ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {visible.map(item => <WorkspaceCard key={item.id} item={item} selectable={selectMode} selected={selection.has(item.id)}
+        {visible.map(item => <WorkspaceCard key={item.id} item={item} selectable={selectMode && !item.inventoryId} selected={selection.has(item.id)}
           onOpen={() => onOpen(item)} onSelect={() => toggleSelection(item.id)} onRemove={() => { if (!busy) remove([item.id]); }}
           canComment={draft.original.components.some(value => value.id === item.id)} />)}
       </div> : <div className="asm-preset"><ul className="contents-list">
         {visible.map(item => {
-          const selectable = selectMode && item.id !== "instruction";
+          const selectable = selectMode && item.id !== "instruction" && !item.inventoryId;
           return <li key={item.id} className="contents-row">
             <div className="component-label">
               {selectable ? <CheckItem item={item} selected={selection.has(item.id)} onSelect={() => toggleSelection(item.id)} /> :

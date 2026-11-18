@@ -1,4 +1,4 @@
-import type { Component, InventoryApp, InventoryItem, InventorySelection, Package, PackageKind } from "./types";
+import type { Component, InventoryApp, InventoryItem, InventorySelection, Kind, Package, PackageKind } from "./types";
 
 export interface Draft {
   original: Package;
@@ -23,6 +23,39 @@ export function createDraft(pkg: Package): Draft {
     members: components.filter(item => item.id !== "instruction" && !item.managedByInventory), appInventorySelections: {} };
 }
 
+function inventoryKind(kind: string): Kind {
+  switch (kind) {
+    case "instruction": case "skill": case "mcp": case "hook": case "plugin":
+    case "connector": case "provider": case "setting": case "lsp": return kind;
+    case "codex-plugin": case "claude-code-plugin": return "plugin";
+    case "prompt": return "instruction";
+    default: return "other";
+  }
+}
+
+export function inventoryComponents(items: InventoryItem[]): Component[] {
+  return items.map(item => ({
+    id: `inventory:${item.id}`, inventoryId: item.id, name: item.name, kind: inventoryKind(item.kind),
+    description: item.description,
+    source: item.source || item.sourcePath || item.sourceRef ? {
+      repositoryUrl: item.source, path: item.sourcePath, ref: item.sourceRef,
+    } : undefined,
+  }));
+}
+
+function skillReference(repository: string, ref: string, path: string) {
+  const repo = repository.replace(/(?:\.git)?\/$|\.git$/i, "").toLowerCase();
+  const directory = path.replace(/(^|\/)SKILL\.md$/i, "").replace(/\/$/, "");
+  return JSON.stringify([repo, ref, directory]);
+}
+
+export function managedInventoryMember(pkg: Package, item: Component) {
+  if (item.managedByInventory) return true;
+  if (item.kind !== "skill" || !item.source?.repositoryUrl || !item.source.ref) return false;
+  const key = skillReference(item.source.repositoryUrl, item.source.ref, item.source.path ?? "");
+  return pkg.appInventory?.some(row => row.apm && skillReference(row.apm.git, row.apm.ref, row.apm.path ?? "") === key) ?? false;
+}
+
 export function inventorySelection(draft: Draft, item: InventoryItem, app: InventoryApp) {
   const changes = Object.hasOwn(draft.appInventorySelections, item.id) ? draft.appInventorySelections[item.id] : {};
   return changes[app] === undefined ? item.apps[app]?.selected : changes[app];
@@ -42,7 +75,7 @@ export function withInventorySelection(draft: Draft, item: InventoryItem, app: I
 export function withMembers(pkg: Package, items: Component[]) {
   const base = createDraft(pkg);
   const ids = new Set([...base.members.map(item => item.id), "package:" + pkg.id]);
-  const added = items.filter(item => !ids.has(item.id) && ids.add(item.id));
+  const added = items.filter(item => !ids.has(item.id) && !managedInventoryMember(pkg, item) && ids.add(item.id));
   return { added, draft: { ...base, members: [...base.members, ...added] } };
 }
 

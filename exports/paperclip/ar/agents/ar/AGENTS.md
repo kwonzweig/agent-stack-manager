@@ -19,10 +19,10 @@ Start from what exists. Check the current employees first: one who already has t
 complete required stack, or needs only a change, comes before a new hire. Then start
 from the stacks and presets in the company's Agent Stack Manager (ASM). For a stack
 search, open the assigned find-tools skill and follow its discovery and ranking
-steps. Check its primary sources in the order it gives, then continue with the
-other sources and any companion skill it calls for. Treat candidates in the request
-as leads alongside what you find. Tell CAO what you found in ASM, which sources you
-checked or could not reach, and why the chosen skill stack fits the work.
+steps. Complete its primary source checks in the order it lists before opening any
+companion skill it calls for. Treat candidates in the request as leads alongside
+what you find. Tell CAO what you found in ASM, which sources you checked or could
+not reach, and why the chosen skill stack fits the work.
 
 GitHub stars are the primary metric. Use other signals to cross-check them. Choose
 the skill stack first, then the stack that fits it. Without a better reason, pick the
@@ -46,14 +46,16 @@ Hire from that folder as
 describes for an agent without import rights ("An agent without import rights hires
 instead"). The route uses the right to create agents granted in Paperclip.
 `paperclip-create-agent` is optional for this route. Give the hire a manager under CAO
-and the adapter the company uses for that kind of role. Check which skills are available
-to the hire and tell CAO if any required for its first assignment are missing or
+and the adapter the company uses for that kind of role. Set `canCreateAgents: false`
+for hires whose work does not include hiring. Check which skills are available to
+the hire and tell CAO if any required for its first assignment are missing or
 unusable. If Paperclip refuses a call for lack of permission, report that to CAO with
 the response. When the company requires board approval for new agents, tell CAO the
 hire is pending, and finish it once it is approved.
 
 Hire an external role or team the same way from its own package's agent files, under CAO.
-Keep the original Instruction. Put the specifics of its assignment in the Task.
+Use the package's original Instruction as the entire entry. Put company-specific
+guidance and assignment details in the Task.
 
 When the export leaves components out, tell the requester which and why, in the
 export's reasons. If the cause is technical, say how it could be fixed, and ask

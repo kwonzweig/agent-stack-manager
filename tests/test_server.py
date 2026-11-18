@@ -40,8 +40,11 @@ class ServerTests(unittest.TestCase):
         (Path(self.temp.name) / 'catalog/consumers.json').write_bytes(source.read_bytes())
         code, body, _ = self.request('/api/consumers')
         self.assertEqual(code, 200)
-        self.assertEqual(json.loads(body), json.loads(source.read_text(encoding='utf-8')))
-        consumers = json.loads(body)['consumers']
+        data = json.loads(body)
+        consumers = data['consumers']
+        catalog = {**data, 'consumers': [{key: value for key, value in row.items() if key != 'export'}
+                                        for row in consumers]}
+        self.assertEqual(catalog, json.loads(source.read_text(encoding='utf-8')))
         self.assertEqual([x['id'] for x in consumers if x['export']], ['paperclip', 'ccswitch'])
 
     def test_rejects_cross_origin_write_before_loading_store(self):

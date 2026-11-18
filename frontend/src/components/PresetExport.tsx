@@ -31,7 +31,7 @@ interface ExportTabProps {
 
 function SwitchRows({ items }: { items: ReviewRow[] }) {
   if (!items.length) return null;
-  return <div className="summary-box support-scroll"><table className="summary-table max-sm:block">
+  return <div className="summary-box support-scroll"><table className="summary-table max-sm:block max-sm:!min-w-0">
     <colgroup className="max-sm:hidden"><col className="w-[24%]" /><col className="w-[18%]" /><col className="w-[22%]" /><col className="w-[36%]" /></colgroup>
     <thead className="max-sm:sr-only"><tr><th scope="col">Component</th><th scope="col">App</th><th scope="col">Result</th><th scope="col">Reason</th></tr></thead>
     <tbody className="max-sm:block">{items.map(row => {

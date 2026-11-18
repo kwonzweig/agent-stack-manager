@@ -3,7 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { api, ApiError, catalogMember, errorMessage, packagePath } from "./api";
 import type { CatalogItem, Component, ConsumerData, Package, PackageKind, PackageSummary, SourceData } from "./types";
 import { withSourceFacts } from "./catalog/catalogItem";
-import { createDraft, isDirty, makePayload, overlappingChanges, rebaseDraft, withMembers, type Draft } from "./draft";
+import { createDraft, isDirty, makePayload, overlappingChanges, rebaseDraft, withInventorySelection, withMembers, type Draft } from "./draft";
 import CatalogPage from "./catalog/CatalogPage";
 import { hrefFor, Sidebar, type Route } from "./components/Sidebar";
 import { readRoute } from "./lib/route";
@@ -14,6 +14,7 @@ import { ComponentDetails } from "./components/ComponentDetails";
 import { PresetExportTab } from "./components/PresetExport";
 import { PresetList } from "./components/PresetList";
 import { SourceFiles } from "./components/SourceFiles";
+import { InventoryContents, InventoryExport } from "./components/InventoryContents";
 
 interface CatalogData {
   items: CatalogItem[];
@@ -225,14 +226,21 @@ export function App() {
               <ErrorBox message={activeSave.message} />
               {activeSave.conflict && <button type="button" className="app-button-secondary" onClick={() => setOverlay({ type: "conflict", id: draft.original.id })}>Review saved version</button>}
             </div>}
-            {route.tab === "export" ? <PresetExportTab id={draft.original.id} kind={draft.original.kind} revision={draft.original.revision}
+            {route.tab === "export" ? draft.original.appInventory
+              ? <InventoryExport key={draft.original.revision} id={draft.original.id} dirty={isDirty(draft)} />
+              : <PresetExportTab id={draft.original.id} kind={draft.original.kind} revision={draft.original.revision}
                 dirty={isDirty(draft)} data={consumers.data} loading={consumers.loading} error={consumers.error}
                 onRetry={consumers.refresh} route={{ ...route, id: draft.original.id }} onNavigate={navigate} />
               : route.tab === "source" ? <SourceFiles id={draft.original.id} files={draft.original.files} dirty={isDirty(draft)} />
-              : <PresetContents draft={draft} busy={activeLoading} facts={sourceFacts.data.items}
+              : <>
+              {draft.original.appInventory && <InventoryContents draft={draft}
+                onSelect={(item, app, selected) => updateDraft(draft.original.id, before => withInventorySelection(before, item, app, selected))} />}
+              {(!draft.original.appInventory || draft.members.length > 0 || draft.instruction) &&
+              <PresetContents draft={draft} busy={activeLoading} facts={sourceFacts.data.items}
                 onOpen={item => setOverlay({ type: "component", item, id: draft.original.id })}
                 onAdd={() => setOverlay({ type: "picker", id: draft.original.id })}
                 onRemove={ids => updateDraft(draft.original.id, before => ({ ...before, members: before.members.filter(item => !ids.includes(item.id)) }))} />}
+              </>}
           </div>}
       </div>}
     </main>

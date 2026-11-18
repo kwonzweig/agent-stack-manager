@@ -153,6 +153,9 @@ class Handler(BaseHTTPRequestHandler):
                         return self.send(200,self.server.store.get(pid))
                     if suffix == '/export':
                         return self.send(200,self.server.store.export(pid),'application/zip',pid+'.zip')
+                    if suffix == '/cc-switch':
+                        from .cc_switch import convert
+                        return self.send(200,convert(self.server.store.get(pid)),'application/json',pid+'-cc-switch.json')
                     if suffix in ('/paperclip','/paperclip/export'):
                         from .paperclip import convert, export_package
                         package = self.server.store.get(pid)

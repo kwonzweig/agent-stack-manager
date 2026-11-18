@@ -42,7 +42,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(json.loads(body), json.loads(source.read_text(encoding='utf-8')))
         consumers = json.loads(body)['consumers']
-        self.assertEqual([x['id'] for x in consumers if x['export']], ['paperclip'])
+        self.assertEqual([x['id'] for x in consumers if x['export']], ['paperclip', 'ccswitch'])
 
     def test_rejects_cross_origin_write_before_loading_store(self):
         code, _, _ = self.request('/api/presets', data=b'{}', headers={

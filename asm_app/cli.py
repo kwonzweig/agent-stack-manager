@@ -52,6 +52,8 @@ def main(argv=None):
     lock=commands.add_parser('lock',help='Resolve APM dependencies without deploying host configuration.')
     lock.add_argument('preset')
     lock.add_argument('--update',action='store_true')
+    cc_switch=commands.add_parser('cc-switch',help='Print the selected preset inventory as a CC Switch review report.')
+    cc_switch.add_argument('preset')
     args=parser.parse_args(argv)
     packages=args.root.resolve()/'packages'
     if args.command in ('serve','export') and not packages.is_dir():
@@ -74,6 +76,10 @@ def main(argv=None):
             return _export(args.root,args.check)
         from .store import Store
         store=Store(args.root)
+        if args.command=='cc-switch':
+            from .cc_switch import convert
+            print(json.dumps(convert(store.get(args.preset)),ensure_ascii=True,indent=2))
+            return 0
         if args.command=='lock':
             result=store.lock(args.preset,args.update)
             print(json.dumps(result,ensure_ascii=False,indent=2))

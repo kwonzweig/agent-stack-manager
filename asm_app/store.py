@@ -28,6 +28,9 @@ _ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 _SIBLING = re.compile(r"\.\./([^/]+)")
 _PRIMARY = ".apm/agents/{}.agent.md"
 _KINDS = {"skill", "mcp", "hook", "plugin", "instruction", "package", "other"}
+_INVENTORY = "x-app-inventory"
+_INVENTORY_APPS = {"codex", "claude"}
+_INVENTORY_REPO = re.compile(r"https://github\.com/[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+")
 _LISTS = (("dependencies", "apm"), ("dependencies", "mcp"), ("dependencies", "lsp"),
           ("dependencies", "hooks"), ("dependencies", "plugins"), ("hooks",), ("plugins",))
 # apm.lock.yaml is written by `lock`: it records resolved commits and is not part of the preset.
@@ -344,6 +347,87 @@ def _component(identifier, name, kind, config, *, source=None, description="", s
     return component
 
 
+def _app_inventory(model):
+    if _INVENTORY not in model:
+        return None
+    inventory = model[_INVENTORY]
+    if not isinstance(inventory, dict) or not isinstance(inventory.get("items"), list):
+        raise StoreError(f"{_INVENTORY} must contain an items list.")
+    seen = set()
+    for item in inventory["items"]:
+        if not isinstance(item, dict) or any(not _text(item.get(key)).strip() for key in ("id", "name", "kind")):
+            raise StoreError("Each inventory item needs a text id, name and kind.")
+        identifier = item["id"]
+        if identifier in seen:
+            raise StoreError(f"Duplicate inventory item: {identifier}")
+        seen.add(identifier)
+        if not isinstance(item.get("description"), str):
+            raise StoreError(f"Inventory item {identifier} needs a text description.")
+        apps = item.get("apps")
+        if not isinstance(apps, dict) or not apps or set(apps) - _INVENTORY_APPS:
+            raise StoreError(f"Inventory item {identifier} needs Codex or Claude Code app states.")
+        for state in apps.values():
+            if (not isinstance(state, dict) or not isinstance(state.get("installed"), bool)
+                    or any(key not in state or (state[key] is not None and not isinstance(state[key], bool))
+                           for key in ("enabled", "selected"))):
+                raise StoreError(f"Inventory item {identifier} needs installed, enabled and selected states.")
+    return inventory
+
+
+def _select_inventory(model, changes):
+    inventory = _app_inventory(model)
+    if inventory is None or not isinstance(changes, dict):
+        raise StoreError("appInventorySelections requires a preset inventory and an object of item selections.")
+    items = {item["id"]: item["apps"] for item in inventory["items"]}
+    for identifier, apps in changes.items():
+        if identifier not in items or not isinstance(apps, dict):
+            raise StoreError(f"Invalid inventory selection: {identifier}")
+        for app, selected in apps.items():
+            if app not in items[identifier]:
+                raise StoreError(f"{identifier} is not installed in {app}.")
+            if selected is not None and not isinstance(selected, bool):
+                raise StoreError("An inventory selection must be true, false or null.")
+            items[identifier][app]["selected"] = selected
+
+
+def _managed_inventory_skills(inventory):
+    result = {}
+    for item in inventory["items"]:
+        spec = item.get("apm")
+        if spec is None:
+            continue
+        if (item["kind"] != "skill" or not isinstance(spec, dict)
+                or set(spec) - {"git", "ref", "path"}
+                or not _text(spec.get("ref")).strip()
+                or ("path" in spec and not _text(spec["path"]).strip())
+                or not _INVENTORY_REPO.fullmatch(_text(spec.get("git")))
+                or not (identity := _identity("skill", spec))):
+            raise StoreError(f"Inventory item {item['id']} needs a GitHub APM skill reference with a ref and optional path.")
+        result.setdefault(identity, {"spec": spec, "selected": False})
+        if any(state["selected"] is True for state in item["apps"].values()):
+            result[identity]["selected"] = True
+    return result
+
+
+def _sync_inventory_skills(model):
+    inventory = _app_inventory(model)
+    managed = _managed_inventory_skills(inventory) if inventory is not None else {}
+    if not managed:
+        return
+    dependencies = model.setdefault("dependencies", {})
+    if not isinstance(dependencies, dict) or not isinstance(dependencies.get("apm", []), list):
+        raise StoreError("Managed inventory skills need a dependencies.apm list.")
+    kept = []
+    seen = set()
+    for spec in dependencies.get("apm", []):
+        identity = _identity("skill", spec)
+        if identity not in managed or managed[identity]["selected"]:
+            kept.append(spec)
+            seen.add(identity)
+    kept.extend(ref["spec"] for identity, ref in managed.items() if ref["selected"] and identity not in seen)
+    dependencies["apm"] = kept
+
+
 def _native_file_kind(path):
     parts = path.split("/")
     if parts[0] != ".apm" or len(parts) < 3:
@@ -403,7 +487,7 @@ class Store:
             return {"kinds": list(SUPPORT_KINDS), "consumers": []}
         return _consumers(_read_json(path.read_bytes(), "consumer support data"))
 
-    def _entries(self, identifier, model, files, catalog):
+    def _entries(self, identifier, model, files, catalog, inventory_skills=None):
         entries = []
         seen = set()
         by_path, by_identity = {}, {}
@@ -433,6 +517,10 @@ class Store:
                 continue
             for value in values:
                 kind = _dependency_kind(section, value)
+                managed = (location == ("dependencies", "apm") and
+                           _identity("skill", value) in (inventory_skills or {}))
+                if managed:
+                    kind = "skill"
                 entry = by_identity.get(_identity(kind, value))
                 if entry is None and kind == "other" and section == "apm":
                     entry = by_identity.get(_identity("skill", value))
@@ -454,6 +542,8 @@ class Store:
                     digest = hashlib.sha256(_yaml(value)).hexdigest()[:16]
                     item = _component(f"{kind}:{digest}", name, kind, config,
                                       source=source, source_url=_source_url(source))
+                if managed:
+                    item["managedByInventory"] = True
                 add(item, location=location, value=value)
 
         primary = _PRIMARY.format(identifier)
@@ -487,7 +577,9 @@ class Store:
     def _package(self, identifier, files, catalog):
         model = _load_manifest(files["apm.yml"])
         labels = _mapping(model.get("x-preset-labels"))
-        entries = self._entries(identifier, model, files, catalog)
+        inventory = _app_inventory(model)
+        inventory_skills = _managed_inventory_skills(inventory) if inventory is not None else None
+        entries = self._entries(identifier, model, files, catalog, inventory_skills)
         _, instruction = _instruction(files.get(_PRIMARY.format(identifier), b""))
         kind = labels.get("kind")
         package = {
@@ -503,6 +595,13 @@ class Store:
             "files": [{"path": path, "content": data.decode("utf-8", errors="replace")}
                       for path, data in sorted(files.items())],
         }
+        if inventory is not None:
+            package["appInventory"] = _json_value(inventory["items"])
+            package["componentCount"] = (len(inventory["items"]) +
+                                         sum(not entry.item.get("managedByInventory") for entry in entries) +
+                                         bool(instruction.strip()))
+            if "coverage" in inventory:
+                package["appInventoryCoverage"] = _json_value(inventory["coverage"])
         return package, model, entries
 
     def _ids(self):
@@ -604,9 +703,12 @@ class Store:
                 files[path] = (front + ("\n" if front and new else "") + new + ("\n" if new else "")).encode("utf-8")
 
         catalog = self._catalog()["items"]
+        if "appInventorySelections" in payload:
+            _select_inventory(model, payload["appInventorySelections"])
         if "componentIds" in payload:
             selected = self._strings(payload["componentIds"], "componentIds")
             self._select(identifier, model, entries, files, selected, catalog)
+        _sync_inventory_skills(model)
 
         if previous is None or _load_manifest(previous["apm.yml"]) != model:
             files["apm.yml"] = _yaml(model)
@@ -641,6 +743,10 @@ class Store:
     def _select(self, identifier, model, entries, files, selected, catalog):
         recognized = {entry.item["id"]: entry for entry in entries}
         selected_set = set(selected)
+        for entry in entries:
+            if entry.item.get("managedByInventory") and entry.item["id"] not in selected_set:
+                selected.append(entry.item["id"])
+                selected_set.add(entry.item["id"])
         available = {row["id"]: row["apm"] for row in catalog}
         manifest_entries = {}
         for entry in entries:

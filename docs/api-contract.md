@@ -53,6 +53,23 @@ Create/save payload: `title,description,kind,icon,workArea,usage,instruction,com
 - GET `/api/consumers` -> store.consumers()
 - GET `/api/presets/{id}/paperclip` -> conversion report from `convert()`
 - GET `/api/presets/{id}/paperclip/export` -> the same files as `exports/paperclip/{id}/`, as a ZIP
+- GET `/api/presets/{id}/cc-switch` -> the saved app inventory's CC Switch review, as a JSON download (see below).
+
+## App inventory
+
+A private preset can hold a captured inventory under `x-app-inventory` in its `apm.yml`. ASM accepts an existing package file. The dashboard neither scans nor applies configuration to the apps. Use a separate private root with `packages/` via `python -m asm_app --root <private-root> serve`. Keep its package, generated files and downloads private. Do not add credentials or raw settings to the manifest. Inventory sources do not join Catalog source lookups.
+
+The extension has an `items` list. Each item has a stable text `id`, `name`, `kind`, `description` and an `apps` map keyed by `codex` and/or `claude`. An app entry has `installed` (boolean), `enabled` (boolean or null if unverified) and `selected` (boolean or null if undecided). An absent app entry carries no observation. Optional item fields are `source`, `sourcePath`, `sourceRef` and `skillRepository`. Optional app fields are `scope`, `parentId`, `targetId` (the app's component key) and `path` relative to the app scope. An optional extension `coverage` list has entries with `app`, `area`, `status`, and `note`.
+
+An inventory skill with a verified source can carry an `apm` reference with `git` (its GitHub repository), `ref` (a branch) and optional `path` (the skill's directory, omitted for a skill at the repository root). Seed matching native `dependencies.apm` entries when creating a preset. After a save, ASM keeps the native dependency as long as at least one app includes the item. Excluding it in both apps removes the native dependency and preserves the inventory row and its source. Per-app selections remain available to the CC Switch review.
+
+`GET /api/presets/{id}` returns `appInventory` and, if supplied, `appInventoryCoverage`. `PATCH` accepts `appInventorySelections`, an object whose keys are item IDs and whose values are objects mapping an observed app to the new selection. For example, `{"revision":"…","appInventorySelections":{"sample":{"codex":false}}}` excludes an item in Codex. Saving changes only the named selections. The inventory retains excluded items so they can be included again.
+
+### CC Switch review
+
+`python -m asm_app --root <private-root> cc-switch <preset-id>` prints the same JSON as the dashboard download. The report includes `presetId`, `consumer: "cc-switch"`, one `items` row per item and app, and a deduplicated `skillRepositories` list. Rows carry `id`, `name`, `kind`, `app`, `installed`, `enabled`, `selected`, `status` and `reason`, plus available source metadata. A repository entry contains `owner`, `repo`, `branch`, optional `directory`, and its official CC Switch deep link in `url`. Supply `skillRepository` only when you have approved the repository for CC Switch to read. Registering a repository does not install or enable a skill.
+
+`status` is `excluded`, `unsupported`, `manual`, `registration-only`, or `import-ready`. Known hooks, plugins and Connectors require their own host route. Observations without portable configuration require manual action. For an item with an explicitly supplied, credential-free app payload, `portable: {prompt: "<text>"}` or `portable: {mcp: {name: "<id>", url: "<https-url>"}}` can generate a per-row import link in `url`. Review the prompt text before adding it. A prompt import defaults to disabled. An MCP link requires an observed enabled state because CC Switch writes the server into the app configuration on confirmation. The endpoint must have no credentials, query or fragment. These links are for review and confirmed import. Use CC Switch to reconcile existing entries before using a deep link. See [CC Switch's deep link reference](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/en/5-faq/5.3-deeplink.md).
 
 ## Paperclip interface (`asm_app/paperclip.py`)
 
@@ -84,6 +101,6 @@ Every agent's `role` is `general`, because Paperclip stores a role outside its o
 
 ## Consumer support (`catalog/consumers.json`)
 
-`{kinds, consumers}`. `kinds` is `instruction, skill, mcp, hook, claude-code-plugin, codex-plugin`: the component kinds with Plugin split by the manifest each app reads. Each consumer has `id`, `name`, `export` (true only for Paperclip, the one app ASM exports to), optional `tools` (for CC Switch, the tools of its own table that its column covers) and `support`, one cell per kind in that order: `{value, name?, note?, doc}`. `value` is `yes`, `no` or `not-documented` (the app's page on that format says nothing); `name` is the app's own term, required for `yes`; `note` is shown in the cell's info popover, above the link to `doc`; `doc` is the https page that says so. The store refuses a file with a missing kind, another value, or a cell without `doc`.
+`{kinds, consumers}`. `kinds` is `instruction, skill, mcp, hook, claude-code-plugin, codex-plugin`: the component kinds with Plugin split by the manifest each app reads. Each consumer has `id`, `name`, `export` (true for Paperclip packages and CC Switch inventory reviews), optional `tools` (for CC Switch, the tools of its own table that its column covers) and `support`, one cell per kind in that order: `{value, name?, note?, doc}`. `value` is `yes`, `no` or `not-documented` (the app's page on that format says nothing); `name` is the app's own term, required for `yes`; `note` is shown in the cell's info popover, above the link to `doc`; `doc` is the https page that says so. The store refuses a file with a missing kind, another value, or a cell without `doc`.
 
 The Export tab shows the cells as a table, one row per kind with this preset's count. Paperclip's cell for a kind the preset has comes from the conversion report instead.

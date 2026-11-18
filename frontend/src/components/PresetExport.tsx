@@ -34,7 +34,7 @@ export function PresetExportTab({ id, kind, revision, dirty, data, loading, erro
   const conversion = useConversion(id, revision);
   return <>
     <SupportTable data={data} report={conversion.report} packageKind={kind} />
-    <PresetExport consumers={data.consumers.filter(consumer => consumer.export)} loading={loading} error={error}
+    <PresetExport consumers={data.consumers.filter(consumer => consumer.export && consumer.id === "paperclip")} loading={loading} error={error}
       onRetry={onRetry} route={route} onNavigate={onNavigate}
       render={(consumer, tabs) => consumer === "paperclip"
         ? <PaperclipReport heading={tabs} id={id} conversion={conversion} dirty={dirty} /> : null} />

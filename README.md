@@ -18,6 +18,8 @@ It works in three units:
 
 Every stack and preset is a [Microsoft APM](https://github.com/microsoft/apm) package in `packages/`, the common language. ASM keeps its own labels (title, icon, work area, usage) under `x-preset-labels` in `apm.yml`; there is no second preset format. The aim is that ASM exports each preset from APM into the formats apps such as Paperclip and CC Switch read, and imports their formats back into APM.
 
+Paper Kit owns the instructions and scripts that set up and maintain Paperclip companies. It consumes the CAO and AI Resources role presets from ASM. Personal Kit owns the instructions and scripts for managing a personal machine through CC Switch. It consumes the machine's private Personal Kit preset from ASM. ASM owns the preset data, its APM extensions, and the conversions both kits use.
+
 ## What each app supports
 
 | Component | Paperclip | Claude Code | Codex | CC Switch (Claude Code · Codex) |
@@ -40,7 +42,9 @@ python -m asm_app export          # rewrite exports/paperclip/ and list what eac
 python -m asm_app export --check  # write nothing; fail if exports/paperclip/ is out of date
 ```
 
-Not built yet: export for Claude Code, Codex and CC Switch, and importing their formats back into APM.
+For a private preset with an [app inventory](docs/api-contract.md#app-inventory), the dashboard shows each installed component and lets you include or exclude it for Codex and Claude Code separately. Download the CC Switch review from the Export tab, or run `python -m asm_app --root <private-root> cc-switch <preset-id>`. The review identifies eligible import links, skill repository registrations, and items that need a different route. ASM saves the preset and does not apply it to any app.
+
+Direct export to Claude Code or Codex and reverse conversion are planned.
 
 ## Presets in this repo
 

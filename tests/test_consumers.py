@@ -25,8 +25,8 @@ class ConsumerDataTests(unittest.TestCase):
                     if cell["value"] == "yes":
                         self.assertTrue(cell["name"].strip())
 
-    def test_only_paperclip_is_exported_to(self):
-        self.assertEqual([row["id"] for row in DATA["consumers"] if row["export"]], ["paperclip"])
+    def test_implemented_export_targets(self):
+        self.assertEqual([row["id"] for row in DATA["consumers"] if row["export"]], ["paperclip", "ccswitch"])
 
     def test_cc_switch_names_the_tools_its_column_covers(self):
         ccswitch = next(row for row in DATA["consumers"] if row["id"] == "ccswitch")

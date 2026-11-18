@@ -61,16 +61,42 @@ export interface Component extends SourceFacts {
   configuration?: unknown;
   /** The file inside the package, for a component stored there. */
   file?: string;
+  managedByInventory?: boolean;
 }
 export interface NativeFile {
   path: string;
   content: string;
+}
+export type InventoryApp = "codex" | "claude";
+export type InventorySelection = boolean | null;
+export interface InventoryAppState {
+  installed: boolean;
+  enabled: boolean | null;
+  selected: InventorySelection;
+  scope?: string;
+  parentId?: string;
+}
+export interface InventoryItem {
+  id: string;
+  name: string;
+  kind: string;
+  description: string;
+  source?: string;
+  apps: Partial<Record<InventoryApp, InventoryAppState>>;
+}
+export interface InventoryCoverage {
+  app: InventoryApp;
+  area: string;
+  status: string;
+  note: string;
 }
 export interface Package extends PackageSummary {
   revision: string;
   instruction: string;
   components: Component[];
   files: NativeFile[];
+  appInventory?: InventoryItem[];
+  appInventoryCoverage?: InventoryCoverage[];
 }
 /** The rows of the support table: the component kinds, with Plugin split by the manifest each app reads. */
 export type SupportKind = "instruction" | "skill" | "mcp" | "hook" | "claude-code-plugin" | "codex-plugin";

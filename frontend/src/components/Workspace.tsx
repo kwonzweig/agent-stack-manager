@@ -61,6 +61,9 @@ export function WorkspaceHeader({ draft, route, onNavigate, onEdit, onIcon, onSa
   onEdit: () => void; onIcon: (icon: string) => void; onSave: () => void; saving: boolean;
 }) {
   const dirty = isDirty(draft);
+  const componentCount = draft.original.appInventory
+    ? draft.original.appInventory.length + draft.members.length + Number(Boolean(draft.instruction.trim()))
+    : draft.members.length + 1;
   const noun = draft.kind === "stack" ? "stack" : "preset";
   return <header className="app-page-header flex flex-col gap-2.5 pb-3">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -72,7 +75,7 @@ export function WorkspaceHeader({ draft, route, onNavigate, onEdit, onIcon, onSa
           </PresetIconPicker>
           <h1 className="app-page-title flex min-w-0 flex-wrap items-center gap-2.5">
             <span className="min-w-0 break-words">{draft.title}</span>
-            <span className="app-badge" aria-label={`${draft.members.length + 1} components`}>{draft.members.length + 1}</span>
+            <span className="app-badge" aria-label={`${componentCount} components`}>{componentCount}</span>
             <button type="button" className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-secondary"
               aria-label={`Edit ${noun} details`} title={`Edit ${noun} details`} onClick={onEdit} disabled={saving}><Pencil className="h-3.5 w-3.5" /></button>
           </h1>

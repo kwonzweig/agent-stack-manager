@@ -43,7 +43,7 @@
     {
       "id": "ccswitch",
       "name": "CC Switch",
-      "export": false,
+      "export": true,
       "tools": ["Claude Code", "Codex"],
       "support": {
         "instruction": {"value": "yes", "name": "Prompts: CLAUDE.md · AGENTS.md", "doc": "https://github.com/farion1231/cc-switch#supported-features-by-tool"},

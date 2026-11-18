@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDraft, makePayload, rebaseDraft, withMembers } from "../src/draft.ts";
+import { createDraft, makePayload, rebaseDraft, withInventorySelection, withMembers } from "../src/draft.ts";
 
 const component = (id) => ({ id, name: id, kind: "skill" });
 const saved = (revision, fields = {}, members = ["a", "b"]) => ({
@@ -62,4 +62,18 @@ test("an open draft keeps its unsaved edits after a Catalog add is saved", () =>
   const rebased = rebaseDraft(open, saved("new", {}, ["a", "b", "c"]));
   assert.equal(rebased.instruction, "Unsaved text");
   assert.deepEqual(makePayload(rebased).componentIds, ["a", "c"]);
+});
+
+test("a selection changed back while saving survives alongside other app observations", () => {
+  const state = { installed: true, enabled: false, selected: true };
+  const item = { id: "example", name: "Example", kind: "skill", description: "", apps: { codex: state, claude: state } };
+  const starting = createDraft(saved("old", { appInventory: [item] }));
+  const submitting = withInventorySelection(starting, item, "codex", false);
+  const editedWhileSaving = withInventorySelection(submitting, item, "codex", true);
+  const latest = saved("new", { appInventory: [{ ...item, apps: {
+    codex: { ...state, selected: false }, claude: { ...state, enabled: true },
+  } }] });
+  const rebased = rebaseDraft(editedWhileSaving, latest, submitting);
+  assert.deepEqual(makePayload(rebased).appInventorySelections, { example: { codex: true } });
+  assert.equal(rebased.original.appInventory[0].apps.claude.enabled, true);
 });

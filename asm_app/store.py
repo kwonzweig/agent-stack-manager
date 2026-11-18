@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import copy
 import importlib.util
 import io
 import json
@@ -22,6 +23,7 @@ from urllib.parse import quote, urlsplit
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import yaml
+from .components import identify, kind_and_host, source_coordinates
 
 
 _ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
@@ -442,6 +444,8 @@ class Store:
     def __init__(self, root: Path, *, base_root: Path | None = None):
         self.root = Path(root).resolve()
         self.base_root = Path(base_root).resolve() if base_root is not None else None
+        self._package_cache = {}
+        self._definition_cache = None
         if self.base_root is not None:
             if self.root.is_relative_to(self.base_root) or self.base_root.is_relative_to(self.root):
                 raise StoreError("The private root and read-only base must be separate folders.")
@@ -622,11 +626,25 @@ class Store:
             "files": [{"path": path, "content": data.decode("utf-8", errors="replace")}
                       for path, data in sorted(files.items())],
         }
+        catalog_ids = {row["id"] for row in catalog}
+        for row in package["components"]:
+            namespace = "catalog" if row["id"] in catalog_ids else identifier
+            row.update(identify(row, namespace))
         if inventory is not None:
             package["appInventory"] = _json_value(inventory["items"])
+            for row in package["appInventory"]:
+                identity = identify(row, identifier)
+                row["canonicalId"] = identity["canonicalId"]
+                row["pluginHost"] = identity["pluginHost"]
+                row["definitionSource"] = identity["source"]
+                row["sourceUrl"] = identity["sourceUrl"]
             package["componentCount"] = (len(inventory["items"]) +
                                          sum(not entry.item.get("managedByInventory") for entry in entries) +
                                          bool(instruction.strip()))
+            visible_ids = {row["canonicalId"] for row in package["appInventory"]}
+            visible_ids.update(row["canonicalId"] for row in package["components"]
+                               if not row.get("managedByInventory") and (row["id"] != "instruction" or instruction.strip()))
+            package["componentCount"] = len(visible_ids)
             if "coverage" in inventory:
                 package["appInventoryCoverage"] = _json_value(inventory["coverage"])
         return package, model, entries
@@ -645,7 +663,13 @@ class Store:
 
     def get(self, identifier):
         with _MUTEX:
-            return self._package(identifier, self._snapshot(identifier), self._catalog()["items"])[0]
+            files, catalog = self._snapshot(identifier), self._catalog()["items"]
+            key = (_revision(files), json.dumps(catalog, sort_keys=True))
+            cached = self._package_cache.get(identifier)
+            if cached is None or cached[0] != key:
+                cached = (key, self._package(identifier, files, catalog)[0])
+                self._package_cache[identifier] = cached
+            return copy.deepcopy(cached[1])
 
     def list_packages(self):
         with _MUTEX:
@@ -658,18 +682,122 @@ class Store:
 
     def catalog(self):
         with _MUTEX:
-            catalog = self._catalog()
-            items = []
-            for row in catalog["items"]:
-                spec = row["apm"]
-                config = _file_content(spec["path"], spec["content"].encode("utf-8")) if "path" in spec else spec["value"]
-                source = _item_source(row)
-                items.append({**row, "type": "component", "configuration": config,
-                              "source": source, "sourceUrl": row.get("sourceUrl") or _source_url(source)})
+            items = copy.deepcopy(list(self._component_index().values()))
             return {"items": [
                 *items, *({**row, "id": f"package:{row['id']}", "packageId": row["id"],
                            "type": row["kind"]} for row in self.list_packages()),
             ]}
+
+    def _component_index(self):
+        public = self._catalog()["items"]
+        key = (json.dumps(public, sort_keys=True),
+               tuple((identifier, _revision(self._snapshot(identifier))) for identifier in self._ids()))
+        if self._definition_cache is not None and self._definition_cache[0] == key:
+            return self._definition_cache[1]
+        definitions = {}
+
+        def add(row, namespace, origin, membership=None, approved=False, details=None):
+            identity = identify(row, namespace)
+            key = identity["canonicalId"]
+            kind, host = kind_and_host(row)
+            definition = definitions.get(key)
+            if definition is None:
+                display_kind = kind if kind in _KINDS | {"connector", "setting", "provider", "lsp"} else "other"
+                definition = {**row, **identity, "id": row["id"] if approved else key,
+                              "kind": display_kind, "type": "component", "aliases": [],
+                              "origins": [], "memberships": [], "remoteApproved": False,
+                              "addable": bool(row.get("apm")),
+                              "details": {"availability": "metadata-only",
+                                          "reason": "Only observed metadata is available for this component."}}
+                definitions[key] = definition
+            if approved:
+                definition["remoteApproved"] = bool(identity["source"]) and definition.get("sourceAccess") != "private"
+                definition["bodyAllowed"] = True
+            access = row.get("sourceAccess")
+            if identity["source"] and access in {"public", "verify", "private"} and definition.get("sourceAccess") != "private":
+                definition["sourceAccess"] = access
+                if access == "public":
+                    definition["remoteApproved"] = True
+                    definition["bodyAllowed"] = bool(identity["source"].get("ref"))
+                elif access == "private":
+                    definition["remoteApproved"] = False
+                    definition["bodyAllowed"] = False
+            if row["id"] not in definition["aliases"]:
+                definition["aliases"].append(row["id"])
+            if origin not in definition["origins"]:
+                definition["origins"].append(origin)
+            if membership and membership not in definition["memberships"]:
+                definition["memberships"].append(membership)
+                if "inventoryId" in membership:
+                    definition["addable"] = True
+            if not definition.get("description") and row.get("description"):
+                definition["description"] = row["description"]
+            if details:
+                available = definition["details"].get("availability") == "available"
+                if not available or details.get("availability") == "available":
+                    definition["details"] = _json_value(details)
+            return definition
+
+        for row in public:
+            spec = row["apm"]
+            config = _file_content(spec["path"], spec["content"].encode()) if "path" in spec else spec["value"]
+            item = {**row, "configuration": config, "source": _item_source(row)}
+            details = None
+            if "path" in spec:
+                details = {"availability": "available", "content": spec["content"],
+                           "format": "json" if spec["path"].endswith(".json") else "text"}
+            add(item, "catalog", {"type": "catalog", "id": row["id"]}, approved=True, details=details)
+
+        public_ids = {row["id"] for row in public}
+        for package_id in self._ids():
+            package = self.get(package_id)
+            membership = {"presetId": package_id, "presetName": package["title"]}
+            for item in package["components"]:
+                if item.get("managedByInventory") or item["kind"] == "package" or (item["id"] == "instruction" and not package["instruction"]):
+                    continue
+                detail = None
+                if not item.get("file") and isinstance(item.get("configuration"), dict):
+                    value = item["configuration"]
+                    section = "apm" if _git(value) or value.get("marketplace") else "mcp" if item["kind"] == "mcp" else None
+                    if section:
+                        item = {**item, "apm": {"section": section, "value": value}}
+                if item.get("file") or item["id"] == "instruction":
+                    content = item.get("configuration")
+                    detail = {"availability": "available", "content": content if isinstance(content, str) else json.dumps(content, indent=2),
+                              "format": "markdown" if item["kind"] in {"instruction", "skill"} else "json"}
+                add(item, "catalog" if item["id"] in public_ids else package_id,
+                    {"type": "package", "presetId": package_id, "memberId": item["id"], "file": item.get("file")},
+                    {**membership, "memberId": item["id"]}, details=detail)
+            parents = {row["id"]: row for row in package.get("appInventory", [])}
+            for item in package.get("appInventory", []):
+                apps = item["apps"]
+                for app, state in apps.items():
+                    add(item, package_id, {"type": "observation", "presetId": package_id, "inventoryId": item["id"],
+                                           "app": app, **{key: state[key] for key in ("locator", "scope", "parentId", "path") if key in state},
+                                           **({"parentName": parents[state["parentId"]]["name"]} if state.get("parentId") in parents else {})},
+                        {**membership, "inventoryId": item["id"], "apps": apps}, details=item.get("details"))
+        private_repositories = {row["source"]["repositoryUrl"].casefold()
+                                for row in definitions.values() if row.get("source") and row.get("sourceAccess") == "private"}
+        for row in definitions.values():
+            if row.get("source") and row["source"]["repositoryUrl"].casefold() in private_repositories:
+                row.update(remoteApproved=False, sourceAccess="private", bodyAllowed=False)
+        self._definition_cache = (key, definitions)
+        return definitions
+
+    def component(self, identifier):
+        with _MUTEX:
+            definitions = self._component_index()
+            if identifier in definitions:
+                return copy.deepcopy(definitions[identifier])
+            matches = [row for row in definitions.values() if identifier == row["id"] or identifier in row["aliases"]]
+            if len(matches) != 1:
+                raise StoreError("Component not found." if not matches else "Choose a component by its source identity.", 404)
+            return copy.deepcopy(matches[0])
+
+    def source_components(self):
+        with _MUTEX:
+            return [copy.deepcopy(row) for row in self._component_index().values()
+                    if row.get("sourceAccess") != "private" and (row["remoteApproved"] or row.get("sourceAccess") == "verify")]
 
     def create(self, payload):
         title = _text(payload.get("title")).strip()
@@ -828,7 +956,43 @@ class Store:
                 else:
                     raise StoreError(f"Unsupported catalog component: {item_id}")
             else:
-                raise StoreError(f"Unknown component: {item_id}")
+                try:
+                    definition = self.component(item_id)
+                except StoreError as error:
+                    raise StoreError(f"Unknown component: {item_id}") from error
+                observed = next((membership for membership in definition["memberships"] if "inventoryId" in membership), None)
+                if observed is None:
+                    spec = definition.get("apm") or {}
+                    if spec.get("section") in {"apm", "mcp"} and "value" in spec:
+                        manifest_entries.setdefault(("dependencies", spec["section"]), []).append(spec["value"])
+                        continue
+                    raise StoreError(f"Component {item_id} has no reusable source. Add its source before including it.")
+                source_package = self.get(observed["presetId"])
+                source_item = next(row for row in source_package["appInventory"] if row["id"] == observed["inventoryId"])
+                # Keep the original observation ID and source; selections remain local to this preset.
+                copied = json.loads(json.dumps(source_item))
+                copied["definitionId"] = definition["canonicalId"]
+                source = source_coordinates(copied)
+                kind, host = kind_and_host(copied)
+                if source and kind in {"skill", "plugin"} and not source.get("path"):
+                    repository = source["repositoryUrl"]
+                    if urlsplit(repository).hostname == "github.com":
+                        repository = repository.lower()
+                    coordinates = (kind, host if kind == "plugin" else None, repository, source.get("ref"), source.get("path"))
+                    copied["definitionSourceKey"] = hashlib.sha256(json.dumps(coordinates).encode()).hexdigest()
+                inventory = model.setdefault(_INVENTORY, {"items": []})
+                existing = {row["id"]: row for row in inventory["items"]}
+                if copied["id"] in existing and identify(existing[copied["id"]], identifier)["canonicalId"] != definition["canonicalId"]:
+                    original_id = copied["id"]
+                    copied["id"] = original_id + "-" + definition["canonicalId"][-12:]
+                    suffix = 2
+                    while copied["id"] in existing and identify(existing[copied["id"]], identifier)["canonicalId"] != definition["canonicalId"]:
+                        copied["id"] = original_id + "-" + definition["canonicalId"][-12:] + "-" + str(suffix)
+                        suffix += 1
+                if copied["id"] not in existing:
+                    for field in ("canonicalId", "definitionSource", "sourceUrl"):
+                        copied.pop(field, None)
+                    inventory["items"].append(copied)
         for location, values in manifest_entries.items():
             parent = model if len(location) == 1 else model.setdefault(location[0], {})
             section = location[-1]

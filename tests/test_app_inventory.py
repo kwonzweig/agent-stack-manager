@@ -33,7 +33,9 @@ class InventoryTests(unittest.TestCase):
 
     def test_excluding_one_app_preserves_installed_state_and_other_apps(self):
         package = self.store.get("example")
-        self.assertEqual(package["appInventory"], self.items)
+        self.assertEqual([{key: value for key, value in row.items() if key in expected}
+                          for row, expected in zip(package["appInventory"], self.items)], self.items)
+        self.assertTrue(all(row["canonicalId"].startswith("component-") for row in package["appInventory"]))
         saved = self.store.save("example", {"revision": package["revision"],
                                            "appInventorySelections": {"example-skill": {"codex": False}}})
         expected = self.items[0]["apps"]["codex"] | {"selected": False}
@@ -42,7 +44,8 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(Store(self.root).get("example"), saved)
         restored = self.store.save("example", {"revision": saved["revision"],
                                               "appInventorySelections": {"example-skill": {"codex": True}}})
-        self.assertEqual(restored["appInventory"], self.items)
+        self.assertEqual([{key: value for key, value in row.items() if key in expected}
+                          for row, expected in zip(restored["appInventory"], self.items)], self.items)
 
     def test_unknown_app_selection_fails_without_writing_other_changes(self):
         package = self.store.get("example")

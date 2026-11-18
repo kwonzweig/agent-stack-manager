@@ -24,13 +24,13 @@ export default function CatalogPage({
 }: CatalogPageProps) {
   const [selection, setSelection] = useState<ReadonlySet<string>>(() => new Set());
   const [onlySelected, setOnlySelected] = useState(false);
-  const selectedIds = items.filter((item) => selection.has(item.id) && item.type !== 'preset').map((item) => item.id);
+  const selectedIds = items.filter((item) => selection.has(item.id) && item.type !== 'preset' && item.addable !== false).map((item) => item.id);
 
   function select(changed: CatalogItem[], selected: boolean) {
     setSelection((previous) => {
       const next = new Set(previous);
       for (const item of changed) {
-        if (item.type === 'preset') continue;
+        if (item.type === 'preset' || item.addable === false) continue;
         if (selected) next.add(item.id);
         else next.delete(item.id);
       }

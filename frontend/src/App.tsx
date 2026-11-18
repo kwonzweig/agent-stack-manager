@@ -15,6 +15,7 @@ import { PresetExportTab } from "./components/PresetExport";
 import { PresetList } from "./components/PresetList";
 import { SourceFiles } from "./components/SourceFiles";
 import { InventoryMembership } from "./components/InventoryMembership";
+import { ComponentMemberships } from "./components/ComponentMemberships";
 
 interface CatalogData {
   items: CatalogItem[];
@@ -132,7 +133,8 @@ export function App() {
   const openPreset = (id: string) => navigate({ view: "presets", id });
   // A Catalog item's page has its own address. Back returns to the Catalog as it was left,
   // through history when the Catalog opened it, so the browser's Back button does the same.
-  const catalogItem = route.view === "catalog" && route.item ? catalogItems.find(item => item.id === route.item) : undefined;
+  const catalogItem = route.view === "catalog" && route.item ? catalogItems.find(item =>
+    item.id === route.item || item.canonicalId === route.item || item.aliases?.includes(route.item!)) : undefined;
   function openCatalogItem(id: string) {
     setOverlay(undefined);
     history.pushState({ fromCatalog: true }, "", hrefFor({ view: "catalog", item: id }));
@@ -143,7 +145,7 @@ export function App() {
     else navigate({ view: "catalog" });
   }
   const createPreset = () => setOverlay({ type: "create", selected: [], kind: "preset" });
-  const pickerItems = catalogItems.filter(item => item.type !== "preset").map(catalogMember)
+  const pickerItems = catalogItems.filter(item => item.type !== "preset" && item.addable !== false).map(catalogMember)
     .filter(item => item.id !== "package:" + routeId && item.id !== "instruction");
   const currentItems = new Map(pickerItems.map(item => [item.id, item]));
   function chosen(ids: string[]) {
@@ -152,6 +154,13 @@ export function App() {
   function updateDraft(id: string, update: (draft: Draft) => Draft) {
     setDrafts(prev => Object.hasOwn(prev, id) ? { ...prev, [id]: update(prev[id]) } : prev);
   }
+  const memberships = (definition: import("./types").ComponentDefinition) => <ComponentMemberships
+    definition={definition} drafts={drafts} loadPreset={getPackage} saving={saving} errors={saveErrors}
+    onSelect={(id, item, app, selected) => updateDraft(id, before => withInventorySelection(before, item, app, selected))}
+    onNativeSelect={(id, item, included) => updateDraft(id, before => ({
+      ...before, members: included ? [...before.members.filter(row => row.id !== item.id), item] : before.members.filter(row => row.id !== item.id),
+    }))}
+    onSave={id => void save(id)} />;
   function addMembers(id: string, items: Component[]) {
     updateDraft(id, before => {
       const existing = new Set(before.members.map(item => item.id));
@@ -255,7 +264,7 @@ export function App() {
       packageKind={drafts[overlay.id].kind} onClose={closeOverlay}
       onAdd={items => { addMembers(overlay.id, items); closeOverlay(); }}
       error={catalog.error} loading={catalog.loading} onRetry={catalog.refresh} />}
-    {catalogItem && <ComponentDetails item={catalogMember(catalogItem)} backLabel="Catalog" onClose={closeCatalogItem} />}
+    {catalogItem && <ComponentDetails item={catalogMember(catalogItem)} backLabel="Catalog" onClose={closeCatalogItem} membership={memberships} />}
     {overlay?.type === "component" && <ComponentDetails
       item={inventoryItem ? overlay.item : { ...overlay.item, ...sourceFacts.data.items[overlay.item.id] }} onClose={closeOverlay}
       backLabel={overlay.id ? drafts[overlay.id].title : "Catalog"}
@@ -263,9 +272,7 @@ export function App() {
       instruction={overlay.id ? drafts[overlay.id].instruction : undefined}
       onInstruction={overlay.id && overlay.item.id === "instruction" ? instruction =>
         updateDraft(overlay.id!, before => ({ ...before, instruction })) : undefined}
-      membership={inventoryItem && componentDraft ?
-        <InventoryMembership draft={componentDraft} item={inventoryItem} onSelect={(app, selected) =>
-          updateDraft(componentDraft.original.id, before => withInventorySelection(before, inventoryItem, app, selected))} /> : undefined}
+      membership={memberships}
       onBrowseStack={overlay.item.kind === "package" && overlay.item.id.startsWith("package:") ?
         () => openPreset(overlay.item.id.slice(8)) : undefined} />}
     {overlay?.type === "conflict" && drafts[overlay.id] && <ConflictDialog draft={drafts[overlay.id]} onClose={closeOverlay}

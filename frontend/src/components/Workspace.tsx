@@ -21,7 +21,7 @@ function WorkspaceCard({ item, selected, selectable, onSelect, onOpen, onRemove,
   item: Component; selectable: boolean; selected: boolean; onSelect: () => void;
   onOpen: () => void; onRemove: () => void; canComment: boolean;
 }) {
-  return <div className={cn("app-panel group relative flex h-full flex-col shadow-card transition-all hover:-translate-y-px hover:border-border hover:shadow-card-hover",
+  return <div data-component-id={item.canonicalId ?? item.id} className={cn("app-panel group relative flex h-full flex-col shadow-card transition-all hover:-translate-y-px hover:border-border hover:shadow-card-hover",
     selected && "border-accent-border ring-1 ring-accent-border")}>
     <div className="flex items-center gap-2.5 px-3.5 pb-1.5 pt-3">
       {selectable && item.id !== "instruction"
@@ -31,11 +31,11 @@ function WorkspaceCard({ item, selected, selectable, onSelect, onOpen, onRemove,
         <button type="button" className="block max-w-full truncate text-left before:absolute before:inset-0" title={item.name}
           onClick={selectable && item.id !== "instruction" ? onSelect : onOpen}>{item.name}</button>
       </h3>
-      <KindIcon kind={item.kind} className="h-3.5 w-3.5 shrink-0 text-faint" />
+      <KindIcon kind={item.kind} pluginHost={item.pluginHost} className="h-3.5 w-3.5 shrink-0 text-faint" />
     </div>
     <div className="px-3.5 pb-3">
       {item.description && <p className="truncate text-[13px] leading-[18px] text-muted" title={item.description}>{item.description}</p>}
-      <div className={cn("flex flex-wrap items-center gap-1", item.description && "mt-2")}><KindBadge kind={item.kind} /></div>
+      <div className={cn("flex flex-wrap items-center gap-1", item.description && "mt-2")}><KindBadge kind={item.kind} pluginHost={item.pluginHost} /></div>
     </div>
     <div className="mt-auto flex items-center justify-between gap-2 border-t border-border-faint px-3.5 py-2.5">
       <span className="truncate text-[12px] text-muted">{sourceLabel(item)}</span>
@@ -63,7 +63,7 @@ export function WorkspaceHeader({ draft, route, onNavigate, onEdit, onIcon, onSa
 }) {
   const dirty = isDirty(draft);
   const componentCount = draft.original.appInventory
-    ? draft.original.appInventory.length + draft.members.length + Number(Boolean(draft.instruction.trim()))
+    ? new Set([...draft.original.appInventory, ...draft.members].map(item => item.canonicalId ?? item.id)).size + Number(Boolean(draft.instruction.trim()))
     : draft.members.length + 1;
   const noun = draft.kind === "stack" ? "stack" : "preset";
   return <header className="app-page-header flex flex-col gap-2.5 pb-3">
@@ -116,14 +116,16 @@ export function PresetContents({ draft, facts, onOpen, onAdd, onRemove, busy }: 
   const [selectMode, setSelectMode] = useState(false);
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const noun = draft.kind === "stack" ? "stack" : "preset";
-  const instruction: Component = { id: "instruction", name: "Instruction", kind: "instruction",
+  const instruction: Component = { ...draft.original.components.find(item => item.id === "instruction"),
+    id: "instruction", name: "Instruction", kind: "instruction",
     description: draft.instruction ? draft.instruction.replace(/\s+/g, " ").trim() : `Add instructions for this ${noun}.`,
     configuration: draft.instruction };
-  const all = [
+  const rows = [
     ...(!draft.original.appInventory || draft.instruction.trim() ? [instruction] : []),
-    ...inventoryComponents(draft.original.appInventory ?? []),
+    ...withSourceFacts(inventoryComponents(draft.original.appInventory ?? []), facts),
     ...withSourceFacts(draft.members, facts),
   ];
+  const all = [...new Map(rows.map(item => [item.canonicalId ?? item.id, item])).values()];
   const kinds = KINDS.filter(type => all.some(item => item.kind === type));
   const active = kind === "all" || kinds.includes(kind) ? kind : "all";
   const q = query.trim().toLowerCase();
@@ -181,13 +183,13 @@ export function PresetContents({ draft, facts, onOpen, onAdd, onRemove, busy }: 
       </div> : <div className="asm-preset"><ul className="contents-list">
         {visible.map(item => {
           const selectable = selectMode && item.id !== "instruction" && !item.inventoryId;
-          return <li key={item.id} className="contents-row">
+          return <li key={item.id} data-component-id={item.canonicalId ?? item.id} className="contents-row">
             <div className="component-label">
               {selectable ? <CheckItem item={item} selected={selection.has(item.id)} onSelect={() => toggleSelection(item.id)} /> :
-                <KindIcon kind={item.kind} className="h-4 w-4 shrink-0 text-muted" />}
+                <KindIcon kind={item.kind} pluginHost={item.pluginHost} className="h-4 w-4 shrink-0 text-muted" />}
               <button type="button" className="row-action" onClick={selectable ? () => toggleSelection(item.id) : () => onOpen(item)}>{item.name}</button>
             </div>
-            <span className="type-badge"><KindBadge kind={item.kind} /></span>
+            <span className="type-badge"><KindBadge kind={item.kind} pluginHost={item.pluginHost} /></span>
             <span className="source-host">{sourceLabel(item)}</span>
             <ChevronRight className="row-arrow h-4 w-4" aria-hidden="true" />
           </li>;

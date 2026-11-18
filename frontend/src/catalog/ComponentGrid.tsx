@@ -28,7 +28,7 @@ interface Props {
   onCreate: (componentIds: string[], kind: PackageKind) => void;
 }
 
-const selectable = (item: CatalogItem) => item.type !== 'preset';
+const selectable = (item: CatalogItem) => item.type !== 'preset' && item.addable !== false;
 
 // Checked when every entry is selected, mixed when only some are.
 function SelectAll({ items, selection, label, onSelect }: {

@@ -128,8 +128,36 @@ class Handler(BaseHTTPRequestHandler):
                 if path == '/api/catalog':
                     return self.send(200, self.server.store.catalog())
                 if path == '/api/catalog/sources':
-                    items = [item for item in self.server.store.catalog()['items'] if item['type'] == 'component']
-                    return self.send(200, self.server.sources.read(items))
+                    items = self.server.store.source_components()
+                    result = self.server.sources.read(items)
+                    for item in items:
+                        if item["id"] not in result["items"]:
+                            continue
+                        facts = result["items"].get(item["id"], {})
+                        metadata = {key: value for key, value in facts.items() if key not in ("content", "contentFormat", "contentUrl", "contentReadAt")}
+                        result["items"][item["id"]] = metadata
+                        result["items"][item["canonicalId"]] = metadata
+                    return self.send(200, result)
+                if path.startswith('/api/components/'):
+                    identifier = unquote(path.removeprefix('/api/components/'))
+                    enrich = identifier.endswith('/source')
+                    if enrich:
+                        identifier = identifier.removesuffix('/source')
+                    definition = self.server.store.component(identifier)
+                    if enrich and (definition["remoteApproved"] or definition.get("sourceAccess") == "verify"):
+                        result = self.server.sources.read([definition])
+                        facts = result["items"].get(definition["id"], {})
+                        definition.update(facts)
+                        if facts.get("sourceUnavailable"):
+                            definition["details"] = {**definition["details"], "reason": facts["sourceUnavailable"]}
+                        if facts.get("content") is not None:
+                            definition["details"] = {"availability": "available", "format": facts.get("contentFormat", "markdown"),
+                                                     "content": facts["content"], "url": facts.get("contentUrl")}
+                            definition["sourceUrl"] = facts.get("contentUrl") or definition.get("sourceUrl")
+                        elif result["errors"]:
+                            definition["details"] = {**definition["details"], "reason": facts.get("sourceUnavailable") or "The source could not be read. Try again when it is available."}
+                        definition["sourceErrors"] = result["errors"]
+                    return self.send(200, definition)
                 if path == '/api/presets':
                     return self.send(200, {'presets':self.server.store.list_packages()})
                 if path == '/api/comments':

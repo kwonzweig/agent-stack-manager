@@ -27,11 +27,12 @@ export default function ComponentCard({ item, index, viewMode, selected, targets
   const config = KIND_STYLES[item.kind];
   const name = itemName(item);
   const isList = viewMode === 'list';
-  const selectable = item.type !== 'preset';
+  const selectable = item.type !== 'preset' && item.addable !== false;
   const chips = <ItemProperties item={item} repository={onRepository} />;
 
   return (
     <article
+      data-component-id={item.canonicalId ?? item.id}
       className={'group relative flex rounded-md bg-[var(--color-card-bg)] border hover:bg-[var(--color-card-hover)] hover:border-[var(--color-accent)] transition-all duration-150 cursor-pointer animate-fade-in-up ' +
         (selected ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)] ' : 'border-[var(--color-border)] ') +
         (menuOpen ? 'z-20 ' : '') +
@@ -45,7 +46,7 @@ export default function ComponentCard({ item, index, viewMode, selected, targets
         className={'rounded flex items-center justify-center shrink-0 ' + (isList ? 'w-11 h-11' : 'w-10 h-10')}
         style={{ backgroundColor: config.color + '15', color: config.color, border: '1px solid ' + config.color + '30' }}
       >
-        <KindIcon kind={item.kind} className={isList ? 'h-[22px] w-[22px]' : 'h-5 w-5'} />
+        <KindIcon kind={item.kind} pluginHost={item.pluginHost} className={isList ? 'h-[22px] w-[22px]' : 'h-5 w-5'} />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col self-stretch">

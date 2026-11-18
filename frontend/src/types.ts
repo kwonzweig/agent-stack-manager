@@ -28,6 +28,10 @@ export interface SourceFacts {
   /** skills.sh installs; absent when skills.sh does not list the skill. */
   installs?: number;
   installsReadAt?: string;
+  content?: string;
+  contentFormat?: string;
+  contentUrl?: string;
+  sourceResolvedRef?: string;
 }
 export interface SourceData {
   items: Record<string, SourceFacts>;
@@ -49,6 +53,13 @@ export interface CatalogItem extends SourceFacts {
   packageId?: string;
   workArea?: string[];
   usage?: string[];
+  canonicalId?: string;
+  pluginHost?: "codex" | "claude";
+  aliases?: string[];
+  origins?: ComponentOrigin[];
+  memberships?: ComponentMembership[];
+  remoteApproved?: boolean;
+  addable?: boolean;
 }
 /** A preset member or a Catalog item, with what its source says once that has been read. */
 export interface Component extends SourceFacts {
@@ -63,6 +74,49 @@ export interface Component extends SourceFacts {
   file?: string;
   managedByInventory?: boolean;
   inventoryId?: string;
+  canonicalId?: string;
+  pluginHost?: "codex" | "claude";
+  details?: ComponentContent;
+  inventoryIds?: string[];
+}
+export interface ComponentOrigin {
+  type: string;
+  presetId?: string;
+  app?: InventoryApp;
+  scope?: string;
+  locator?: string;
+  path?: string;
+  parentId?: string;
+  parentName?: string;
+  file?: string;
+  inventoryId?: string;
+}
+export interface ComponentMembership {
+  presetId: string;
+  presetName: string;
+  memberId?: string;
+  inventoryId?: string;
+  apps?: Partial<Record<InventoryApp, InventoryAppState>>;
+}
+export interface ComponentContent {
+  availability: "available" | "metadata-only" | "unavailable";
+  reason?: string;
+  content?: string;
+  format?: string;
+  fields?: { name: string; type: string; selections?: Partial<Record<InventoryApp, InventorySelection>> }[];
+  selectionConflict?: boolean;
+  entry?: string;
+  files?: string[];
+  resourceCount?: number;
+}
+export interface ComponentDefinition extends Component {
+  origins: ComponentOrigin[];
+  memberships: ComponentMembership[];
+  details: ComponentContent;
+  remoteApproved: boolean;
+  sourceAccess?: "public" | "verify" | "private";
+  addable?: boolean;
+  sourceErrors?: string[];
 }
 export interface NativeFile {
   path: string;
@@ -76,6 +130,9 @@ export interface InventoryAppState {
   selected: InventorySelection;
   scope?: string;
   parentId?: string;
+  locator?: string;
+  path?: string;
+  targetId?: string;
 }
 export interface InventoryItem {
   id: string;
@@ -86,6 +143,11 @@ export interface InventoryItem {
   sourcePath?: string;
   sourceRef?: string;
   apm?: { git: string; ref: string; path?: string };
+  canonicalId?: string;
+  pluginHost?: "codex" | "claude";
+  definitionSource?: Source;
+  sourceUrl?: string;
+  details?: ComponentContent;
   apps: Partial<Record<InventoryApp, InventoryAppState>>;
 }
 export interface InventoryCoverage {

@@ -34,13 +34,24 @@ function inventoryKind(kind: string): Kind {
 }
 
 export function inventoryComponents(items: InventoryItem[]): Component[] {
-  return items.map(item => ({
+  const components = new Map<string, Component>();
+  for (const item of items) {
+    const key = item.canonicalId ?? item.id;
+    const existing = components.get(key);
+    if (existing) {
+      existing.inventoryIds!.push(item.id);
+      continue;
+    }
+    components.set(key, {
     id: `inventory:${item.id}`, inventoryId: item.id, name: item.name, kind: inventoryKind(item.kind),
-    description: item.description,
-    source: item.source || item.sourcePath || item.sourceRef ? {
+    canonicalId: item.canonicalId, pluginHost: item.pluginHost, inventoryIds: [item.id],
+    description: item.description, details: item.details, sourceUrl: item.sourceUrl,
+    source: item.definitionSource ?? (item.source || item.sourcePath || item.sourceRef ? {
       repositoryUrl: item.source, path: item.sourcePath, ref: item.sourceRef,
-    } : undefined,
-  }));
+    } : undefined),
+    });
+  }
+  return [...components.values()];
 }
 
 function skillReference(repository: string, ref: string, path: string) {

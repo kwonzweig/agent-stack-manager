@@ -7,15 +7,22 @@ import type { Kind, PackageKind } from "../types";
 export const KINDS: Kind[] = ["instruction", "skill", "mcp", "hook", "plugin", "package", "connector", "provider", "setting", "lsp", "other"];
 export const KIND_LABELS = Object.fromEntries(KINDS.map(kind => [kind, KIND_STYLES[kind].singular])) as Record<Kind, string>;
 
-export function KindIcon({ kind, className = "h-4 w-4", style }: { kind: Kind | PackageKind; className?: string; style?: CSSProperties }) {
+export function KindIcon({ kind, pluginHost, className = "h-4 w-4", style }: { kind: Kind | PackageKind; pluginHost?: "codex" | "claude"; className?: string; style?: CSSProperties }) {
+  if (kind === "plugin" && pluginHost) {
+    return <img src={pluginHost === "claude" ? "/claudecode.svg" : "/codex.svg"} alt="" className={className} style={style} />;
+  }
   const Icon = (KIND_STYLES[kind] ?? KIND_STYLES.other).icon;
   return <Icon className={className} style={style} aria-hidden="true" />;
 }
 
 // The one kind label: Presets, Catalog, the detail page and the export report all use it.
-export function KindBadge({ kind }: { kind: Kind | PackageKind }) {
-  return <span className={cn("inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-    KIND_STYLES[kind].chip)}>{KIND_STYLES[kind].singular}</span>;
+export function KindBadge({ kind, pluginHost }: { kind: Kind | PackageKind; pluginHost?: "codex" | "claude" }) {
+  const label = kind === "plugin" && pluginHost ? (pluginHost === "claude" ? "Claude Code plugin" : "Codex plugin") : KIND_STYLES[kind].singular;
+  return <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+    KIND_STYLES[kind].chip)}>
+    {kind === "plugin" && pluginHost && <KindIcon kind={kind} pluginHost={pluginHost} className="h-3.5 w-3.5" />}
+    {label}
+  </span>;
 }
 
 export function SearchField({ value, onChange, label = "Search components" }: { value: string; onChange: (value: string) => void; label?: string }) {

@@ -5,6 +5,7 @@ import { cn } from "../utils";
 interface SkillMarkdownProps {
   content: string;
   className?: string;
+  sourceUrl?: string;
 }
 
 // remark-gfm's autolink step compiles a regex with lookbehind on every render.
@@ -34,7 +35,7 @@ function stripMarkdownFrontmatter(content: string) {
   return rest.slice(closing.index + closing[0].length).trimStart();
 }
 
-export function SkillMarkdown({ content, className }: SkillMarkdownProps) {
+export function SkillMarkdown({ content, className, sourceUrl }: SkillMarkdownProps) {
   const markdown = stripMarkdownFrontmatter(content);
 
   return (
@@ -65,7 +66,10 @@ export function SkillMarkdown({ content, className }: SkillMarkdownProps) {
           ),
           a: ({ className, href, ...props }) => {
             const dangerous = /^(javascript|vbscript|data):/i;
-            const safeHref = href && !dangerous.test(href.trim()) ? href : undefined;
+            let safeHref = href && !dangerous.test(href.trim()) ? href : undefined;
+            if (safeHref && sourceUrl && /^https?:\/\//i.test(sourceUrl)) {
+              try { safeHref = new URL(safeHref, sourceUrl).href; } catch { safeHref = undefined; }
+            }
             return (
               <a
                 className={cn("text-accent-light underline decoration-accent-border underline-offset-4", className)}

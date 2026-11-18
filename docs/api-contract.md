@@ -64,9 +64,33 @@ Paperclip assesses whether the package describes a single agent. A preset's prev
 
 CC Switch produces a review when there are Codex or Claude Code inventory rows. It records existing per-app selections. Ordinary APM components with no app mapping appear as unassigned rows in the preview and under `unassignedItems` in the downloaded review. Its existing `items` field still contains only per-app rows. ASM does not infer app selections or run any import.
 
+## Component identity
+
+`canonicalId` identifies a component definition across Catalog, preset dependencies and installed observations. A remote definition uses its kind, plugin host, repository, branch and exact component path. Repository names on GitHub compare without case; component paths and refs retain their case. An unknown branch stays distinct from a recorded branch. A repository without a skill path does not imply a root skill. A declared root APM skill does.
+
+Local definitions use a proven file locator and field key when available. Otherwise the preset and original item ID scope the identity. Equal display names never establish identity. A copied observation without a proven locator receives a `definitionId` reference to its original definition. The original member IDs, inventory IDs, native source references and app selections stay intact.
+
+`GET /api/catalog` includes component definitions from the configured Catalog, shared packages and private inventory. Each definition has `canonicalId`, legacy `aliases`, `origins`, `memberships` and `addable`. Existing Catalog IDs remain usable. A source-backed skill and its observation appear once when their proven coordinates match. Different local origins and unknown coordinates remain separate. An observed component can be added to a new preset while retaining its source and existing app selections. Entries with no reusable source have `addable: false`.
+
+## Source access and enrichment
+
+`GET /api/catalog/sources` returns facts under both the existing Catalog ID and `canonicalId`. The configured shared Catalog declares sources permitted for enrichment. An inventory row's `sourceAccess` may be `verify`, `public` or `private`. No access value is inferred from its name or an HTTPS URL.
+
+`verify` means an explicit configured GitHub remote established by its installation receipt or source manifest. ASM first asks the owning GitHub API for that repository's visibility. Only an affirmative public response permits its raw source file and skills.sh queries. A local-only component and an unverified URL receive no requests. A private declaration takes precedence for every identity of that repository. The `public` value records an affirmative public-source decision, such as the scanner's GitHub visibility receipt in `sourceAccessEvidence`. It requires no list of repository names in ASM code.
+
+When an observed branch is unknown, a verified public repository's current default branch can be used for a source read. The response reports `sourceResolvedRef`; it does not rewrite the observed `sourceRef` or equate it to an installed revision. Missing paths, inaccessible content and metrics unavailable from their owners stay explicit. Facts and source bodies share an expiring runtime cache. Cache locks cover disk access, so a bulk Catalog query cannot hold the cache lock during network requests.
+
+## Component details and origins
+
+`GET /api/components/{canonicalId-or-legacy-id}` returns the locally resolved definition immediately. `GET /api/components/{id}/source` enriches that same definition when source access permits it. Catalog and preset item pages use these same calls and renderer. Public detail displays local metadata while the clicked source is read.
+
+The response includes normalized `source`, `pluginHost` (`codex` or `claude` when established), `details`, `origins` and `memberships`. A details block has `availability` (`available`, `metadata-only` or `unavailable`), optional `content`, `format` and `reason`. A safe captured settings container may list typed `fields` without configuration values. A legacy selection conflict retains the individual field selections for review.
+
+Origins identify the preset, app, scope, safe locator and parent container when known. Memberships refer to the original preset member or inventory IDs and observed app states. Editing memberships uses that preset's ordinary revision-checked save. Private or local metadata can be reviewed without resolving its files or contacting its source. Source bodies appear only when present in the package, captured safely, or read through the permitted remote-source route.
+
 ## App inventory
 
-A private preset can hold a captured inventory under `x-app-inventory` in its `apm.yml`. ASM accepts an existing package file. The dashboard neither scans nor applies configuration to the apps. Open it beside the shared presets and Catalog with `python -m asm_app --root <private-root> --base-root <shared-checkout> serve`. The base is read-only. Editing a shared preset in this view creates a private copy for subsequent edits. Keep its package, generated files and downloads private. Do not add credentials or raw settings to the manifest. Inventory sources do not join Catalog source lookups.
+A private preset can hold a captured inventory under `x-app-inventory` in its `apm.yml`. ASM accepts an existing package file. The dashboard neither scans nor applies configuration to the apps. Open it beside the shared presets and Catalog with `python -m asm_app --root <private-root> --base-root <shared-checkout> serve`. The base is read-only. Editing a shared preset in this view creates a private copy for subsequent edits. Keep its package, generated files and downloads private. Do not add credentials or raw settings to the manifest. Source access follows the policy above.
 
 The extension has an `items` list. Each item has a stable text `id`, `name`, `kind`, `description` and an `apps` map keyed by `codex` and/or `claude`. An app entry has `installed` (boolean), `enabled` (boolean or null if unverified) and `selected` (boolean or null if undecided). An absent app entry carries no observation. Optional item fields are `source`, `sourcePath`, `sourceRef` and `skillRepository`. Optional app fields are `scope`, `parentId`, `targetId` (the app's component key) and `path` relative to the app scope. An optional extension `coverage` list has entries with `app`, `area`, `status`, and `note`.
 

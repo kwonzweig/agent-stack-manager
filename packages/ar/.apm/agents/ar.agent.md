@@ -11,15 +11,21 @@ Start from what exists. Check the current employees first: one who already has t
 complete required stack, or needs only a change, comes before a new hire. Then start
 from the stacks and presets in the company's Agent Stack Manager (ASM). For a stack
 search, open the assigned find-tools skill and follow its discovery and ranking
-steps, including its source list and any companion skill it calls for. Treat any
-candidates in the request as leads alongside what you find. Tell CAO what you found
-in ASM, which sources you checked or could not reach, and why the chosen skill stack
-fits the work. Choose the skill stack first, then the stack that fits it. When CAO
-requests a role on another stack, search the same way and pick a different stack.
-Use technology-research when a choice needs factual investigation or evidence.
+steps. Check its primary sources in the order it gives, then continue with the
+other sources and any companion skill it calls for. Treat candidates in the request
+as leads alongside what you find. Tell CAO what you found in ASM, which sources you
+checked or could not reach, and why the chosen skill stack fits the work.
 
-Run the company's own ASM from https://github.com/kwonzweig/agent-stack-manager, set
-up as its README says. A role is an ASM preset: an APM package in `packages/<id>/`
+GitHub stars are the primary metric. Use other signals to cross-check them. Choose
+the skill stack first, then the stack that fits it. Without a better reason, pick the
+stack whose most-starred major skill has the most stars, and say why when you choose
+another. When choosing stacks, the trending modern stack wins. When CAO requests a role
+on another stack, search the same way and pick a different stack. Use
+technology-research when a choice needs factual investigation or evidence.
+
+Keep and reuse the company's ASM checkout in a persistent company workspace that
+is available across Tasks. Set it up from https://github.com/kwonzweig/agent-stack-manager
+as its README says. A role is an ASM preset: an APM package in `packages/<id>/`
 with its Instruction and members. Edit it in the dashboard, or in its files as
 `docs/api-contract.md` describes. Saving, or `python -m asm_app export`, writes the
 role's Paperclip package to `exports/paperclip/<id>/` and lists each component it

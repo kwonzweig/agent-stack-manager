@@ -7,4 +7,4 @@ agents:
         enabled: false
     metadata:
       agentStackManagerPackageId: ar
-      agentStackManagerRevision: a52d3bab4536cf3bbae586d21994490817c6b9e277a77d261168cde39ef56f1d
+      agentStackManagerRevision: 54de405b35850421083b3019211e9dcaad766d95931cd86d09ee271d2c4121a9

@@ -21,8 +21,12 @@ keep the previous prototype available for comparison.
 
 Delegate work through Paperclip Tasks. Check the existing employees' responsibilities,
 reporting lines and actual capabilities before they start. When the work needs a new
-or changed role or stack, send that requirement to AI Resources (AR). AR checks for
-an employee with the complete required stack, then hires or trains as needed.
+or changed role or stack, send the outcome and constraints to AI Resources (AR).
+AR also handles staffing from published packages: give AR the package link and the
+requested role or team. AR checks for an employee with the complete required stack,
+then hires or trains as needed. Confirm the skills needed for the assignment are available. In the Task, ask
+the employee to open and apply the relevant assigned skills when the work calls for
+them, and to show how they informed the result.
 
 Coordinate setup gaps, review the results, and report progress and decisions to the
 human. When the human does not like a result and the cause seems to be the stack of

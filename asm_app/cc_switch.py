@@ -5,7 +5,8 @@ import re
 from urllib.parse import quote, urlencode, urlsplit
 
 
-_UNSUPPORTED = {"hook", "plugin", "claude-code-plugin", "codex-plugin", "connector"}
+UNSUPPORTED_KINDS = {"hook", "plugin", "claude-code-plugin", "codex-plugin", "connector"}
+UNSUPPORTED_REASON = "CC Switch does not manage this component."
 _REPO_PART = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9._-]*")
 
 
@@ -97,8 +98,8 @@ def convert(package):
                 row["skillRepository"] = registration
             if state["selected"] is False:
                 status, reason = "excluded", "Excluded from the preset for this app."
-            elif kind in _UNSUPPORTED:
-                status, reason = "unsupported", "CC Switch does not manage this component."
+            elif kind in UNSUPPORTED_KINDS:
+                status, reason = "unsupported", UNSUPPORTED_REASON
             elif state["selected"] is None:
                 status, reason = "manual", "The selection for this app has not been set."
             elif registration:

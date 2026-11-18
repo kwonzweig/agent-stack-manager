@@ -231,7 +231,7 @@ export function App() {
               {activeSave.conflict && <button type="button" className="app-button-secondary" onClick={() => setOverlay({ type: "conflict", id: draft.original.id })}>Review saved version</button>}
             </div>}
             {route.tab === "export" ? <PresetExportTab id={draft.original.id} kind={draft.original.kind}
-                inventory={!!draft.original.appInventory} revision={draft.original.revision}
+                revision={draft.original.revision}
                 dirty={isDirty(draft)} data={consumers.data} loading={consumers.loading} error={consumers.error}
                 onRetry={consumers.refresh} route={{ ...route, id: draft.original.id }} onNavigate={navigate} />
               : route.tab === "source" ? <SourceFiles id={draft.original.id} files={draft.original.files} dirty={isDirty(draft)} />

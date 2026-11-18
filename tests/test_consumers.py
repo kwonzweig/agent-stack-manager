@@ -10,6 +10,8 @@ from asm_app.store import SUPPORT_KINDS, Store, StoreError
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = json.loads((ROOT / "catalog/consumers.json").read_text(encoding="utf-8"))
+EXPECTED = {**DATA, "consumers": [{**row, "export": row["id"] in {"paperclip", "ccswitch"}}
+                                for row in DATA["consumers"]]}
 
 
 class ConsumerDataTests(unittest.TestCase):
@@ -26,14 +28,15 @@ class ConsumerDataTests(unittest.TestCase):
                         self.assertTrue(cell["name"].strip())
 
     def test_implemented_export_targets(self):
-        self.assertEqual([row["id"] for row in DATA["consumers"] if row["export"]], ["paperclip", "ccswitch"])
+        self.assertEqual([row["id"] for row in Store(ROOT).consumers()["consumers"] if row["export"]],
+                         ["paperclip", "ccswitch"])
 
     def test_cc_switch_names_the_tools_its_column_covers(self):
         ccswitch = next(row for row in DATA["consumers"] if row["id"] == "ccswitch")
         self.assertEqual(ccswitch["tools"], ["Claude Code", "Codex"])
 
     def test_the_store_serves_the_file(self):
-        self.assertEqual(Store(ROOT).consumers(), DATA)
+        self.assertEqual(Store(ROOT).consumers(), EXPECTED)
 
 
 class ConsumerValidationTests(unittest.TestCase):
@@ -58,7 +61,20 @@ class ConsumerValidationTests(unittest.TestCase):
 
     def test_a_copy_of_the_file_is_accepted(self):
         self.write(DATA)
-        self.assertEqual(Store(self.root).consumers(), DATA)
+        self.assertEqual(Store(self.root).consumers(), EXPECTED)
+
+    def test_runtime_export_flags_ignore_legacy_declarations_in_the_shared_base(self):
+        data = copy.deepcopy(DATA)
+        by_id = {consumer["id"]: consumer for consumer in data["consumers"]}
+        by_id["ccswitch"]["export"] = False
+        by_id["codex"]["export"] = True
+        self.write(data)
+        (self.root / "packages").mkdir()
+        with tempfile.TemporaryDirectory() as private:
+            resolved = Store(Path(private), base_root=self.root).consumers()["consumers"]
+        self.assertEqual([consumer["id"] for consumer in resolved if consumer["export"]],
+                         ["paperclip", "ccswitch"])
+        self.assertEqual(json.loads((self.root / "catalog/consumers.json").read_text(encoding="utf-8")), data)
 
     def test_incomplete_or_unsourced_cells_are_refused(self):
         cell = lambda data, consumer=1, kind="hook": data["consumers"][consumer]["support"][kind]

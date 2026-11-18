@@ -42,7 +42,9 @@ python -m asm_app export          # rewrite exports/paperclip/ and list what eac
 python -m asm_app export --check  # write nothing; fail if exports/paperclip/ is out of date
 ```
 
-For a private preset with an [app inventory](docs/api-contract.md#app-inventory), the dashboard shows each installed component and lets you include or exclude it for Codex and Claude Code separately. Download the CC Switch review from the Export tab, or run `python -m asm_app --root <private-root> cc-switch <preset-id>`. The review identifies eligible import links, skill repository registrations, and items that need a different route. ASM saves the preset and does not apply it to any app.
+The Export tab previews what each exporter can produce from the saved preset and explains unavailable targets and omitted items. A mixed preset can offer both a Paperclip package and a CC Switch review. Paperclip reports per-app inventory states it cannot carry.
+
+For a private preset with an [app inventory](docs/api-contract.md#app-inventory), the dashboard shows each installed component and lets you include or exclude it for Codex and Claude Code separately. Download the CC Switch review from the Export tab, or run `python -m asm_app --root <private-root> cc-switch <preset-id>`. The review identifies eligible import links, skill repository registrations, unassigned APM components, and items that need a different route. ASM saves the preset and does not apply it to any app.
 
 Direct export to Claude Code or Codex and reverse conversion are planned.
 

@@ -254,8 +254,10 @@ def _consumers(data):
         if not isinstance(identifier, str) or not _ID.fullmatch(identifier) or identifier in seen:
             raise StoreError("Every consumer needs a unique lowercase id.")
         seen.add(identifier)
-        if not _text(consumer.get("name")).strip() or not isinstance(consumer.get("export"), bool):
-            raise StoreError(f"Consumer {identifier} needs a name and export true or false.")
+        if not _text(consumer.get("name")).strip():
+            raise StoreError(f"Consumer {identifier} needs a name.")
+        if "export" in consumer and not isinstance(consumer["export"], bool):
+            raise StoreError(f"Consumer {identifier} export must be true or false.")
         tools = consumer.get("tools", [])
         if not isinstance(tools, list) or any(not _text(tool).strip() for tool in tools):
             raise StoreError(f"Consumer {identifier} tools must be a list of names.")
@@ -499,12 +501,17 @@ class Store:
         return catalog
 
     def consumers(self):
-        """What each app supports per component kind, from catalog/consumers.json; none without the file."""
+        """Documented app support plus the exporters installed in this process."""
+        from .exporters import EXPORTERS
+
         root = self.base_root if self.base_root is not None else self.root
         path = self._checked(root / "catalog" / "consumers.json", root=root)
         if not path.is_file():
             return {"kinds": list(SUPPORT_KINDS), "consumers": []}
-        return _consumers(_read_json(path.read_bytes(), "consumer support data"))
+        data = _consumers(_read_json(path.read_bytes(), "consumer support data"))
+        for consumer in data["consumers"]:
+            consumer["export"] = consumer["id"] in EXPORTERS
+        return data
 
     def _entries(self, identifier, model, files, catalog, inventory_skills=None):
         entries = []

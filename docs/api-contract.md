@@ -51,9 +51,18 @@ Create/save payload: `title,description,kind,icon,workArea,usage,instruction,com
 - GET `/api/comments?presetId=&componentId=` -> `{comments:[]}`
 - POST `/api/comments` with `presetId,componentId,body,author` -> `{comment}`
 - GET `/api/consumers` -> store.consumers()
+- GET `/api/presets/{id}/exports` -> the saved preset's assessed targets, previews and download paths.
 - GET `/api/presets/{id}/paperclip` -> conversion report from `convert()`
 - GET `/api/presets/{id}/paperclip/export` -> the same files as `exports/paperclip/{id}/`, as a ZIP
 - GET `/api/presets/{id}/cc-switch` -> the saved app inventory's CC Switch review, as a JSON download (see below).
+
+## Export targets
+
+`GET /api/presets/{id}/exports` returns `{targets: [...]}`. Each target gives its `id`, `name`, `available`, `reason` and `preview`. An available target also gives a package-relative `download` path and a `filename`. Append the path to `/api/presets/{id}`. The download path carries the assessed artifact's revision. A download returns 409 if that artifact changed since the preview. The existing download paths without a revision still use the current saved data. The support matrix documents what each app supports. Download availability comes from the exporters' assessments.
+
+Paperclip assesses whether the package describes a single agent. A preset's preview is the Paperclip conversion report without file bodies. The conversion includes each observed app row as an omission because the company package cannot represent its installed, enabled and selected states. A shared APM skill may still produce a Paperclip skill reference independently. A stack has a preview and a reason, and produces a package only when a preset includes it. The Paperclip ZIP and generated directory use the same file map.
+
+CC Switch produces a review when there are Codex or Claude Code inventory rows. It records existing per-app selections. Ordinary APM components with no app mapping appear as unassigned rows in the preview and under `unassignedItems` in the downloaded review. Its existing `items` field still contains only per-app rows. ASM does not infer app selections or run any import.
 
 ## App inventory
 
@@ -67,7 +76,7 @@ An inventory skill with a verified source can carry an `apm` reference with `git
 
 ### CC Switch review
 
-`python -m asm_app --root <private-root> cc-switch <preset-id>` prints the same JSON as the dashboard download. The report includes `presetId`, `consumer: "cc-switch"`, one `items` row per item and app, and a deduplicated `skillRepositories` list. Rows carry `id`, `name`, `kind`, `app`, `installed`, `enabled`, `selected`, `status` and `reason`, plus available source metadata. A repository entry contains `owner`, `repo`, `branch`, optional `directory`, and its official CC Switch deep link in `url`. Supply `skillRepository` only when you have approved the repository for CC Switch to read. Registering a repository does not install or enable a skill.
+`python -m asm_app --root <private-root> cc-switch <preset-id>` prints the same JSON as the dashboard download. The report includes `presetId`, `consumer: "cc-switch"`, one `items` row per item and app, a deduplicated `skillRepositories` list and, when needed, `unassignedItems`. Rows in `items` carry `id`, `name`, `kind`, `app`, `installed`, `enabled`, `selected`, `status` and `reason`, plus available source metadata. A repository entry contains `owner`, `repo`, `branch`, optional `directory`, and its official CC Switch deep link in `url`. Supply `skillRepository` only when you have approved the repository for CC Switch to read. Registering a repository does not install or enable a skill.
 
 `status` is `excluded`, `unsupported`, `manual`, `registration-only`, or `import-ready`. Known hooks, plugins and Connectors require their own host route. Observations without portable configuration require manual action. For an item with an explicitly supplied, credential-free app payload, `portable: {prompt: "<text>"}` or `portable: {mcp: {name: "<id>", url: "<https-url>"}}` can generate a per-row import link in `url`. Review the prompt text before adding it. A prompt import defaults to disabled. An MCP link requires an observed enabled state because CC Switch writes the server into the app configuration on confirmation. The endpoint must have no credentials, query or fragment. These links are for review and confirmed import. Use CC Switch to reconcile existing entries before using a deep link. See [CC Switch's deep link reference](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/en/5-faq/5.3-deeplink.md).
 
@@ -101,6 +110,8 @@ Every agent's `role` is `general`, because Paperclip stores a role outside its o
 
 ## Consumer support (`catalog/consumers.json`)
 
-`{kinds, consumers}`. `kinds` is `instruction, skill, mcp, hook, claude-code-plugin, codex-plugin`: the component kinds with Plugin split by the manifest each app reads. Each consumer has `id`, `name`, `export` (true for Paperclip packages and CC Switch inventory reviews), optional `tools` (for CC Switch, the tools of its own table that its column covers) and `support`, one cell per kind in that order: `{value, name?, note?, doc}`. `value` is `yes`, `no` or `not-documented` (the app's page on that format says nothing); `name` is the app's own term, required for `yes`; `note` is shown in the cell's info popover, above the link to `doc`; `doc` is the https page that says so. The store refuses a file with a missing kind, another value, or a cell without `doc`.
+`{kinds, consumers}`. `kinds` lists `instruction, skill, mcp, hook, claude-code-plugin, codex-plugin`. Each catalog consumer has `id`, `name`, optional `tools` (the apps its column covers), and `support`, one cell per kind in that order. Each cell has `value` of `yes`, `no` or `not-documented`, and a `doc` HTTPS URL to the source. `name` is the app's term and is required for `yes`. An optional `note` appears in the info popover with the source link. The store refuses missing or invalid cells.
+
+`GET /api/consumers` adds the boolean `export` to every row. It tells whether the running ASM has a registered exporter, regardless of the current preset. Older catalogs may still include this field. ASM accepts that input and derives the response from the exporter registry. Use `GET /api/presets/{id}/exports` for saved-preset availability and omissions.
 
 The Export tab shows the cells as a table, one row per kind with this preset's count. Paperclip's cell for a kind the preset has comes from the conversion report instead.

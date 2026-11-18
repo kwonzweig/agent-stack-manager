@@ -333,6 +333,7 @@ def needs_attention(row):
 
 def _exports(root, store=None):
     """The export of every preset: `{id, report}`, or `{id, error}` for a package that cannot be read."""
+    from .exporters import EXPORTERS
     from .store import Store
 
     store = store or Store(root)
@@ -340,8 +341,9 @@ def _exports(root, store=None):
     for identifier in store._ids():
         try:
             package = store.get(identifier)
-            if package["kind"] == "preset":
-                results.append({"id": identifier, "report": convert(package, root=store.root, store=store)})
+            assessment = EXPORTERS["paperclip"].assess(package, store)
+            if assessment.artifact is not None:
+                results.append({"id": identifier, "report": assessment.artifact})
         except (ValueError, OSError) as error:
             results.append({"id": identifier, "error": str(error)})
     return store, results

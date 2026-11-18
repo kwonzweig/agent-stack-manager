@@ -154,16 +154,16 @@ class Handler(BaseHTTPRequestHandler):
                         return self.send(200,self.server.store.get(pid))
                     if suffix == '/export':
                         return self.send(200,self.server.store.export(pid),'application/zip',pid+'.zip')
-                    if suffix == '/cc-switch':
-                        from .cc_switch import convert
-                        return self.send(200,convert(self.server.store.get(pid)),'application/json',pid+'-cc-switch.json')
-                    if suffix in ('/paperclip','/paperclip/export'):
-                        from .paperclip import convert, export_package
-                        package = self.server.store.get(pid)
-                        report = convert(package,root=self.server.root,store=self.server.store)
-                        if suffix.endswith('/export'):
-                            return self.send(200,export_package(report),'application/zip',pid+'-paperclip.zip')
-                        return self.send(200,report)
+                    from .exporters import DOWNLOADS, EXPORTERS, choices
+                    if suffix == '/exports':
+                        return self.send(200,choices(self.server.store.get(pid),self.server.store))
+                    if exporter := DOWNLOADS.get(suffix):
+                        revision = query.get('revision',[None])[0]
+                        return self.send(200,*exporter.produce(self.server.store.get(pid),self.server.store,revision))
+                    if suffix == '/paperclip':
+                        assessment = EXPORTERS['paperclip'].assess(self.server.store.get(pid),self.server.store)
+                        return self.send(200,assessment.artifact if assessment.artifact is not None
+                                         else {**assessment.preview, 'files': []})
                 elif self.command == 'PATCH' and not suffix:
                     with self.server.io_lock:
                         return self.send(200,self.server.store.save(pid,data))

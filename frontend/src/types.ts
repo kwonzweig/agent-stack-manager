@@ -134,6 +134,7 @@ export interface ReportItem {
   id: string;
   name: string;
   kind: Kind;
+  app?: InventoryApp;
   /** The support table row; null for a stack, a plugin with no known manifest, or a row that is no component. */
   supportKind: SupportKind | null;
   conversion: Result;

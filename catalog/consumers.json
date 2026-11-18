@@ -4,7 +4,6 @@
     {
       "id": "paperclip",
       "name": "Paperclip",
-      "export": true,
       "support": {
         "instruction": {"value": "yes", "name": "AGENTS.md", "note": "The body of an agent's AGENTS.md is its instruction.", "doc": "https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md"},
         "skill": {"value": "yes", "name": "Skills", "note": "An import from GitHub omits files over 1 MiB, past 9,990 files or 61 MiB per repository, and files its execution or secret-disclosure checks reject; unsafe content, secrets and invalid paths are rejected.", "doc": "https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/skills-store.md"},
@@ -17,7 +16,6 @@
     {
       "id": "claude-code",
       "name": "Claude Code",
-      "export": false,
       "support": {
         "instruction": {"value": "yes", "name": "CLAUDE.md", "note": "Claude Code can also read a repository's AGENTS.md.", "doc": "https://code.claude.com/docs/en/memory"},
         "skill": {"value": "yes", "name": "Skills", "doc": "https://code.claude.com/docs/en/skills"},
@@ -30,7 +28,6 @@
     {
       "id": "codex",
       "name": "Codex",
-      "export": false,
       "support": {
         "instruction": {"value": "yes", "name": "AGENTS.md", "doc": "https://learn.chatgpt.com/docs/agent-configuration/agents-md"},
         "skill": {"value": "yes", "name": "Skills", "doc": "https://learn.chatgpt.com/docs/build-skills"},
@@ -43,7 +40,6 @@
     {
       "id": "ccswitch",
       "name": "CC Switch",
-      "export": true,
       "tools": ["Claude Code", "Codex"],
       "support": {
         "instruction": {"value": "yes", "name": "Prompts: CLAUDE.md · AGENTS.md", "doc": "https://github.com/farion1231/cc-switch#supported-features-by-tool"},

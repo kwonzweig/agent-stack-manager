@@ -81,8 +81,9 @@ def main(argv=None):
         if args.command=='export':
             return _export(args.root,args.check,store)
         if args.command=='cc-switch':
-            from .cc_switch import convert
-            print(json.dumps(convert(store.get(args.preset)),ensure_ascii=True,indent=2))
+            from .exporters import EXPORTERS
+            assessment = EXPORTERS['ccswitch'].assess(store.get(args.preset),store)
+            print(json.dumps(assessment.require_artifact(),ensure_ascii=True,indent=2))
             return 0
         if args.command=='lock':
             result=store.lock(args.preset,args.update)

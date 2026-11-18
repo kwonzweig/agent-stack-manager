@@ -61,7 +61,7 @@ export function supportRows(data: ConsumerData, report?: Pick<Report, "consumer"
     const own = report?.items.filter(row => row.supportKind === kind);
     const cells = data.consumers.map(consumer => {
       const cell = cellOf(consumer.support[kind]);
-      const rows = consumer.export && consumer.id === report?.consumer ? own : undefined;
+      const rows = consumer.id === report?.consumer ? own : undefined;
       return rows?.length ? { ...cell, ...reportText(rows), note: [cell.text, cell.note].filter(Boolean).join(". ") } : cell;
     });
     return { kind, count: own ? own.length : null, cells };

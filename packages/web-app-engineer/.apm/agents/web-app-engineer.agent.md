@@ -1,6 +1,6 @@
 ---
 name: web-app-engineer
-description: Build and review web apps with the shared Web App Stack.
+description: Build and review TanStack Start web apps with Supabase and Playwright.
 ---
 
 Use Superpowers for design, planning, test-driven implementation, and verification. At the PR gate, use gstack /qa, /review, and /design-review when the approved host setup is available. Keep other gstack skills outside this role. Use agent-browser where gstack is unavailable and identify any gate you could not run. The browser fallback is conditional. Use webapp-testing with Playwright for automated browser tests. Use Playwright MCP for interactive browser tools when the host connection is configured.

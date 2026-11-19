@@ -81,12 +81,23 @@ test("edits made during a save rebase against the submitted snapshot", () => {
 });
 
 test("adding from Catalog saves only new members onto the saved version", () => {
-  const { added, draft } = withMembers(saved("current"), ["b", "c", "c"].map(component).concat({ id: "package:example", name: "Example", kind: "package" }));
+  const { added, draft } = withMembers(createDraft(saved("current")), ["b", "c", "c"].map(component).concat({ id: "package:example", name: "Example", kind: "package" }));
   assert.deepEqual(added.map(item => item.id), ["c"]);
   assert.deepEqual(makePayload(draft), {
     revision: "current", title: "Example", description: "", kind: "preset", icon: "",
     workArea: [], usage: [], instruction: "", componentIds: ["a", "b", "c"],
   });
+});
+
+test("adding an alias preserves existing native members and per-app exclusions", () => {
+  const native = { ...component("package-local-id"), canonicalId: "native-key" };
+  const observation = { ...component("snapshot-local-id"), canonicalId: "captured-key",
+    apps: { codex: { installed: true, selected: false } } };
+  const pkg = saved("current", { components: [native], appInventory: [observation] });
+  const candidates = ["native-key", "captured-key", "different-key", "different-key"].map((canonicalId, index) => ({
+    ...component("catalog-alias-" + index), name: "Identical display name", canonicalId,
+  }));
+  assert.deepEqual(withMembers(createDraft(pkg), candidates).added, [candidates[2]]);
 });
 
 test("an open draft keeps its unsaved edits after a Catalog add is saved", () => {
@@ -131,5 +142,5 @@ test("adding from the Catalog leaves an inventory-managed skill under its per-ap
   const managed = { id: "catalog-different-id", kind: "skill", name: "Skill",
     source: { repositoryUrl: "https://github.com/Example/Skills.git", ref: "main", path: "skills/code/SKILL.md" } };
   const differentRef = { ...managed, id: "another-ref", source: { ...managed.source, ref: "preview" } };
-  assert.deepEqual(withMembers(pkg, [managed, differentRef]).added, [differentRef]);
+  assert.deepEqual(withMembers(createDraft(pkg), [managed, differentRef]).added, [differentRef]);
 });

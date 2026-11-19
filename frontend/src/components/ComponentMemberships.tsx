@@ -3,7 +3,7 @@ import type { Component, ComponentDefinition, InventoryApp, InventoryItem, Inven
 import { isDirty, type Draft } from "../draft";
 import { InventoryMembership } from "./InventoryMembership";
 
-export function ComponentMemberships({ definition, drafts, loadPreset, onSelect, onNativeSelect, onSave, saving, errors }: {
+export function ComponentMemberships({ definition, drafts, loadPreset, onSelect, onNativeSelect, onSave, saving, errors, loadErrors, onConflict }: {
   definition: ComponentDefinition;
   drafts: Record<string, Draft>;
   loadPreset: (id: string) => Promise<unknown>;
@@ -12,6 +12,8 @@ export function ComponentMemberships({ definition, drafts, loadPreset, onSelect,
   onSave: (presetId: string) => void;
   saving: string[];
   errors: Record<string, { message: string; conflict: boolean }>;
+  loadErrors: Record<string, string>;
+  onConflict: (id: string) => void;
 }) {
   const presets = [...new Map(definition.memberships.map(row => [row.presetId, row.presetName])).entries()];
   const ids = presets.map(([id]) => id).join("\n");
@@ -33,8 +35,11 @@ export function ComponentMemberships({ definition, drafts, loadPreset, onSelect,
           {draft && isDirty(draft) && <button type="button" className="app-button-primary"
             onClick={() => onSave(id)} disabled={saving.includes(id)}>{saving.includes(id) ? "Saving…" : "Save " + name}</button>}
         </div>
-        {!draft && <p role="status" className="text-muted">Loading preset…</p>}
+        {!draft && (loadErrors[id]
+          ? <p role="alert" className="text-danger">{loadErrors[id]} <button type="button" className="underline" onClick={() => void loadPreset(id).catch(() => {})}>Retry</button></p>
+          : <p role="status" className="text-muted">Loading preset…</p>)}
         {errors[id]?.message && <p role="alert" className="text-danger">{errors[id].message}</p>}
+        {errors[id]?.conflict && <button type="button" className="app-button-secondary" onClick={() => onConflict(id)}>Review saved version</button>}
         {draft && observations.map(item => <InventoryMembership key={item.id} draft={draft} item={item}
           onSelect={(app, selected) => onSelect(id, item, app, selected)} />)}
         {draft && native.map(item => item.id === "instruction" ? <p key={item.id} className="text-secondary">Primary instruction</p> :

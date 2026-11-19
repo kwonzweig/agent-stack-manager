@@ -79,11 +79,17 @@ export function presetMembers(draft: Draft): Component[] {
   return [...rows.values()];
 }
 
-export function managedInventoryMember(pkg: Package, item: Component) {
-  if (item.managedByInventory) return true;
-  if (item.kind !== "skill" || !item.source?.repositoryUrl || !item.source.ref) return false;
-  const key = skillReference(item.source.repositoryUrl, item.source.ref, item.source.path ?? "");
-  return pkg.appInventory?.some(row => row.apm && skillReference(row.apm.git, row.apm.ref, row.apm.path ?? "") === key) ?? false;
+export function listedMember(draft: Draft) {
+  const observed = draft.original.appInventory ?? [];
+  const keys = new Set([
+    "package:" + draft.original.id, ...draft.members.map(row => row.canonicalId ?? row.id),
+    ...observed.map(row => row.canonicalId ?? "inventory:" + row.id),
+  ]);
+  const managedSkills = new Set(observed.flatMap(row =>
+    row.apm ? [skillReference(row.apm.git, row.apm.ref, row.apm.path ?? "")] : []));
+  return (item: Component) => !!item.managedByInventory || keys.has(item.canonicalId ?? item.id) ||
+    (item.kind === "skill" && !!item.source?.repositoryUrl && !!item.source.ref &&
+      managedSkills.has(skillReference(item.source.repositoryUrl, item.source.ref, item.source.path ?? "")));
 }
 
 function currentSelection(selections: Draft["appInventorySelections"], item: InventoryItem, app: InventoryApp) {
@@ -123,11 +129,15 @@ export function withComponentInclusion(draft: Draft, rows: Component[], included
   return { ...draft, members, appInventorySelections: Object.fromEntries(selections) };
 }
 
-// The saved package plus the given components it lacks; a package never contains itself.
-export function withMembers(pkg: Package, items: Component[]) {
-  const base = createDraft(pkg);
-  const ids = new Set([...base.members.map(item => item.id), "package:" + pkg.id]);
-  const added = items.filter(item => !ids.has(item.id) && !managedInventoryMember(pkg, item) && ids.add(item.id));
+export function withMembers(base: Draft, items: Component[]) {
+  const listed = listedMember(base);
+  const seen = new Set<string>();
+  const added = items.filter(item => {
+    const key = item.canonicalId ?? item.id;
+    if (listed(item) || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   return { added, draft: { ...base, members: [...base.members, ...added] } };
 }
 

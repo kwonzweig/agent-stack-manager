@@ -27,7 +27,7 @@ async function writeFixture(root) {
       apm: sharedRef,
       skillRepository: { owner: "example", repo: "verification-fixture", branch: "main", directory: sharedRef.path },
     }),
-    inventory("preferences", "Observed preferences", "setting", { codex: state(true) }),
+    inventory("preferences", "Observed preferences", "setting", { codex: { ...state(true), scope: "project", locator: "sample-team/config.toml" } }),
     inventory("prompt", "Readiness prompt", "instruction", { codex: state(false, { prompt: "Synthetic portable prompt." }) }),
     inventory("mcp", "Readiness MCP", "mcp", { codex: state(false, { mcp: { name: "readiness", url: "https://example.invalid/mcp" } }) }),
     inventory("stop", "Observed stop hook", "hook", { claude: state(true) }),
@@ -120,6 +120,7 @@ async function runBrowser(base, root) {
           patches.push(pathname);
           return route.continue();
         }
+        if (method === "POST" && pathname === "/api/comments") return route.continue();
         if (method === "GET" || method === "HEAD") {
           if (pathname === "/api/catalog/sources") return route.fulfill({ json: { items: {}, errors: [] } });
           return route.continue();
@@ -173,6 +174,26 @@ async function runBrowser(base, root) {
 
     const initial = await preset(mixed);
     await open(mixed);
+    await button("Add components").click();
+    const picker = page.getByRole("dialog", { name: "Add components" });
+    const pickerSearch = picker.getByRole("searchbox");
+    await pickerSearch.fill("Observed preferences");
+    const listed = picker.getByRole("checkbox", { name: /Observed preferences/ });
+    await listed.waitFor({ state: "attached" });
+    assert.ok(await listed.isChecked() && await listed.isDisabled(), "already listed observations retain their saved choices");
+    await pickerSearch.fill("sample-team/config.toml");
+    await picker.getByText("Observed preferences", { exact: true }).waitFor();
+    await picker.getByText("sample-team/config.toml", { exact: true }).waitFor();
+    await picker.getByRole("button", { name: "Close picker" }).click();
+    await button("native-mixed-keep").click();
+    const detail = page.getByRole("dialog", { name: "native-mixed-keep" });
+    await detail.getByRole("heading", { name: "Presets" }).waitFor();
+    await detail.getByText("No comments yet.").waitFor();
+    await detail.getByLabel("Author", { exact: true }).fill("Reviewer");
+    await detail.getByLabel("Comment", { exact: true }).fill("Keep this member for the field team.");
+    await detail.getByRole("button", { name: "Post comment" }).click();
+    await detail.getByText("Keep this member for the field team.", { exact: true }).waitFor();
+    await detail.getByRole("button", { name: /^Back to / }).click();
     await button("Grid view").click();
     await button("Select components").click();
     await button("Observed relay").click();
@@ -282,6 +303,32 @@ async function runBrowser(base, root) {
 
     execFileSync(python, ["-B", fileURLToPath(new URL("./assert-paperclip.py", import.meta.url)), root, mixed, curated]);
     assert.deepEqual(patches, allowedPatches);
+
+    // Open an observed component directly from Catalog, including recovery from a failed load
+    // and from another editor saving this preset while the membership form is open.
+    const preferences = saved.appInventory.find(row => row.id === "preferences");
+    await page.route(base + presetPath(mixed), route => route.fulfill({
+      status: 503, json: { error: "Preset temporarily unavailable" },
+    }), { times: 1 });
+    await page.goto(base + "/#view=catalog&item=" + preferences.canonicalId);
+    await page.reload();
+    const membership = page.getByRole("region", { name: saved.title, exact: true });
+    await membership.getByText("Preset temporarily unavailable").waitFor();
+    await membership.getByRole("button", { name: "Retry" }).click();
+    const choice = membership.getByRole("combobox", { name: "Codex preset membership" });
+    await choice.selectOption("true");
+    const external = await page.request.patch(base + presetPath(mixed), {
+      data: { revision: saved.revision, description: "Another editor saved this description." },
+    });
+    assert.equal(external.status(), 200);
+    await membership.getByRole("button", { name: "Save " + saved.title }).click();
+    await membership.getByRole("button", { name: "Review saved version" }).click();
+    await page.getByRole("button", { name: "Keep my edits" }).click();
+    await membership.getByRole("button", { name: "Save " + saved.title }).click();
+    await membership.getByRole("button", { name: "Save " + saved.title }).waitFor({ state: "hidden" });
+    const resolved = await preset(mixed);
+    assert.equal(resolved.description, "Another editor saved this description.");
+    assert.equal(resolved.appInventory.find(row => row.id === "preferences").apps.codex.selected, true);
     assert.deepEqual(failures, []);
   } finally {
     await browser.close();

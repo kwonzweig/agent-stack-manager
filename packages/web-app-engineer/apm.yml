@@ -1,6 +1,6 @@
 name: web-app-engineer
 version: 0.1.0
-description: Build and review web apps with the shared Web App Stack.
+description: Build and review TanStack Start web apps with Supabase and Playwright.
 targets:
 - claude
 - codex

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import copy
 import importlib.util
 import io
 import json
@@ -22,12 +23,16 @@ from urllib.parse import quote, urlsplit
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import yaml
+from .components import identify, kind_and_host, source_coordinates
 
 
 _ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 _SIBLING = re.compile(r"\.\./([^/]+)")
 _PRIMARY = ".apm/agents/{}.agent.md"
 _KINDS = {"skill", "mcp", "hook", "plugin", "instruction", "package", "other"}
+_INVENTORY = "x-app-inventory"
+_INVENTORY_APPS = {"codex", "claude"}
+_INVENTORY_REPO = re.compile(r"https://github\.com/[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+")
 _LISTS = (("dependencies", "apm"), ("dependencies", "mcp"), ("dependencies", "lsp"),
           ("dependencies", "hooks"), ("dependencies", "plugins"), ("hooks",), ("plugins",))
 # apm.lock.yaml is written by `lock`: it records resolved commits and is not part of the preset.
@@ -251,8 +256,10 @@ def _consumers(data):
         if not isinstance(identifier, str) or not _ID.fullmatch(identifier) or identifier in seen:
             raise StoreError("Every consumer needs a unique lowercase id.")
         seen.add(identifier)
-        if not _text(consumer.get("name")).strip() or not isinstance(consumer.get("export"), bool):
-            raise StoreError(f"Consumer {identifier} needs a name and export true or false.")
+        if not _text(consumer.get("name")).strip():
+            raise StoreError(f"Consumer {identifier} needs a name.")
+        if "export" in consumer and not isinstance(consumer["export"], bool):
+            raise StoreError(f"Consumer {identifier} export must be true or false.")
         tools = consumer.get("tools", [])
         if not isinstance(tools, list) or any(not _text(tool).strip() for tool in tools):
             raise StoreError(f"Consumer {identifier} tools must be a list of names.")
@@ -314,11 +321,12 @@ def _dependency_kind(section, value):
 
 
 def _identity(kind, value):
-    if kind in {"skill", "instruction", "other"} and (source := _source(kind, value)):
+    if kind in {"skill", "instruction", "other", "plugin"} and (source := _source(kind, value)):
+        source = source_coordinates({"kind": kind, "source": source, "configuration": value}) or source
         repo = source["repositoryUrl"]
         if repo.casefold().startswith("https://github.com/"):
             repo = repo.casefold()
-        return kind, repo, source["path"], source["ref"]
+        return kind, repo, source.get("path"), source.get("ref")
     native = _mapping(value)
     if kind == "plugin":
         return kind, native.get("marketplace"), native.get("name"), native.get("version")
@@ -344,6 +352,87 @@ def _component(identifier, name, kind, config, *, source=None, description="", s
     return component
 
 
+def _app_inventory(model):
+    if _INVENTORY not in model:
+        return None
+    inventory = model[_INVENTORY]
+    if not isinstance(inventory, dict) or not isinstance(inventory.get("items"), list):
+        raise StoreError(f"{_INVENTORY} must contain an items list.")
+    seen = set()
+    for item in inventory["items"]:
+        if not isinstance(item, dict) or any(not _text(item.get(key)).strip() for key in ("id", "name", "kind")):
+            raise StoreError("Each inventory item needs a text id, name and kind.")
+        identifier = item["id"]
+        if identifier in seen:
+            raise StoreError(f"Duplicate inventory item: {identifier}")
+        seen.add(identifier)
+        if not isinstance(item.get("description"), str):
+            raise StoreError(f"Inventory item {identifier} needs a text description.")
+        apps = item.get("apps")
+        if not isinstance(apps, dict) or not apps or set(apps) - _INVENTORY_APPS:
+            raise StoreError(f"Inventory item {identifier} needs Codex or Claude Code app states.")
+        for state in apps.values():
+            if (not isinstance(state, dict) or not isinstance(state.get("installed"), bool)
+                    or any(key not in state or (state[key] is not None and not isinstance(state[key], bool))
+                           for key in ("enabled", "selected"))):
+                raise StoreError(f"Inventory item {identifier} needs installed, enabled and selected states.")
+    return inventory
+
+
+def _select_inventory(model, changes):
+    inventory = _app_inventory(model)
+    if inventory is None or not isinstance(changes, dict):
+        raise StoreError("appInventorySelections requires a preset inventory and an object of item selections.")
+    items = {item["id"]: item["apps"] for item in inventory["items"]}
+    for identifier, apps in changes.items():
+        if identifier not in items or not isinstance(apps, dict):
+            raise StoreError(f"Invalid inventory selection: {identifier}")
+        for app, selected in apps.items():
+            if app not in items[identifier]:
+                raise StoreError(f"{identifier} is not installed in {app}.")
+            if selected is not None and not isinstance(selected, bool):
+                raise StoreError("An inventory selection must be true, false or null.")
+            items[identifier][app]["selected"] = selected
+
+
+def _managed_inventory_skills(inventory):
+    result = {}
+    for item in inventory["items"]:
+        spec = item.get("apm")
+        if spec is None:
+            continue
+        if (item["kind"] != "skill" or not isinstance(spec, dict)
+                or set(spec) - {"git", "ref", "path"}
+                or not _text(spec.get("ref")).strip()
+                or ("path" in spec and not _text(spec["path"]).strip())
+                or not _INVENTORY_REPO.fullmatch(_text(spec.get("git")))
+                or not (identity := _identity("skill", spec))):
+            raise StoreError(f"Inventory item {item['id']} needs a GitHub APM skill reference with a ref and optional path.")
+        result.setdefault(identity, {"spec": spec, "selected": False})
+        if any(state["selected"] is True for state in item["apps"].values()):
+            result[identity]["selected"] = True
+    return result
+
+
+def _sync_inventory_skills(model):
+    inventory = _app_inventory(model)
+    managed = _managed_inventory_skills(inventory) if inventory is not None else {}
+    if not managed:
+        return
+    dependencies = model.setdefault("dependencies", {})
+    if not isinstance(dependencies, dict) or not isinstance(dependencies.get("apm", []), list):
+        raise StoreError("Managed inventory skills need a dependencies.apm list.")
+    kept = []
+    seen = set()
+    for spec in dependencies.get("apm", []):
+        identity = _identity("skill", spec)
+        if identity not in managed or managed[identity]["selected"]:
+            kept.append(spec)
+            seen.add(identity)
+    kept.extend(ref["spec"] for identity, ref in managed.items() if ref["selected"] and identity not in seen)
+    dependencies["apm"] = kept
+
+
 def _native_file_kind(path):
     parts = path.split("/")
     if parts[0] != ".apm" or len(parts) < 3:
@@ -353,23 +442,42 @@ def _native_file_kind(path):
 
 
 class Store:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, *, base_root: Path | None = None):
         self.root = Path(root).resolve()
+        self.base_root = Path(base_root).resolve() if base_root is not None else None
+        self._package_cache = {}
+        self._definition_cache = None
+        if self.base_root is not None:
+            if self.root.is_relative_to(self.base_root) or self.base_root.is_relative_to(self.root):
+                raise StoreError("The private root and read-only base must be separate folders.")
+            if not self._checked(self.base_root / "packages", root=self.base_root).is_dir():
+                raise StoreError("The read-only base must contain a packages folder.")
 
-    def _checked(self, path):
-        cursor = self.root
-        for part in path.relative_to(self.root).parts:
+    def _checked(self, path, *, root=None):
+        root = self.root if root is None else root
+        cursor = root
+        for part in path.relative_to(root).parts:
             cursor /= part
             if cursor.is_symlink() or (hasattr(cursor, "is_junction") and cursor.is_junction()):
-                raise StoreError(f"Linked paths are not supported: {cursor.relative_to(self.root).as_posix()}")
+                raise StoreError(f"Linked paths are not supported: {cursor.relative_to(root).as_posix()}")
         return path
 
-    def _directory(self, identifier):
-        return self._checked(self.root / "packages" / _package_id(identifier))
+    def _directory(self, identifier, *, root=None):
+        root = self.root if root is None else root
+        return self._checked(root / "packages" / _package_id(identifier), root=root)
 
-    def _snapshot(self, identifier):
-        directory = self._directory(identifier)
-        if not self._checked(directory / "apm.yml").is_file():
+    def _package_root(self, identifier):
+        local = self._directory(identifier)
+        if self.base_root is not None and not self._checked(local / "apm.yml").is_file():
+            directory = self._directory(identifier, root=self.base_root)
+            if self._checked(directory / "apm.yml", root=self.base_root).is_file():
+                return self.base_root
+        return self.root
+
+    def _snapshot(self, identifier, *, root=None):
+        root = self._package_root(identifier) if root is None else root
+        directory = self._directory(identifier, root=root)
+        if not self._checked(directory / "apm.yml", root=root).is_file():
             raise StoreError(f"Package {identifier} was not found.", 404)
         files = {}
         for current, dirs, names in os.walk(directory):
@@ -378,14 +486,15 @@ class Store:
             for name in (*dirs, *names):
                 if name in _SKIPPED or name.startswith("_asm-tmp-"):
                     continue
-                path = self._checked(current / name)
+                path = self._checked(current / name, root=root)
                 relative = _relative(path.relative_to(directory).as_posix())
                 if name in names and path.is_file():
                     files[relative] = path.read_bytes()
         return files
 
     def _catalog(self):
-        path = self._checked(self.root / "catalog" / "components.json")
+        root = self.base_root if self.base_root is not None else self.root
+        path = self._checked(root / "catalog" / "components.json", root=root)
         if not path.is_file():
             return {"items": []}
         catalog = _read_json(path.read_bytes(), "component catalog")
@@ -397,13 +506,19 @@ class Store:
         return catalog
 
     def consumers(self):
-        """What each app supports per component kind, from catalog/consumers.json; none without the file."""
-        path = self._checked(self.root / "catalog" / "consumers.json")
+        """Documented app support plus the exporters installed in this process."""
+        from .exporters import EXPORTERS
+
+        root = self.base_root if self.base_root is not None else self.root
+        path = self._checked(root / "catalog" / "consumers.json", root=root)
         if not path.is_file():
             return {"kinds": list(SUPPORT_KINDS), "consumers": []}
-        return _consumers(_read_json(path.read_bytes(), "consumer support data"))
+        data = _consumers(_read_json(path.read_bytes(), "consumer support data"))
+        for consumer in data["consumers"]:
+            consumer["export"] = consumer["id"] in EXPORTERS
+        return data
 
-    def _entries(self, identifier, model, files, catalog):
+    def _entries(self, identifier, model, files, catalog, inventory_skills=None):
         entries = []
         seen = set()
         by_path, by_identity = {}, {}
@@ -433,6 +548,10 @@ class Store:
                 continue
             for value in values:
                 kind = _dependency_kind(section, value)
+                managed = (location == ("dependencies", "apm") and
+                           _identity("skill", value) in (inventory_skills or {}))
+                if managed:
+                    kind = "skill"
                 entry = by_identity.get(_identity(kind, value))
                 if entry is None and kind == "other" and section == "apm":
                     entry = by_identity.get(_identity("skill", value))
@@ -442,8 +561,9 @@ class Store:
                 name = entry["name"] if entry else _name(kind, value, source)
                 config = value
                 if kind == "package":
-                    target = self._directory(name) / "apm.yml"
-                    stored = _load_manifest(self._checked(target).read_bytes()) if target.is_file() else {}
+                    root = self._package_root(name)
+                    target = self._checked(self._directory(name, root=root) / "apm.yml", root=root)
+                    stored = _load_manifest(target.read_bytes()) if target.is_file() else {}
                     item = _component(f"package:{name}",
                                       _mapping(stored.get("x-preset-labels")).get("title", name),
                                       kind, {"packageId": name}, description=_text(stored.get("description")))
@@ -454,6 +574,8 @@ class Store:
                     digest = hashlib.sha256(_yaml(value)).hexdigest()[:16]
                     item = _component(f"{kind}:{digest}", name, kind, config,
                                       source=source, source_url=_source_url(source))
+                if managed:
+                    item["managedByInventory"] = True
                 add(item, location=location, value=value)
 
         primary = _PRIMARY.format(identifier)
@@ -471,6 +593,8 @@ class Store:
                 if path == skill_file:
                     names = tuple(name for name in files if name.startswith(f"{skill_root}/"))
             entry = by_path.get(path)
+            if entry and data.replace(b"\r\n", b"\n") != entry["apm"]["content"].encode("utf-8").replace(b"\r\n", b"\n"):
+                entry = None
             name, description = PurePosixPath(path).stem, ""
             if entry:
                 name, description = entry["name"], entry.get("description", "")
@@ -487,7 +611,9 @@ class Store:
     def _package(self, identifier, files, catalog):
         model = _load_manifest(files["apm.yml"])
         labels = _mapping(model.get("x-preset-labels"))
-        entries = self._entries(identifier, model, files, catalog)
+        inventory = _app_inventory(model)
+        inventory_skills = _managed_inventory_skills(inventory) if inventory is not None else None
+        entries = self._entries(identifier, model, files, catalog, inventory_skills)
         _, instruction = _instruction(files.get(_PRIMARY.format(identifier), b""))
         kind = labels.get("kind")
         package = {
@@ -503,18 +629,50 @@ class Store:
             "files": [{"path": path, "content": data.decode("utf-8", errors="replace")}
                       for path, data in sorted(files.items())],
         }
+        catalog_ids = {row["id"] for row in catalog}
+        for row in package["components"]:
+            namespace = "catalog" if row["id"] in catalog_ids else identifier
+            row.update(identify(row, namespace))
+        if inventory is not None:
+            package["appInventory"] = _json_value(inventory["items"])
+            for row in package["appInventory"]:
+                identity = identify(row, identifier)
+                row["canonicalId"] = identity["canonicalId"]
+                row["pluginHost"] = identity["pluginHost"]
+                row["definitionSource"] = identity["source"]
+                row["sourceUrl"] = identity["sourceUrl"]
+            package["componentCount"] = (len(inventory["items"]) +
+                                         sum(not entry.item.get("managedByInventory") for entry in entries) +
+                                         bool(instruction.strip()))
+            visible_ids = {row["canonicalId"] for row in package["appInventory"]}
+            visible_ids.update(row["canonicalId"] for row in package["components"]
+                               if not row.get("managedByInventory") and (row["id"] != "instruction" or instruction.strip()))
+            package["componentCount"] = len(visible_ids)
+            if "coverage" in inventory:
+                package["appInventoryCoverage"] = _json_value(inventory["coverage"])
         return package, model, entries
 
     def _ids(self):
-        directory = self._checked(self.root / "packages")
-        if directory.is_dir():
-            for path in sorted(directory.iterdir()):
-                if _ID.fullmatch(path.name) and self._checked(path / "apm.yml").is_file():
-                    yield path.name
+        packages = set()
+        for root in dict.fromkeys((self.root, self.base_root)):
+            if root is None:
+                continue
+            directory = self._checked(root / "packages", root=root)
+            if directory.is_dir():
+                for path in directory.iterdir():
+                    if _ID.fullmatch(path.name) and self._checked(path / "apm.yml", root=root).is_file():
+                        packages.add(path.name)
+        yield from sorted(packages)
 
     def get(self, identifier):
         with _MUTEX:
-            return self._package(identifier, self._snapshot(identifier), self._catalog()["items"])[0]
+            files, catalog = self._snapshot(identifier), self._catalog()["items"]
+            key = (_revision(files), json.dumps(catalog, sort_keys=True))
+            cached = self._package_cache.get(identifier)
+            if cached is None or cached[0] != key:
+                cached = (key, self._package(identifier, files, catalog)[0])
+                self._package_cache[identifier] = cached
+            return copy.deepcopy(cached[1])
 
     def list_packages(self):
         with _MUTEX:
@@ -527,18 +685,122 @@ class Store:
 
     def catalog(self):
         with _MUTEX:
-            catalog = self._catalog()
-            items = []
-            for row in catalog["items"]:
-                spec = row["apm"]
-                config = _file_content(spec["path"], spec["content"].encode("utf-8")) if "path" in spec else spec["value"]
-                source = _item_source(row)
-                items.append({**row, "type": "component", "configuration": config,
-                              "source": source, "sourceUrl": row.get("sourceUrl") or _source_url(source)})
+            items = copy.deepcopy(list(self._component_index().values()))
             return {"items": [
                 *items, *({**row, "id": f"package:{row['id']}", "packageId": row["id"],
                            "type": row["kind"]} for row in self.list_packages()),
             ]}
+
+    def _component_index(self):
+        public = self._catalog()["items"]
+        key = (json.dumps(public, sort_keys=True),
+               tuple((identifier, _revision(self._snapshot(identifier))) for identifier in self._ids()))
+        if self._definition_cache is not None and self._definition_cache[0] == key:
+            return self._definition_cache[1]
+        definitions = {}
+
+        def add(row, namespace, origin, membership=None, approved=False, details=None):
+            identity = identify(row, namespace)
+            key = identity["canonicalId"]
+            kind, host = kind_and_host(row)
+            definition = definitions.get(key)
+            if definition is None:
+                display_kind = kind if kind in _KINDS | {"connector", "setting", "provider", "lsp"} else "other"
+                definition = {**row, **identity, "id": row["id"] if approved else key,
+                              "kind": display_kind, "type": "component", "aliases": [],
+                              "origins": [], "memberships": [], "remoteApproved": False,
+                              "addable": bool(row.get("apm")),
+                              "details": {"availability": "metadata-only",
+                                          "reason": "Only observed metadata is available for this component."}}
+                definitions[key] = definition
+            if approved:
+                definition["remoteApproved"] = bool(identity["source"]) and definition.get("sourceAccess") != "private"
+                definition["bodyAllowed"] = True
+            access = row.get("sourceAccess")
+            if identity["source"] and access in {"public", "verify", "private"} and definition.get("sourceAccess") != "private":
+                definition["sourceAccess"] = access
+                if access == "public":
+                    definition["remoteApproved"] = True
+                    definition["bodyAllowed"] = bool(identity["source"].get("ref"))
+                elif access == "private":
+                    definition["remoteApproved"] = False
+                    definition["bodyAllowed"] = False
+            if row["id"] not in definition["aliases"]:
+                definition["aliases"].append(row["id"])
+            if origin not in definition["origins"]:
+                definition["origins"].append(origin)
+            if membership and membership not in definition["memberships"]:
+                definition["memberships"].append(membership)
+                if "inventoryId" in membership:
+                    definition["addable"] = True
+            if not definition.get("description") and row.get("description"):
+                definition["description"] = row["description"]
+            if details:
+                available = definition["details"].get("availability") == "available"
+                if not available or details.get("availability") == "available":
+                    definition["details"] = _json_value(details)
+            return definition
+
+        for row in public:
+            spec = row["apm"]
+            config = _file_content(spec["path"], spec["content"].encode()) if "path" in spec else spec["value"]
+            item = {**row, "configuration": config, "source": _item_source(row)}
+            details = None
+            if "path" in spec:
+                details = {"availability": "available", "content": spec["content"],
+                           "format": "json" if spec["path"].endswith(".json") else "text"}
+            add(item, "catalog", {"type": "catalog", "id": row["id"]}, approved=True, details=details)
+
+        public_ids = {row["id"] for row in public}
+        for package_id in self._ids():
+            package = self.get(package_id)
+            membership = {"presetId": package_id, "presetName": package["title"]}
+            for item in package["components"]:
+                if item.get("managedByInventory") or item["kind"] == "package" or (item["id"] == "instruction" and not package["instruction"]):
+                    continue
+                detail = None
+                if not item.get("file") and isinstance(item.get("configuration"), dict):
+                    value = item["configuration"]
+                    section = "apm" if _git(value) or value.get("marketplace") else "mcp" if item["kind"] == "mcp" else None
+                    if section:
+                        item = {**item, "apm": {"section": section, "value": value}}
+                if item.get("file") or item["id"] == "instruction":
+                    content = item.get("configuration")
+                    detail = {"availability": "available", "content": content if isinstance(content, str) else json.dumps(content, indent=2),
+                              "format": "markdown" if item["kind"] in {"instruction", "skill"} else "json"}
+                add(item, "catalog" if item["id"] in public_ids else package_id,
+                    {"type": "package", "presetId": package_id, "memberId": item["id"], "file": item.get("file")},
+                    {**membership, "memberId": item["id"]}, details=detail)
+            parents = {row["id"]: row for row in package.get("appInventory", [])}
+            for item in package.get("appInventory", []):
+                apps = item["apps"]
+                for app, state in apps.items():
+                    add(item, package_id, {"type": "observation", "presetId": package_id, "inventoryId": item["id"],
+                                           "app": app, **{key: state[key] for key in ("locator", "scope", "parentId", "path") if key in state},
+                                           **({"parentName": parents[state["parentId"]]["name"]} if state.get("parentId") in parents else {})},
+                        {**membership, "inventoryId": item["id"], "apps": apps}, details=item.get("details"))
+        private_repositories = {row["source"]["repositoryUrl"].casefold()
+                                for row in definitions.values() if row.get("source") and row.get("sourceAccess") == "private"}
+        for row in definitions.values():
+            if row.get("source") and row["source"]["repositoryUrl"].casefold() in private_repositories:
+                row.update(remoteApproved=False, sourceAccess="private", bodyAllowed=False)
+        self._definition_cache = (key, definitions)
+        return definitions
+
+    def component(self, identifier):
+        with _MUTEX:
+            definitions = self._component_index()
+            if identifier in definitions:
+                return copy.deepcopy(definitions[identifier])
+            matches = [row for row in definitions.values() if identifier == row["id"] or identifier in row["aliases"]]
+            if len(matches) != 1:
+                raise StoreError("Component not found." if not matches else "Choose a component by its source identity.", 404)
+            return copy.deepcopy(matches[0])
+
+    def source_components(self):
+        with _MUTEX:
+            return [copy.deepcopy(row) for row in self._component_index().values()
+                    if row.get("sourceAccess") != "private" and (row["remoteApproved"] or row.get("sourceAccess") == "verify")]
 
     def create(self, payload):
         title = _text(payload.get("title")).strip()
@@ -549,7 +811,7 @@ class Store:
         identifier = _package_id(slug or f"package-{hashlib.sha256(title.encode('utf-8')).hexdigest()[:12]}")
         with _MUTEX:
             directory = self._directory(identifier)
-            if directory.exists():
+            if directory.exists() or self._package_root(identifier) != self.root:
                 raise StoreError(f"Package {identifier} already exists.", 409)
             model = {"name": identifier, "version": "0.1.0", "description": "",
                      "dependencies": {"apm": [], "mcp": []}, "x-preset-labels": {"title": title, "kind": "preset",
@@ -604,15 +866,19 @@ class Store:
                 files[path] = (front + ("\n" if front and new else "") + new + ("\n" if new else "")).encode("utf-8")
 
         catalog = self._catalog()["items"]
+        if "appInventorySelections" in payload:
+            _select_inventory(model, payload["appInventorySelections"])
         if "componentIds" in payload:
             selected = self._strings(payload["componentIds"], "componentIds")
             self._select(identifier, model, entries, files, selected, catalog)
+        _sync_inventory_skills(model)
 
         if previous is None or _load_manifest(previous["apm.yml"]) != model:
             files["apm.yml"] = _yaml(model)
         self._bundle(identifier, files)
         result = self._package(identifier, files, catalog)[0]
         directory = self._directory(identifier)
+        inherited = self._package_root(identifier) != self.root
         if previous is None:
             try:
                 directory.mkdir(parents=True)
@@ -620,16 +886,30 @@ class Store:
                 raise StoreError(f"Package {identifier} already exists.", 409) from exc
         elif previous != self._snapshot(identifier):
             raise StoreError("This package changed. Reload it before saving.", 409)
-        for path, data in files.items():
-            if previous is None or previous.get(path) != data:
-                target = self._checked(directory / _relative(path))
-                target.parent.mkdir(parents=True, exist_ok=True)
-                _atomic_write(target, data)
-        for path in (previous or {}).keys() - files.keys():
-            self._checked(directory / path).unlink()
+        if inherited:
+            if previous == files:
+                return result
+            directory.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryDirectory(prefix="_asm-tmp-", dir=directory.parent) as temporary:
+                staged = Path(temporary) / "package"
+                for path, data in files.items():
+                    target = staged / _relative(path)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(data)
+                if previous != self._snapshot(identifier) or directory.exists():
+                    raise StoreError("This package changed. Reload it before saving.", 409)
+                staged.rename(directory)
+        else:
+            for path, data in files.items():
+                if previous is None or previous.get(path) != data:
+                    target = self._checked(directory / _relative(path))
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    _atomic_write(target, data)
+            for path in (previous or {}).keys() - files.keys():
+                self._checked(directory / path).unlink()
         # A saved stack changes the export of every preset that includes it, so every preset is rewritten.
         from .paperclip import write_exports
-        write_exports(self.root)
+        write_exports(self.root, store=self)
         return result
 
     @staticmethod
@@ -638,11 +918,124 @@ class Store:
             raise StoreError(f"{field} must be a list of nonempty strings.")
         return list(dict.fromkeys(values))
 
+    def _copy_observations(self, identifier, model, definition, selected):
+        inventory = model.setdefault(_INVENTORY, {"items": []})["items"]
+        owned = {(id(row), app) for row in inventory for app in row["apps"]}
+        packages, copied, visiting, choices = {}, {}, set(), {}
+
+        def package(preset):
+            if preset not in packages:
+                packages[preset] = {row["id"]: row for row in self.get(preset).get("appInventory", [])}
+            return packages[preset]
+
+        def origin(state):
+            provenance = state.get("provenance") or {}
+            return json.dumps([state.get("scope"), state.get("locator") or provenance.get("location") or state.get("path"),
+                               state.get("parentId"), state.get("targetId"), provenance.get("field")], sort_keys=True)
+
+        def observed(state):
+            return {key: value for key, value in state.items() if key != "selected"}
+
+        def transfer(preset, item_id, provenance_only=False):
+            key = (preset, item_id)
+            if key in copied:
+                return copied[key]
+            if key in visiting:
+                raise StoreError("Observed component containers contain a cycle.")
+            visiting.add(key)
+            source_item = package(preset)[item_id]
+            canonical = source_item["canonicalId"]
+            row = copy.deepcopy(source_item)
+            row["definitionId"] = canonical
+            for state in row["apps"].values():
+                parent = state.get("parentId")
+                if parent in package(preset):
+                    parent_source = package(preset)[parent]
+                    state["parentId"] = transfer(preset, parent, parent_source["canonicalId"] not in selected and parent not in selected)["id"]
+                elif parent:
+                    state["provenance"] = {**(state.get("provenance") or {}), "parentId": state.pop("parentId")}
+                if provenance_only:
+                    state["selected"] = False
+            source = source_coordinates(row)
+            kind, host = kind_and_host(row)
+            if canonical == definition["canonicalId"] and kind == "skill" and source and source.get("ref") and source.get("path"):
+                spec = definition.get("apm") or {}
+                value = spec.get("value", spec)
+                if isinstance(value, dict) and _git(value) and _INVENTORY_REPO.fullmatch(source["repositoryUrl"]):
+                    directory = source["path"].removesuffix("SKILL.md").rstrip("/")
+                    row.setdefault("apm", {"git": source["repositoryUrl"], "ref": source["ref"],
+                                           **({"path": directory} if directory else {})})
+            if source and kind in {"skill", "plugin"} and not source.get("path"):
+                repository = source["repositoryUrl"]
+                if urlsplit(repository).hostname == "github.com":
+                    repository = repository.lower()
+                coordinates = (kind, host if kind == "plugin" else None, repository, source.get("ref"), source.get("path"))
+                row["definitionSourceKey"] = hashlib.sha256(json.dumps(coordinates).encode()).hexdigest()
+            target = None
+            for candidate in inventory:
+                if identify(candidate, identifier)["canonicalId"] != canonical:
+                    continue
+                overlaps = set(candidate["apps"]) & set(row["apps"])
+                same = all(origin(candidate["apps"][app]) == origin(row["apps"][app]) and
+                           ((id(candidate), app) in owned or observed(candidate["apps"][app]) == observed(row["apps"][app]))
+                           for app in overlaps)
+                combined = {**candidate, "apps": {**candidate["apps"], **row["apps"]}}
+                if same and identify(combined, identifier)["canonicalId"] == canonical:
+                    target = candidate
+                    break
+            if target is None:
+                existing = {item["id"] for item in inventory}
+                original = row["id"]
+                number = 1
+                while row["id"] in existing:
+                    row["id"] = original + "-" + canonical[-12:] + (f"-{number}" if number > 1 else "")
+                    number += 1
+                for field in ("canonicalId", "definitionSource", "sourceUrl"):
+                    row.pop(field, None)
+                inventory.append(row)
+                target = row
+            else:
+                for app, state in row["apps"].items():
+                    target["apps"].setdefault(app, state)
+                if row.get("sourceAccess") == "private":
+                    target["sourceAccess"] = "private"
+            for app, state in row["apps"].items():
+                choices.setdefault((canonical, app, origin(state)), set()).add(state["selected"])
+            copied[key] = target
+            visiting.remove(key)
+            return target
+
+        for membership in definition["memberships"]:
+            if "inventoryId" in membership:
+                transfer(membership["presetId"], membership["inventoryId"])
+        for row in inventory:
+            canonical = identify(row, identifier)["canonicalId"]
+            for app, state in row["apps"].items():
+                if (id(row), app) not in owned and len(choices.get((canonical, app, origin(state)), ())) > 1:
+                    state["selected"] = None
+
     def _select(self, identifier, model, entries, files, selected, catalog):
         recognized = {entry.item["id"]: entry for entry in entries}
         selected_set = set(selected)
+        for entry in entries:
+            if entry.item.get("managedByInventory") and entry.item["id"] not in selected_set:
+                selected.append(entry.item["id"])
+                selected_set.add(entry.item["id"])
         available = {row["id"]: row["apm"] for row in catalog}
+        catalog_identities = {row["id"]: identify({**row, "source": _item_source(row)}, "catalog")["canonicalId"] for row in catalog}
         manifest_entries = {}
+
+        def include_spec(spec):
+            if "path" in spec and "content" in spec:
+                path = _relative(spec["path"])
+                if not _native_file_kind(path) or any(name.casefold() == path.casefold() for name in files):
+                    raise StoreError(f"Component file path is unavailable: {path}")
+                files[path] = spec["content"].encode("utf-8")
+            elif spec.get("section") in ("apm", "mcp") and "value" in spec:
+                manifest_entries.setdefault(("dependencies", spec["section"]), []).append(spec["value"])
+            else:
+                return False
+            return True
         for entry in entries:
             if entry.location:
                 manifest_entries.setdefault(entry.location, [])
@@ -664,18 +1057,22 @@ class Store:
                         raise StoreError("Only stacks can be added as package dependencies.")
                 manifest_entries.setdefault(("dependencies", "apm"), []).append(f"../{target}")
             elif item_id in available:
-                spec = available[item_id]
-                if "path" in spec:
-                    path = _relative(spec["path"])
-                    if not _native_file_kind(path) or any(name.casefold() == path.casefold() for name in files):
-                        raise StoreError(f"Component file path is unavailable: {path}")
-                    files[path] = spec["content"].encode("utf-8")
-                elif spec["section"] in ("apm", "mcp"):
-                    manifest_entries.setdefault(("dependencies", spec["section"]), []).append(spec["value"])
-                else:
+                if not include_spec(available[item_id]):
                     raise StoreError(f"Unsupported catalog component: {item_id}")
+                definition = self.component(catalog_identities[item_id])
+                if any("inventoryId" in membership for membership in definition["memberships"]):
+                    self._copy_observations(identifier, model, definition, selected_set)
             else:
-                raise StoreError(f"Unknown component: {item_id}")
+                try:
+                    definition = self.component(item_id)
+                except StoreError as error:
+                    raise StoreError(f"Unknown component: {item_id}") from error
+                observed = next((membership for membership in definition["memberships"] if "inventoryId" in membership), None)
+                included = include_spec(definition.get("apm") or {})
+                if observed is None and not included:
+                    raise StoreError(f"Component {item_id} has no reusable source. Add its source before including it.")
+                if observed is not None:
+                    self._copy_observations(identifier, model, definition, selected_set)
         for location, values in manifest_entries.items():
             parent = model if len(location) == 1 else model.setdefault(location[0], {})
             section = location[-1]
@@ -752,16 +1149,50 @@ class Store:
         if not command:
             return {"ok": False, "output": "Microsoft APM CLI was not found on this machine."}
         with _APM_RUN:
-            try:
-                result = subprocess.run([*command, "lock", *(["--update"] if update else [])],
-                                        cwd=directory, stdin=subprocess.DEVNULL,
-                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False,
-                                        timeout=_LOCK_SECONDS, encoding="utf-8", errors="replace")
-            except subprocess.TimeoutExpired:
-                return {"ok": False, "output": f"APM lock timed out after {_LOCK_SECONDS} seconds."}
-            except OSError as exc:
-                return {"ok": False, "output": f"Could not start Microsoft APM CLI: {exc}"}
-            return {"ok": result.returncode == 0, "output": result.stdout.strip()}
+            if self.base_root is None:
+                return self._run_lock(command, directory, update)
+            return self._lock_overlay(identifier, bundle, command, update)
+
+    @staticmethod
+    def _run_lock(command, directory, update):
+        try:
+            result = subprocess.run([*command, "lock", *(["--update"] if update else [])],
+                                    cwd=directory, stdin=subprocess.DEVNULL,
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False,
+                                    timeout=_LOCK_SECONDS, encoding="utf-8", errors="replace")
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "output": f"APM lock timed out after {_LOCK_SECONDS} seconds."}
+        except OSError as exc:
+            return {"ok": False, "output": f"Could not start Microsoft APM CLI: {exc}"}
+        return {"ok": result.returncode == 0, "output": result.stdout.strip()}
+
+    def _lock_overlay(self, identifier, bundle, command, update):
+        scratch = self._checked(self.root / ".asm")
+        scratch.mkdir(parents=True, exist_ok=True)
+        cache = self._checked(scratch / "locks" / identifier / "apm.lock.yaml")
+        with tempfile.TemporaryDirectory(prefix="lock-", dir=scratch) as temporary:
+            staged = Path(temporary)
+            for package, files in bundle.items():
+                for path, data in files.items():
+                    target = staged / package / path
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(data)
+            directory = staged / identifier
+            staged_lock = directory / "apm.lock.yaml"
+            origin = self._package_root(identifier)
+            source = self._checked(self._directory(identifier, root=origin) / staged_lock.name, root=origin)
+            output = source if origin == self.root else cache
+            previous = next((path for path in (output, cache, source) if path.is_file()), None)
+            if previous is not None:
+                staged_lock.write_bytes(previous.read_bytes())
+            result = self._run_lock(command, directory, update)
+            if result["ok"] and staged_lock.is_file():
+                with _MUTEX:
+                    if self._bundle(identifier, self._snapshot(identifier)) != bundle:
+                        return {"ok": False, "output": "This package or a dependency changed during APM lock. Run it again."}
+                    self._checked(output).parent.mkdir(parents=True, exist_ok=True)
+                    _atomic_write(output, staged_lock.read_bytes())
+            return result
 
     @staticmethod
     def _check_lock_paths(files, bundle):

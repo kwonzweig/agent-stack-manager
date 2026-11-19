@@ -1,6 +1,8 @@
 # Importing an export into Paperclip
 
-`exports/paperclip/<id>/` holds one preset as a Paperclip [company package](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md) with one agent. ASM never contacts Paperclip: a person or an agent imports the folder by hand, as below. The calls are those of Paperclip [2026.1106.0](https://github.com/paperclipai/paperclip/releases/tag/v2026.1106.0); what no page states is marked as observed on that release.
+Save a preset, open its **Export** tab, select **Paperclip**, and download the company-package ZIP. The same files are generated in `exports/paperclip/<id>/`. Each package describes one agent; review the export's omissions before importing it into Paperclip.
+
+ASM prepares the files and never contacts Paperclip. The API procedure below targets Paperclip [2026.1106.0](https://github.com/paperclipai/paperclip/releases/tag/v2026.1106.0). Check the running Paperclip version before using it; version-specific observations below refer to that release. The package format is documented in Paperclip's [company specification](https://github.com/paperclipai/paperclip/blob/master/docs/companies/companies-spec.md).
 
 | File | Holds |
 | --- | --- |
@@ -9,7 +11,7 @@
 | `.paperclip.yaml` | Role `general`, heartbeat off, and `metadata.agentStackManagerPackageId` and `agentStackManagerRevision`. No adapter and no permissions. |
 | `skills/<key>/SKILL.md` | One stub per skill: repository, path and branch, no commit. |
 
-A preset holds nothing for one app alone, so the export takes no role or right from it. Every agent gets the role `general`, because Paperclip stores a role outside its own list when a package names none, and no permissions. Whoever imports gives the company what it needs in Paperclip (step 5 below).
+The export assigns role `general` and no permissions or adapter. Whoever imports configures these in Paperclip (steps 4 and 5 below). Captured installed, enabled and selected states for other apps cannot be carried by this company package; the export reports them as omissions.
 
 ## Import a preset
 

@@ -7,6 +7,8 @@ import AddToMenu from './AddToMenu';
 import Checkbox from './Checkbox';
 import ItemProperties from './ItemProperties';
 import { itemName } from './catalogItem';
+import { componentLocations, displayDescription } from '../lib/componentLocation';
+import { ComponentLocation } from '../components/ComponentLocation';
 
 interface Props {
   item: CatalogItem;
@@ -26,26 +28,28 @@ export default function ComponentCard({ item, index, viewMode, selected, targets
   const [menuOpen, setMenuOpen] = useState(false);
   const config = KIND_STYLES[item.kind];
   const name = itemName(item);
+  const description = displayDescription(item);
   const isList = viewMode === 'list';
-  const selectable = item.type !== 'preset';
+  const selectable = item.type !== 'preset' && item.addable !== false;
   const chips = <ItemProperties item={item} repository={onRepository} />;
 
   return (
     <article
+      data-component-id={item.canonicalId ?? item.id}
       className={'group relative flex rounded-md bg-[var(--color-card-bg)] border hover:bg-[var(--color-card-hover)] hover:border-[var(--color-accent)] transition-all duration-150 cursor-pointer animate-fade-in-up ' +
         (selected ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)] ' : 'border-[var(--color-border)] ') +
         (menuOpen ? 'z-20 ' : '') +
-        (isList ? 'items-center gap-4 p-4' : 'items-start gap-3.5 p-5')}
+        (isList ? 'items-center gap-2 p-3 sm:gap-4 sm:p-4' : 'items-start gap-2 p-3 sm:gap-3.5 sm:p-5')}
       style={{ animationDelay: index * (isList ? 30 : 50) + 'ms', animationFillMode: 'both' }}
     >
-      <div className={'flex w-4 shrink-0 items-center ' + (isList ? '' : 'h-10')}>
-        {selectable && <Checkbox checked={selected} label={'Select ' + name} onChange={(checked) => onSelect(item, checked)} />}
-      </div>
+      {selectable && <div className={'flex w-4 shrink-0 items-center ' + (isList ? '' : 'h-10')}>
+        <Checkbox checked={selected} label={'Select ' + name} onChange={(checked) => onSelect(item, checked)} />
+      </div>}
       <div
-        className={'rounded flex items-center justify-center shrink-0 ' + (isList ? 'w-11 h-11' : 'w-10 h-10')}
+        className={'rounded hidden sm:flex items-center justify-center shrink-0 ' + (isList ? 'w-11 h-11' : 'w-10 h-10')}
         style={{ backgroundColor: config.color + '15', color: config.color, border: '1px solid ' + config.color + '30' }}
       >
-        <KindIcon kind={item.kind} className={isList ? 'h-[22px] w-[22px]' : 'h-5 w-5'} />
+        <KindIcon kind={item.kind} pluginHost={item.pluginHost} className={isList ? 'h-[22px] w-[22px]' : 'h-5 w-5'} />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col self-stretch">
@@ -55,16 +59,17 @@ export default function ComponentCard({ item, index, viewMode, selected, targets
             {name}
           </button>
         </h3>
-        {item.description && (
+        {description && (
           <p className={'text-[12px] text-[var(--color-text-secondary)] ' + (isList ? 'line-clamp-1 leading-relaxed' : 'line-clamp-2 leading-[1.6]')}>
-            {item.description}
+            {description}
           </p>
         )}
+        {componentLocations(item).length > 0 && <div className="mt-1.5"><ComponentLocation item={item} compact /></div>}
         {/* In the grid the properties sit at the card's bottom, so cards in one row line up. */}
         <div className={'flex flex-wrap items-center gap-2 ' + (isList ? 'mt-1.5 sm:hidden' : 'mt-auto pt-3')}>{chips}</div>
       </div>
 
-      {isList && <div className="hidden sm:flex min-w-0 max-w-[40%] items-center gap-2 shrink-0">{chips}</div>}
+      {isList && <div className="hidden sm:flex min-w-0 max-w-[45%] flex-wrap items-center justify-end gap-x-2 gap-y-1 shrink-0">{chips}</div>}
       {selectable && (
         <AddToMenu
           label={'Add ' + name + ' to a preset or stack'}

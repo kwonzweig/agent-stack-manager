@@ -52,8 +52,11 @@ export function installsTitle(item: SourceFacts) {
 }
 
 // Each Catalog item with what its source says, once GET /api/catalog/sources has answered.
-export function withSourceFacts<T extends { id: string }>(items: T[], facts: Record<string, SourceFacts>): T[] {
-  return items.map((item) => (facts[item.id] ? { ...item, ...facts[item.id] } : item));
+export function withSourceFacts<T extends { id: string; canonicalId?: string }>(items: T[], facts: Record<string, SourceFacts>): T[] {
+  return items.map((item) => {
+    const found = (item.canonicalId ? facts[item.canonicalId] : undefined) ?? facts[item.id];
+    return found ? { ...item, ...found } : item;
+  });
 }
 
 // "obra/superpowers" for a GitHub URL, otherwise the host and path.

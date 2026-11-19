@@ -40,9 +40,12 @@ class ServerTests(unittest.TestCase):
         (Path(self.temp.name) / 'catalog/consumers.json').write_bytes(source.read_bytes())
         code, body, _ = self.request('/api/consumers')
         self.assertEqual(code, 200)
-        self.assertEqual(json.loads(body), json.loads(source.read_text(encoding='utf-8')))
-        consumers = json.loads(body)['consumers']
-        self.assertEqual([x['id'] for x in consumers if x['export']], ['paperclip'])
+        data = json.loads(body)
+        consumers = data['consumers']
+        catalog = {**data, 'consumers': [{key: value for key, value in row.items() if key != 'export'}
+                                        for row in consumers]}
+        self.assertEqual(catalog, json.loads(source.read_text(encoding='utf-8')))
+        self.assertEqual([x['id'] for x in consumers if x['export']], ['paperclip', 'ccswitch'])
 
     def test_rejects_cross_origin_write_before_loading_store(self):
         code, _, _ = self.request('/api/presets', data=b'{}', headers={
@@ -192,6 +195,99 @@ class ServerTests(unittest.TestCase):
     def test_package_path_is_not_a_filesystem_route(self):
         code, _, _ = self.request('/api/presets/%2e%2e%2fsecret')
         self.assertEqual(code, 400)
+
+    def test_export_targets_preview_real_artifacts_for_a_new_mixed_preset(self):
+        import yaml
+        from asm_app.paperclip import write_exports
+
+        identifier = "new-mixed"
+        root = Path(self.temp.name)
+        package_dir = root / "packages" / identifier
+        instruction_path = package_dir / ".apm/agents/new-mixed.agent.md"
+        instruction_path.parent.mkdir(parents=True)
+        instruction_path.write_text("Use the fixture workflow.\n", encoding="utf-8")
+        manifest = {
+            "name": identifier,
+            "dependencies": {"hooks": [{"name": "stop"}]},
+            "x-app-inventory": {"items": [
+                {"id": "portable-prompt", "name": "Example prompt", "kind": "prompt",
+                 "description": "Portable instructions",
+                 "apps": {"codex": {"installed": False, "enabled": None, "selected": True,
+                                     "portable": {"prompt": "# New prompt\n"}}}},
+                {"id": "unknown-skill", "name": "Undecided skill", "kind": "skill",
+                 "description": "Unknown selection",
+                 "apps": {"claude": {"installed": True, "enabled": None, "selected": None}}},
+                {"id": "hidden-hook", "name": "Observed hook", "kind": "hook",
+                 "description": "Observed local hook",
+                 "apps": {"codex": {"installed": True, "enabled": True, "selected": False}}},
+            ]},
+        }
+        (package_dir / "apm.yml").write_text(yaml.safe_dump(manifest), encoding="utf-8")
+
+        base = f"/api/presets/{identifier}"
+        code, body, _ = self.request(base + "/exports")
+        self.assertEqual(code, 200)
+        targets = {row["id"]: row for row in json.loads(body)["targets"]}
+        paperclip = targets["paperclip"]
+        switch = targets["ccswitch"]
+        self.assertTrue(paperclip["available"])
+        self.assertTrue(switch["available"])
+        self.assertEqual({row["app"] for row in paperclip["preview"]["items"] if "app" in row},
+                         {"codex", "claude"})
+        self.assertTrue(all(row["conversion"]["status"] == "unconverted"
+                            for row in paperclip["preview"]["items"] if "app" in row))
+        self.assertEqual([row["status"] for row in switch["preview"]["items"] if row.get("app")],
+                         ["import-ready", "manual", "excluded"])
+        self.assertTrue(any(row["status"] == "manual" for row in switch["preview"]["items"] if not row.get("app")))
+        self.assertTrue(any(row["kind"] == "hook" and row["status"] == "unsupported"
+                            for row in switch["preview"]["items"] if not row.get("app")))
+
+        code, body, _ = self.request(base + paperclip["download"])
+        self.assertEqual(code, 200)
+        with ZipFile(io.BytesIO(body)) as archive:
+            files = {name: archive.read(name) for name in archive.namelist()}
+        self.assertIn(b"Use the fixture workflow.", files[f"agents/{identifier}/AGENTS.md"])
+        self.assertTrue(all(b"# New prompt" not in content for content in files.values()))
+        write_exports(root)
+        self.assertEqual(files, {path: (root / "exports/paperclip" / identifier / path).read_bytes()
+                                 for path in files})
+
+        code, body, _ = self.request(base + switch["download"])
+        self.assertEqual(code, 200)
+        review = json.loads(body)
+        self.assertEqual(review["items"], [row for row in switch["preview"]["items"] if row.get("app")])
+        self.assertEqual(review["unassignedItems"], [row for row in switch["preview"]["items"] if not row.get("app")])
+        self.assertEqual(review["items"][0]["app"], "codex")
+
+        instruction_path.write_text("The saved instruction changed.\n", encoding="utf-8")
+        code, _, _ = self.request(base + paperclip["download"])
+        self.assertEqual(code, 409)
+        code, _, _ = self.request(base + "/paperclip/export")
+        self.assertEqual(code, 200)
+
+    def test_unavailable_exporters_explain_missing_app_choices_and_stack_package(self):
+        root = Path(self.temp.name)
+        for identifier, kind in (("ordinary", "preset"), ("aggregate", "stack")):
+            directory = root / "packages" / identifier
+            directory.mkdir(parents=True)
+            (directory / "apm.yml").write_text(f"name: {identifier}\nx-preset-labels: {{kind: {kind}}}\n",
+                                                 encoding="utf-8")
+        for identifier, paperclip in (("ordinary", True), ("aggregate", False)):
+            with self.subTest(identifier=identifier):
+                base = f"/api/presets/{identifier}"
+                code, body, _ = self.request(base + "/exports")
+                self.assertEqual(code, 200)
+                targets = {row["id"]: row for row in json.loads(body)["targets"]}
+                self.assertEqual(targets["paperclip"]["available"], paperclip)
+                self.assertFalse(targets["ccswitch"]["available"])
+                self.assertNotIn("download", targets["ccswitch"])
+                code, body, _ = self.request(base + "/cc-switch")
+                self.assertEqual(code, 400)
+                self.assertEqual(json.loads(body)["error"], targets["ccswitch"]["reason"])
+                if not paperclip:
+                    code, body, _ = self.request(base + "/paperclip/export")
+                    self.assertEqual(code, 400)
+                    self.assertEqual(json.loads(body)["error"], targets["paperclip"]["reason"])
 
     def test_edit_export_comment_and_stale_save_through_http(self):
         root = Path(self.temp.name)

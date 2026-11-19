@@ -3,7 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { api, ApiError, catalogMember, errorMessage, packagePath } from "./api";
 import type { CatalogItem, Component, ConsumerData, Package, PackageKind, PackageSummary, SourceData } from "./types";
 import { withSourceFacts } from "./catalog/catalogItem";
-import { createDraft, isDirty, makePayload, overlappingChanges, rebaseDraft, withMembers, type Draft } from "./draft";
+import { createDraft, isDirty, listedMember, makePayload, overlappingChanges, rebaseDraft, withComponentInclusion, withInventorySelection, withMembers, type Draft } from "./draft";
 import CatalogPage from "./catalog/CatalogPage";
 import { hrefFor, Sidebar, type Route } from "./components/Sidebar";
 import { readRoute } from "./lib/route";
@@ -14,6 +14,7 @@ import { ComponentDetails } from "./components/ComponentDetails";
 import { PresetExportTab } from "./components/PresetExport";
 import { PresetList } from "./components/PresetList";
 import { SourceFiles } from "./components/SourceFiles";
+import { ComponentMemberships } from "./components/ComponentMemberships";
 
 interface CatalogData {
   items: CatalogItem[];
@@ -69,21 +70,25 @@ export function App() {
   const [saveErrors, setSaveErrors] = useState<Record<string, { message: string; conflict: boolean }>>({});
   const [overlay, setOverlay] = useState<
     | { type: "create"; selected: string[]; kind: PackageKind }
-    | { type: "edit" | "picker" | "conflict"; id: string }
+    | { type: "edit" | "picker"; id: string }
     | { type: "component"; item: Component; id?: string }
   >();
+  const [conflictId, setConflictId] = useState<string>();
   const [notice, setNotice] = useState("");
   const timer = useRef<number | undefined>(undefined);
   const main = useRef<HTMLElement>(null);
   const routeId = route.view === "presets" ? route.id : undefined;
   const draft = routeId && Object.hasOwn(drafts, routeId) ? drafts[routeId] : undefined;
+  const componentDraft = overlay?.type === "component" && overlay.id ? drafts[overlay.id] : undefined;
+  const inventoryItem = overlay?.type === "component" && overlay.item.inventoryId
+    ? componentDraft?.original.appInventory?.find(item => item.id === overlay.item.inventoryId) : undefined;
   const activeSave = routeId && Object.hasOwn(saveErrors, routeId) ? saveErrors[routeId] : undefined;
   const activeLoadError = routeId && Object.hasOwn(loadErrors, routeId) ? loadErrors[routeId] : "";
   const activeLoading = routeId ? saving.includes(routeId) : false;
   const closeOverlay = useCallback(() => setOverlay(undefined), []);
 
   useEffect(() => {
-    const sync = () => { setRoute(currentRoute()); setOverlay(undefined); };
+    const sync = () => { setRoute(currentRoute()); setOverlay(undefined); setConflictId(undefined); };
     window.addEventListener("popstate", sync);
     window.addEventListener("hashchange", sync);
     return () => {
@@ -121,6 +126,7 @@ export function App() {
 
   function navigate(next: Route) {
     setOverlay(undefined);
+    setConflictId(undefined);
     const href = hrefFor(next);
     if (location.hash !== href) history.pushState(null, "", href);
     setRoute(next);
@@ -128,7 +134,8 @@ export function App() {
   const openPreset = (id: string) => navigate({ view: "presets", id });
   // A Catalog item's page has its own address. Back returns to the Catalog as it was left,
   // through history when the Catalog opened it, so the browser's Back button does the same.
-  const catalogItem = route.view === "catalog" && route.item ? catalogItems.find(item => item.id === route.item) : undefined;
+  const catalogItem = route.view === "catalog" && route.item ? catalogItems.find(item =>
+    item.id === route.item || item.canonicalId === route.item || item.aliases?.includes(route.item!)) : undefined;
   function openCatalogItem(id: string) {
     setOverlay(undefined);
     history.pushState({ fromCatalog: true }, "", hrefFor({ view: "catalog", item: id }));
@@ -139,7 +146,7 @@ export function App() {
     else navigate({ view: "catalog" });
   }
   const createPreset = () => setOverlay({ type: "create", selected: [], kind: "preset" });
-  const pickerItems = catalogItems.filter(item => item.type !== "preset").map(catalogMember)
+  const pickerItems = catalogItems.filter(item => item.type !== "preset" && item.addable !== false).map(catalogMember)
     .filter(item => item.id !== "package:" + routeId && item.id !== "instruction");
   const currentItems = new Map(pickerItems.map(item => [item.id, item]));
   function chosen(ids: string[]) {
@@ -148,15 +155,20 @@ export function App() {
   function updateDraft(id: string, update: (draft: Draft) => Draft) {
     setDrafts(prev => Object.hasOwn(prev, id) ? { ...prev, [id]: update(prev[id]) } : prev);
   }
+  const memberships = (definition: import("./types").ComponentDefinition) => <ComponentMemberships
+    definition={definition} drafts={drafts} loadPreset={getPackage} saving={saving} errors={saveErrors}
+    loadErrors={loadErrors} onConflict={setConflictId}
+    onSelect={(id, item, app, selected) => updateDraft(id, before => withInventorySelection(before, item, app, selected))}
+    onNativeSelect={(id, item, included) => updateDraft(id, before => ({
+      ...before, members: included ? [...before.members.filter(row => row.id !== item.id), item] : before.members.filter(row => row.id !== item.id),
+    }))}
+    onSave={id => void save(id)} />;
   function addMembers(id: string, items: Component[]) {
-    updateDraft(id, before => {
-      const existing = new Set(before.members.map(item => item.id));
-      return { ...before, members: [...before.members, ...items.filter(item => !existing.has(item.id))] };
-    });
+    updateDraft(id, before => withMembers(before, items).draft);
   }
   // Catalog adds save straight onto the latest saved version; an open draft keeps its own unsaved edits.
   async function addToPackage(id: string, componentIds: string[]) {
-    const { added, draft: next } = withMembers(await api<Package>(packagePath(id)), chosen(componentIds));
+    const { added, draft: next } = withMembers(createDraft(await api<Package>(packagePath(id))), chosen(componentIds));
     if (!added.length) {
       feedback((componentIds.length === 1 ? "Already in " : "All already in ") + next.original.title + ".");
       return;
@@ -223,16 +235,17 @@ export function App() {
               onSave={() => void save(draft.original.id)} saving={activeLoading} />
             {activeSave?.message && <div className="space-y-2">
               <ErrorBox message={activeSave.message} />
-              {activeSave.conflict && <button type="button" className="app-button-secondary" onClick={() => setOverlay({ type: "conflict", id: draft.original.id })}>Review saved version</button>}
+              {activeSave.conflict && <button type="button" className="app-button-secondary" onClick={() => setConflictId(draft.original.id)}>Review saved version</button>}
             </div>}
-            {route.tab === "export" ? <PresetExportTab id={draft.original.id} kind={draft.original.kind} revision={draft.original.revision}
+            {route.tab === "export" ? <PresetExportTab id={draft.original.id} kind={draft.original.kind}
+                revision={draft.original.revision}
                 dirty={isDirty(draft)} data={consumers.data} loading={consumers.loading} error={consumers.error}
                 onRetry={consumers.refresh} route={{ ...route, id: draft.original.id }} onNavigate={navigate} />
               : route.tab === "source" ? <SourceFiles id={draft.original.id} files={draft.original.files} dirty={isDirty(draft)} />
               : <PresetContents draft={draft} busy={activeLoading} facts={sourceFacts.data.items}
                 onOpen={item => setOverlay({ type: "component", item, id: draft.original.id })}
                 onAdd={() => setOverlay({ type: "picker", id: draft.original.id })}
-                onRemove={ids => updateDraft(draft.original.id, before => ({ ...before, members: before.members.filter(item => !ids.includes(item.id)) }))} />}
+                onSetIncluded={(rows, included) => updateDraft(draft.original.id, before => withComponentInclusion(before, rows, included))} />}
           </div>}
       </div>}
     </main>
@@ -244,23 +257,26 @@ export function App() {
     {overlay?.type === "edit" && drafts[overlay.id] && <PresetDialog initial={drafts[overlay.id]} onClose={closeOverlay}
       onSave={fields => updateDraft(overlay.id, before => ({ ...before, ...fields }))} />}
     {overlay?.type === "picker" && drafts[overlay.id] && <ComponentPicker items={pickerItems}
-      existing={new Set(drafts[overlay.id].members.map(item => item.id))} packageKind={drafts[overlay.id].kind} onClose={closeOverlay}
+      existing={new Set(pickerItems.filter(listedMember(drafts[overlay.id])).map(item => item.id))}
+      packageKind={drafts[overlay.id].kind} onClose={closeOverlay}
       onAdd={items => { addMembers(overlay.id, items); closeOverlay(); }}
       error={catalog.error} loading={catalog.loading} onRetry={catalog.refresh} />}
-    {catalogItem && <ComponentDetails item={catalogMember(catalogItem)} backLabel="Catalog" onClose={closeCatalogItem} />}
-    {overlay?.type === "component" && <ComponentDetails item={{ ...overlay.item, ...sourceFacts.data.items[overlay.item.id] }} onClose={closeOverlay}
+    {catalogItem && <ComponentDetails item={catalogMember(catalogItem)} backLabel="Catalog" onClose={closeCatalogItem} membership={memberships} />}
+    {overlay?.type === "component" && <ComponentDetails
+      item={inventoryItem ? overlay.item : { ...overlay.item, ...sourceFacts.data.items[overlay.item.id] }} onClose={closeOverlay}
       backLabel={overlay.id ? drafts[overlay.id].title : "Catalog"}
       presetId={overlay.id && drafts[overlay.id].original.components.some(item => item.id === overlay.item.id) ? overlay.id : undefined}
       instruction={overlay.id ? drafts[overlay.id].instruction : undefined}
       onInstruction={overlay.id && overlay.item.id === "instruction" ? instruction =>
         updateDraft(overlay.id!, before => ({ ...before, instruction })) : undefined}
+      membership={memberships}
       onBrowseStack={overlay.item.kind === "package" && overlay.item.id.startsWith("package:") ?
         () => openPreset(overlay.item.id.slice(8)) : undefined} />}
-    {overlay?.type === "conflict" && drafts[overlay.id] && <ConflictDialog draft={drafts[overlay.id]} onClose={closeOverlay}
+    {conflictId && drafts[conflictId] && <ConflictDialog draft={drafts[conflictId]} onClose={() => setConflictId(undefined)}
       onResolve={next => {
-        updateDraft(overlay.id, () => next);
-        setSaveErrors(prev => ({ ...prev, [overlay.id]: { message: "", conflict: false } }));
-        closeOverlay();
+        updateDraft(conflictId, () => next);
+        setSaveErrors(prev => ({ ...prev, [conflictId]: { message: "", conflict: false } }));
+        setConflictId(undefined);
       }} />}
     <div role="status" aria-live="polite" className="pointer-events-none fixed bottom-4 right-4 z-50">
       {notice && <p className="rounded-lg border border-border-subtle bg-surface px-4 py-2 text-[13px] text-secondary shadow-lg">{notice}</p>}
@@ -286,7 +302,7 @@ function ConflictDialog({ draft, onClose, onResolve }: { draft: Draft; onClose: 
     {error ? <ErrorBox message={error} onRetry={() => setAttempt(v => v + 1)} /> : latest ?
       <div className="space-y-3 text-[13px] text-secondary">
         <p><strong>{latest.title}</strong> has changed since you started editing.</p>
-        <p>{latest.components.length} components in the saved version.</p>
+        <p>{latest.componentCount} components in the saved version.</p>
         {overlappingChanges(draft, latest).length > 0 && <p>Both versions changed: {overlappingChanges(draft, latest).map(field => fieldNames[field]).join(", ")}. Keep your edits to use your values for these fields.</p>}
         <div className="flex flex-wrap justify-end gap-2">
           <button type="button" className="app-button-secondary" onClick={() => onResolve(createDraft(latest))}>Use saved version</button>

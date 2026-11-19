@@ -3,6 +3,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { FolderGit2 } from 'lucide-react';
 import type { CatalogItem, PackageKind, PackageSummary } from '../types';
 import { KIND_STYLES } from '../lib/kinds';
+import { componentSearchText } from '../lib/componentLocation';
 import Checkbox from './Checkbox';
 import ComponentCard from './ComponentCard';
 import RepositoryFilter from './RepositoryFilter';
@@ -28,7 +29,7 @@ interface Props {
   onCreate: (componentIds: string[], kind: PackageKind) => void;
 }
 
-const selectable = (item: CatalogItem) => item.type !== 'preset';
+const selectable = (item: CatalogItem) => item.type !== 'preset' && item.addable !== false;
 
 // Checked when every entry is selected, mixed when only some are.
 function SelectAll({ items, selection, label, onSelect }: {
@@ -87,8 +88,7 @@ export default function ComponentGrid({
     if (query) {
       results = results.filter((item) =>
         [
-          itemName(item), item.description, item.source?.path, item.source?.repositoryUrl,
-          item.sourceUrl, KIND_STYLES[item.kind].singular, ...(item.workArea ?? []), ...(item.usage ?? []),
+          componentSearchText(item), KIND_STYLES[item.kind].singular, ...(item.workArea ?? []), ...(item.usage ?? []),
         ].some((value) => value?.toLowerCase().includes(query)),
       );
     }

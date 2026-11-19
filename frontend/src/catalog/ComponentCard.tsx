@@ -7,6 +7,8 @@ import AddToMenu from './AddToMenu';
 import Checkbox from './Checkbox';
 import ItemProperties from './ItemProperties';
 import { itemName } from './catalogItem';
+import { componentLocations, displayDescription } from '../lib/componentLocation';
+import { ComponentLocation } from '../components/ComponentLocation';
 
 interface Props {
   item: CatalogItem;
@@ -26,6 +28,7 @@ export default function ComponentCard({ item, index, viewMode, selected, targets
   const [menuOpen, setMenuOpen] = useState(false);
   const config = KIND_STYLES[item.kind];
   const name = itemName(item);
+  const description = displayDescription(item);
   const isList = viewMode === 'list';
   const selectable = item.type !== 'preset' && item.addable !== false;
   const chips = <ItemProperties item={item} repository={onRepository} />;
@@ -56,11 +59,12 @@ export default function ComponentCard({ item, index, viewMode, selected, targets
             {name}
           </button>
         </h3>
-        {item.description && (
+        {description && (
           <p className={'text-[12px] text-[var(--color-text-secondary)] ' + (isList ? 'line-clamp-1 leading-relaxed' : 'line-clamp-2 leading-[1.6]')}>
-            {item.description}
+            {description}
           </p>
         )}
+        {componentLocations(item).length > 0 && <div className="mt-1.5"><ComponentLocation item={item} /></div>}
         {/* In the grid the properties sit at the card's bottom, so cards in one row line up. */}
         <div className={'flex flex-wrap items-center gap-2 ' + (isList ? 'mt-1.5 sm:hidden' : 'mt-auto pt-3')}>{chips}</div>
       </div>

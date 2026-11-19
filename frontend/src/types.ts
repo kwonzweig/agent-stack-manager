@@ -78,6 +78,7 @@ export interface Component extends SourceFacts {
   pluginHost?: "codex" | "claude";
   details?: ComponentContent;
   inventoryIds?: string[];
+  origins?: ComponentOrigin[];
 }
 export interface ComponentOrigin {
   type: string;
@@ -133,6 +134,7 @@ export interface InventoryAppState {
   locator?: string;
   path?: string;
   targetId?: string;
+  provenance?: { location?: string };
 }
 export interface InventoryItem {
   id: string;

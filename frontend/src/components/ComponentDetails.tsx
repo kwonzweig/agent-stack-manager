@@ -5,6 +5,8 @@ import type { Comment, Component, ComponentDefinition } from "../types";
 import { DetailSheet } from "./DetailSheet";
 import ItemProperties from "../catalog/ItemProperties";
 import { readAtLabel, sourceLabel } from "../catalog/catalogItem";
+import { displayDescription, observationAppName, componentLocations } from "../lib/componentLocation";
+import { ComponentLocation } from "./ComponentLocation";
 const SkillMarkdown = lazy(() => import("./SkillMarkdown").then(module => ({ default: module.SkillMarkdown })));
 
 export const displayValue = (value: unknown): string => typeof value === "string" ? value : JSON.stringify(value, null, 2) ?? "";
@@ -109,12 +111,13 @@ export function ComponentDetails({ item: initialItem, presetId, backLabel, onClo
     return () => request.abort();
   }, [initialItem.canonicalId]);
   const item = definition ?? initialItem;
+  const description = displayDescription(item);
   const sourceUrl = externalUrl(item.sourceUrl || item.source?.repositoryUrl);
   const read = externalUrl(item.descriptionUrl);
   const githubSource = externalUrl(item.source?.repositoryUrl)?.hostname === "github.com";
   return <DetailSheet open title={item.name} backLabel={backLabel} onClose={onClose}
-    description={initialItem.id !== "instruction" && item.description ? <>
-      <p>{item.description}</p>
+    description={initialItem.id !== "instruction" && description ? <>
+      <p>{description}</p>
       {read && <p className="mt-1 text-[12px] leading-5 text-muted">
         From <a href={read.href} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-secondary">{readFrom(read)}</a>, read {readAtLabel(item.descriptionReadAt)}.
       </p>}
@@ -148,7 +151,7 @@ export function ComponentDetails({ item: initialItem, presetId, backLabel, onClo
           <h3>Source reference</h3>
           <dl className="app-panel mt-2 grid grid-cols-[7rem_minmax(0,1fr)] gap-2 p-3 text-[13px]">
             <dt className="text-muted">Repository</dt><dd className="break-all">{item.source?.repositoryUrl ?? "Local or account-managed component"}</dd>
-            <dt className="text-muted">Path</dt><dd className="break-all">{item.source?.path ?? "Not recorded"}</dd>
+            <dt className="text-muted">Path</dt><dd className="break-all">{item.source?.path ?? componentLocations(item)[0]?.location ?? "Not recorded"}</dd>
             <dt className="text-muted">Branch</dt><dd>{item.source?.ref ?? "Unknown"}</dd>
             {item.sourceResolvedRef && <><dt className="text-muted">Source read</dt><dd>Current default branch ({item.sourceResolvedRef})</dd></>}
             <dt className="text-muted">GitHub stars</dt><dd>{!githubSource ?
@@ -167,7 +170,7 @@ export function ComponentDetails({ item: initialItem, presetId, backLabel, onClo
               (definition.remoteApproved ? "The source body is unavailable." : "Only observed metadata is available. The local or private source body was not captured.")}</p>}
           {definition.details.selectionConflict && <p className="mt-2 text-amber-700">This container has different saved selections for its fields. Review them before choosing the container.</p>}
           {definition.details.fields?.length ? <div className="summary-box mt-2"><table className="summary-table">
-            <thead><tr><th scope="col">Field</th><th scope="col">Type</th>{definition.details.selectionConflict && <><th scope="col">Codex selection</th><th scope="col">Claude Code selection</th></>}</tr></thead>
+            <thead><tr><th scope="col">Field</th><th scope="col">Type</th>{definition.details.selectionConflict && <><th scope="col">Codex selection</th><th scope="col">{observationAppName("claude", definition.origins.find(origin => origin.app === "claude"))} selection</th></>}</tr></thead>
             <tbody>{definition.details.fields.map(field => <tr key={field.name}><th scope="row">{field.name}</th><td>{field.type}</td>
               {definition.details.selectionConflict && (["codex", "claude"] as const).map(app => <td key={app}>{field.selections?.[app] == null ? "Not set" : field.selections[app] ? "Included" : "Excluded"}</td>)}</tr>)}</tbody>
           </table></div> : null}
@@ -176,11 +179,13 @@ export function ComponentDetails({ item: initialItem, presetId, backLabel, onClo
             <ul className="space-y-1 p-3 text-[13px]">{definition.details.files.map(file => <li key={file} className="break-all">{file}</li>)}</ul>
           </details> : null}
         </section>}
-        {definition?.origins.length ? <section className="inspector-section" aria-label="Observed locations">
+        {componentLocations(item).length > 0 ? <section className="inspector-section" aria-label="Observed locations">
+          <h3>Observed locations</h3><div className="app-panel mt-2 p-3"><ComponentLocation item={item} /></div>
+        </section> : definition?.origins.length ? <section className="inspector-section" aria-label="Observed locations">
           <h3>Observed locations</h3>
           <div className="values mt-2">{definition.origins.filter(origin => origin.type !== "catalog").map((origin, index) =>
             <dl key={index} className="app-panel grid grid-cols-[7rem_minmax(0,1fr)] gap-2 p-3 text-[13px]">
-              {origin.app && <><dt className="text-muted">App</dt><dd>{origin.app === "claude" ? "Claude Code" : "Codex"}</dd></>}
+              {origin.app && <><dt className="text-muted">App</dt><dd>{observationAppName(origin.app, origin)}</dd></>}
               {origin.scope && <><dt className="text-muted">Scope</dt><dd className="break-all">{origin.scope}</dd></>}
               <dt className="text-muted">Location</dt><dd className="break-all">{origin.locator ?? origin.file ?? origin.path ?? "Not recorded"}</dd>
               {origin.parentId && <><dt className="text-muted">Container</dt><dd>{origin.parentName ?? "Parent component unavailable"}</dd></>}

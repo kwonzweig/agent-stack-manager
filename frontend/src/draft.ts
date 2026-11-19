@@ -1,4 +1,5 @@
 import type { Component, InventoryApp, InventoryItem, InventorySelection, Kind, Package, PackageKind } from "./types";
+import { inventoryOrigins } from "./lib/componentLocation.ts";
 
 export interface Draft {
   original: Package;
@@ -40,12 +41,14 @@ export function inventoryComponents(items: InventoryItem[]): Component[] {
     const existing = components.get(key);
     if (existing) {
       existing.inventoryIds!.push(item.id);
+      existing.origins!.push(...inventoryOrigins(item.apps));
       continue;
     }
     components.set(key, {
     id: `inventory:${item.id}`, inventoryId: item.id, name: item.name, kind: inventoryKind(item.kind),
     canonicalId: item.canonicalId, pluginHost: item.pluginHost, inventoryIds: [item.id],
     description: item.description, details: item.details, sourceUrl: item.sourceUrl,
+    origins: inventoryOrigins(item.apps),
     source: item.definitionSource ?? (item.source || item.sourcePath || item.sourceRef ? {
       repositoryUrl: item.source, path: item.sourcePath, ref: item.sourceRef,
     } : undefined),

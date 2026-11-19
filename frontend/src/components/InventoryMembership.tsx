@@ -1,6 +1,7 @@
 import { Check, CircleHelp, Minus } from "lucide-react";
 import { inventorySelection, type Draft } from "../draft";
 import type { InventoryApp, InventoryItem, InventorySelection } from "../types";
+import { observationAppName } from "../lib/componentLocation";
 
 const apps = [["codex", "Codex"], ["claude", "Claude Code"]] as const;
 
@@ -18,10 +19,11 @@ export function InventoryMembership({ draft, item, onSelect }: {
   return <section className="inspector-section" aria-label="Preset membership">
     <div className="section-heading"><h3>Preset membership</h3></div>
     <div className="values sm:grid-cols-2">
-      {apps.map(([app, name]) => {
+      {apps.map(([app]) => {
         const observation = item.apps[app];
         const chosen = inventorySelection(draft, item, app);
         if (!observation) return null;
+        const name = observationAppName(app, observation);
         return <section className="app-panel p-3 text-[13px]" key={app} aria-label={name}>
           <h4 className="font-semibold text-primary">{name}</h4>
           <dl className="mt-2 grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5">

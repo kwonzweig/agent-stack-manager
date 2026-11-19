@@ -9,6 +9,8 @@ import { KindBadge, KindIcon, KINDS, SearchField, TypeFilter } from "./Component
 import { hrefFor, PresetIcon, type Route } from "./Sidebar";
 import { PresetIconPicker } from "./PresetIconPicker";
 import { inferPresetIconKey } from "../lib/presetIcons";
+import { componentLocations, componentSearchText, displayDescription } from "../lib/componentLocation";
+import { ComponentLocation } from "./ComponentLocation";
 import "./preset.css";
 
 export type WorkspaceTab = NonNullable<Route["tab"]>;
@@ -21,6 +23,8 @@ function WorkspaceCard({ item, selected, selectable, onSelect, onOpen, onRemove,
   item: Component; selectable: boolean; selected: boolean; onSelect: () => void;
   onOpen: () => void; onRemove: () => void; canComment: boolean;
 }) {
+  const description = displayDescription(item);
+  const hasLocation = componentLocations(item).length > 0;
   return <div data-component-id={item.canonicalId ?? item.id} className={cn("app-panel group relative flex h-full flex-col shadow-card transition-all hover:-translate-y-px hover:border-border hover:shadow-card-hover",
     selected && "border-accent-border ring-1 ring-accent-border")}>
     <div className="flex items-center gap-2.5 px-3.5 pb-1.5 pt-3">
@@ -34,8 +38,9 @@ function WorkspaceCard({ item, selected, selectable, onSelect, onOpen, onRemove,
       <KindIcon kind={item.kind} pluginHost={item.pluginHost} className="h-3.5 w-3.5 shrink-0 text-faint" />
     </div>
     <div className="px-3.5 pb-3">
-      {item.description && <p className="truncate text-[13px] leading-[18px] text-muted" title={item.description}>{item.description}</p>}
-      <div className={cn("flex flex-wrap items-center gap-1", item.description && "mt-2")}><KindBadge kind={item.kind} pluginHost={item.pluginHost} /></div>
+      {description && <p className="truncate text-[13px] leading-[18px] text-muted" title={description}>{description}</p>}
+      <div className={cn("flex flex-wrap items-center gap-1", description && "mt-2")}><KindBadge kind={item.kind} pluginHost={item.pluginHost} /></div>
+      {hasLocation && <div className="mt-2"><ComponentLocation item={item} /></div>}
     </div>
     <div className="mt-auto flex items-center justify-between gap-2 border-t border-border-faint px-3.5 py-2.5">
       <span className="truncate text-[12px] text-muted">{sourceLabel(item)}</span>
@@ -130,7 +135,7 @@ export function PresetContents({ draft, facts, onOpen, onAdd, onRemove, busy }: 
   const active = kind === "all" || kinds.includes(kind) ? kind : "all";
   const q = query.trim().toLowerCase();
   const visible = all.filter(item => (active === "all" || item.kind === active) &&
-    `${item.name} ${item.description ?? ""} ${item.sourceUrl ?? item.source?.repositoryUrl ?? ""}`.toLowerCase().includes(q));
+    componentSearchText(item).includes(q));
   const updateView = (next: "grid" | "list") => { localStorage.setItem("asm:component-view", next); setView(next); };
   const chosen = draft.members.filter(item => selection.has(item.id));
   const toggleSelection = (id: string) => setSelection(prev => {
@@ -190,8 +195,9 @@ export function PresetContents({ draft, facts, onOpen, onAdd, onRemove, busy }: 
               <button type="button" className="row-action" onClick={selectable ? () => toggleSelection(item.id) : () => onOpen(item)}>{item.name}</button>
             </div>
             <span className="type-badge"><KindBadge kind={item.kind} pluginHost={item.pluginHost} /></span>
-            <span className="source-host">{sourceLabel(item)}</span>
+            <span className="source-host">{item.kind !== "setting" && sourceLabel(item)}</span>
             <ChevronRight className="row-arrow h-4 w-4" aria-hidden="true" />
+            {componentLocations(item).length > 0 && <div className="col-span-full min-w-0"><ComponentLocation item={item} /></div>}
           </li>;
         })}
       </ul></div>}

@@ -200,6 +200,7 @@ export interface ReportItem {
   name: string;
   kind: Kind;
   app?: InventoryApp;
+  originPackage?: { id: string; title: string };
   /** The support table row; null for a stack, a plugin with no known manifest, or a row that is no component. */
   supportKind: SupportKind | null;
   conversion: Result;

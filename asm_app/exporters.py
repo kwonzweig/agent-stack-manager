@@ -6,7 +6,7 @@ import hashlib
 import json
 from typing import TYPE_CHECKING
 
-from . import cc_switch, paperclip
+from . import cc_switch, export_graph, paperclip
 
 if TYPE_CHECKING:
     from .store import Store
@@ -29,59 +29,55 @@ class Assessment:
         return hashlib.sha256(json.dumps(self.artifact, sort_keys=True).encode()).hexdigest()
 
 
-def _paperclip_inventory_rows(package):
-    for item in package.get("appInventory", []):
-        for app, state in item["apps"].items():
-            name = {"codex": "Codex", "claude": "Claude Code"}[app]
-            yield {
-                "id": f"inventory:{app}:{item['id']}",
-                "name": item["name"],
-                "kind": item["kind"],
-                "app": app,
-                "supportKind": None,
-                **{field: state[field] for field in ("installed", "enabled", "selected")},
-                "source": item.get("source"),
-                "target": None,
-                "conversion": {
-                    "status": "unconverted",
-                    "cause": "not-in-format",
-                    "reason": f"Paperclip cannot preserve the {name} inventory state for this item.",
-                },
-            }
-
-
 def _assess_paperclip(package, store):
     report = paperclip.convert(package, root=store.root, store=store)
-    extra = list(_paperclip_inventory_rows(package))
-    if extra:
-        report["items"].extend(extra)
-        report["summary"]["total"] += len(extra)
-        report["summary"]["unconverted"] += len(extra)
     preview = {key: value for key, value in report.items() if key != "files"}
     if package["kind"] == "preset":
         return Assessment(preview, report)
     reason = "Paperclip needs a single agent preset. Include this stack in a preset to export it."
     preview["items"] = [
         {**row, "target": None, "conversion": {"status": "unconverted", "cause": "not-in-format", "reason": reason}}
+        if row["conversion"]["status"] == "converted" else row
         for row in report["items"]
     ]
     preview["summary"] = {"total": len(report["items"]), "converted": 0, "unconverted": len(report["items"])}
     return Assessment(preview, None, reason)
 
 
-def _assess_cc_switch(package, _store):
-    native = []
-    for row in package["components"]:
-        if row.get("managedByInventory") or (row["id"] == "instruction" and not package["instruction"].strip()):
+def _assess_cc_switch(package, store):
+    packages, members = export_graph.expand(package, store)
+    native, inventory = [], []
+    for member in members:
+        row = member.component
+        if row.get("managedByInventory"):
             continue
         unsupported = row["kind"] in cc_switch.UNSUPPORTED_KINDS
-        native.append({**{field: row[field] for field in ("id", "name", "kind")},
-                       "status": "unsupported" if unsupported else "manual",
-                       "reason": cc_switch.UNSUPPORTED_REASON if unsupported else
-                       "No Codex or Claude Code selection is recorded for this APM component."})
-    if not any(item["apps"] for item in package.get("appInventory", [])):
+        result = {field: row[field] for field in ("id", "name", "kind")}
+        if member.owner != package["id"]:
+            result.update(id=f"{member.owner}/{row['id']}", originPackage=export_graph.origin(packages[member.owner]))
+        if member.error:
+            status, reason = "unsupported", member.error
+        elif member.dependency:
+            status, reason = "manual", "The review lists this stack's members separately."
+        elif unsupported:
+            status, reason = "unsupported", cc_switch.UNSUPPORTED_REASON
+        else:
+            status, reason = "manual", "No Codex or Claude Code selection is recorded for this APM component."
+        native.append({**result, "status": status, "reason": reason})
+
+    identifiers = {item["id"] for item in package.get("appInventory", [])}
+    for owner, current in packages.items():
+        for item in current.get("appInventory", []):
+            if owner != package["id"]:
+                identifier = f"{owner}/{item['id']}"
+                while identifier in identifiers:
+                    identifier = f"stack/{identifier}"
+                identifiers.add(identifier)
+                item = {**item, "id": identifier, "originPackage": export_graph.origin(current)}
+            inventory.append(item)
+    if not inventory:
         return Assessment({"items": native}, None, "This preset has no app inventory.")
-    review = cc_switch.convert(package)
+    review = cc_switch.convert({**package, "appInventory": inventory})
     if native:
         review["unassignedItems"] = native
     return Assessment({"items": review["items"] + native}, review)

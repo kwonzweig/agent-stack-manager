@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Ban, CircleCheck, CircleHelp, Download, Link2 } from "lucide-react";
 import { api, ApiError, downloadFile, errorMessage, packagePath } from "../api";
-import type { ConsumerData, InventoryApp, PackageKind, Report } from "../types";
+import type { ConsumerData, InventoryApp, PackageKind, Report, ReportItem } from "../types";
 import { cn } from "../utils";
 import { hrefFor, type Route } from "./Sidebar";
 import { PaperclipReport } from "./PaperclipReport";
@@ -16,7 +16,7 @@ const switchStatuses = {
 } as const;
 
 interface ReviewRow {
-  id: string; name: string; app?: InventoryApp; status: keyof typeof switchStatuses; reason: string;
+  id: string; name: string; app?: InventoryApp; originPackage?: ReportItem["originPackage"]; status: keyof typeof switchStatuses; reason: string;
 }
 type TargetBase = { name: string; available: boolean; reason: string; download?: string; filename?: string };
 type PaperclipTarget = TargetBase & { id: "paperclip"; preview: Omit<Report, "files"> };
@@ -37,7 +37,10 @@ function SwitchRows({ items }: { items: ReviewRow[] }) {
     <tbody className="max-sm:block">{items.map(row => {
       const { label, icon: Icon, tone } = switchStatuses[row.status];
       return <tr key={`${row.id}:${row.app ?? ""}`} className="max-sm:grid max-sm:grid-cols-[minmax(0,1fr)_auto]">
-        <th scope="row" className="[overflow-wrap:anywhere] max-sm:!h-auto max-sm:!w-auto">{row.name}</th>
+        <th scope="row" className="[overflow-wrap:anywhere] max-sm:!h-auto max-sm:!w-auto">
+          {row.name}
+          {row.originPackage && <span className="block text-[12px] font-normal text-muted">From {row.originPackage.title}</span>}
+        </th>
         <td className="[overflow-wrap:anywhere] max-sm:col-span-2 max-sm:row-start-2 max-sm:!h-auto max-sm:text-muted">
           {row.app === "claude" ? "Claude Code" : row.app === "codex" ? "Codex" : "Unassigned"}
         </td>
@@ -151,7 +154,8 @@ export function PresetExportTab({ id, kind, revision, dirty, data, loading, erro
       <details className="summary-box p-3">
         <summary className="cursor-pointer text-[13px] font-semibold">{target.name} unavailable</summary>
         <p className="mt-2 text-[13px] text-muted">{target.reason}</p>
-        {target.id === "ccswitch" && <SwitchRows items={target.preview.items} />}
+        {target.id === "ccswitch" ? <SwitchRows items={target.preview.items} /> :
+          <PaperclipReport report={target.preview} heading={null} download={null} dirty={false} />}
       </details>
     </section>)}
   </>;

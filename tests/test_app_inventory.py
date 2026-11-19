@@ -132,6 +132,41 @@ class InventoryTests(unittest.TestCase):
                          {"mcpServers": {"remote": {"url": "https://mcp.example.com/v1"}}})
         self.assertNotIn("secret", json.dumps(protected))
 
+    def test_cc_switch_requires_one_configuration_for_each_mcp_server_id(self):
+        from asm_app.cc_switch import convert
+
+        def server(identifier, app, url):
+            return {"id": identifier, "name": identifier, "kind": "mcp", "apps": {app: {
+                "installed": True, "enabled": True, "selected": True,
+                "portable": {"mcp": {"name": "workspace", "url": url}},
+            }}}
+
+        codex = server("codex-server", "codex", "https://example.invalid/one")
+        claude = server("claude-server", "claude", "https://example.invalid/two")
+        rows = convert({"id": "servers", "appInventory": [codex, claude]})["items"]
+        self.assertEqual([row["status"] for row in rows], ["manual", "manual"])
+        self.assertTrue(all("url" not in row and "conflicting" in row["reason"] for row in rows))
+        claude["apps"]["claude"]["portable"] = codex["apps"]["codex"]["portable"]
+        rows = convert({"id": "servers", "appInventory": [codex, claude]})["items"]
+        self.assertEqual([row["status"] for row in rows], ["import-ready", "import-ready"])
+
+    def test_cc_switch_omits_import_links_for_scoped_payloads_and_invalid_endpoints(self):
+        from asm_app.cc_switch import convert
+
+        base = {"installed": True, "enabled": True, "selected": True}
+        items = [
+            {"id": "scoped", "name": "Scoped prompt", "kind": "prompt", "apps": {"claude": {
+                **base, "scope": "project", "portable": {"prompt": "Project-specific instructions"},
+            }}},
+            {"id": "endpoint", "name": "Malformed URL", "kind": "mcp", "apps": {"codex": {
+                **base, "portable": {"mcp": {"name": "workspace", "url": "https://example.invalid:wrong/mcp"}},
+            }}},
+        ]
+        rows = convert({"id": "payloads", "appInventory": items})["items"]
+        self.assertEqual([row["status"] for row in rows], ["manual", "manual"])
+        self.assertTrue(all("url" not in row for row in rows))
+        self.assertNotIn("Project-specific instructions", json.dumps(rows))
+
 
 if __name__ == "__main__":
     unittest.main()

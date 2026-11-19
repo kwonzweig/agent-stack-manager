@@ -9,6 +9,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import yaml
 
+from . import export_graph
+
 
 GITHUB = re.compile(r"https://github\.com/([\w.-]+)/([\w.-]+)", re.IGNORECASE | re.ASCII)
 # Paperclip stores a role outside its own list when a package names none, so every agent names `general`.
@@ -123,7 +125,9 @@ def support_kind(component):
     places = [component.get("sourceUrl"), component.get("file"), source.get("path"), source.get("repositoryUrl")]
     found = {_MANIFESTS[part] for place in places if isinstance(place, str)
              for part in re.split(r"[/\\]", place) if part in _MANIFESTS}
-    return found.pop() if len(found) == 1 else None
+    if found:
+        return found.pop() if len(found) == 1 else None
+    return {"claude": "claude-code-plugin", "codex": "codex-plugin"}.get(component.get("pluginHost"))
 
 
 def _base_key(stub):
@@ -131,26 +135,42 @@ def _base_key(stub):
     return stub["repo"].split("/")[1] if folder == "." else folder.rsplit("/", 1)[-1]
 
 
+def _inventory_rows(package, packages):
+    for owner, current in packages.items():
+        nested = owner != package["id"]
+        for item in current.get("appInventory", []):
+            for app, state in item["apps"].items():
+                name = {"codex": "Codex", "claude": "Claude Code"}[app]
+                identifier = f"inventory:{app}:{item['id']}"
+                yield {
+                    "id": f"{owner}/{identifier}" if nested else identifier,
+                    **({"originPackage": export_graph.origin(current)} if nested else {}),
+                    "name": item["name"], "kind": item["kind"], "app": app, "supportKind": None,
+                    **{field: state[field] for field in ("installed", "enabled", "selected")},
+                    "source": item.get("source"), "target": None,
+                    "conversion": _status("unconverted", _because(
+                        f"Paperclip cannot preserve the {name} inventory state for this item.", "not-in-format")),
+                }
+
+
 def _report(package, store):
-    items, skills, bundle = [], [], {}
+    is_preset = package.get("kind", "preset") == "preset"
+    packages, members = export_graph.expand(package, store, include_empty_instruction=is_preset)
+    items, skills = [], []
     seen = {}
     instruction_path = f"agents/{package['id']}/AGENTS.md"
 
-    def remember(current):
-        bundle.setdefault(current["id"], {
-            entry["path"]: entry["content"].encode("utf-8") for entry in current.get("files", [])})
-
-    def add(component, ancestry):
+    for member in members:
+        component, ancestry = member.component, member.ancestry
         kind = component["kind"]
         component_id = component["id"]
+        file = component.get("file")
         signature = (component_id, kind, component.get("source"), component.get("file"),
-                     component.get("configuration"))
+                     component.get("configuration"), member.owner if file else None)
         previous = seen.setdefault(component_id, [])
         primary_instruction = kind == "instruction" and component_id == "instruction" and len(ancestry) == 1
-        if kind not in ("package", "instruction"):
-            for _, original in previous:
-                if original == signature:
-                    return
+        if kind not in ("package", "instruction") and any(original == signature for _, original in previous):
+            continue
         item_id = component_id
         if previous:
             item_id = "/".join((*ancestry[1:], component_id))
@@ -163,13 +183,14 @@ def _report(package, store):
         elif kind == "instruction":
             reason = "Paperclip takes one Instruction per agent; merge it into the Instruction."
         elif kind == "skill":
-            owner = ancestry[-1]
-            stub, reason = _skill_source(component, owner, store._package_root(owner))
+            stub, reason = _skill_source(component, member.owner, store._package_root(member.owner))
         elif kind == "mcp":
             reason = _because("Paperclip's company package has no MCP entry; "
                               "set it in the agent's adapter after import.", "adapter")
         elif kind == "package":
-            reason = "Stack members exported."
+            reason = member.error or "Stack members exported."
+            if not member.error:
+                target = {"packageId": member.dependency}
         elif kind in ("hook", "plugin"):
             reason = _because(f"Paperclip's company package has no {kind} entry.", "not-in-format")
         else:
@@ -180,65 +201,43 @@ def _report(package, store):
             "target": target,
             "conversion": _status("converted" if target is not None else "unconverted", reason),
         }
+        if member.owner != package["id"]:
+            row["originPackage"] = export_graph.origin(packages[member.owner])
         items.append(row)
         if kind == "skill" and stub:
             skills.append((row, stub, component))
-        if kind != "package":
-            return
 
-        package_id = (component.get("configuration") or {}).get("packageId")
-        if not package_id:
-            reason = "The APM dependency has no local stack to expand."
-        elif package_id in ancestry:
-            reason = f"Stack dependency cycle at {package_id}."
-        else:
-            try:
-                child = store.get(package_id)
-            except (ValueError, LookupError, FileNotFoundError):
-                reason = f"Local stack {package_id} could not be read."
-            else:
-                remember(child)
-                for member in child["components"]:
-                    if member["id"] != "instruction" or child["instruction"].strip():
-                        add(member, (*ancestry, package_id))
-                row["target"] = {"packageId": package_id}
-                row["conversion"] = _status("converted", reason)
-                return
-        row["conversion"] = _status("unconverted", reason)
-
-    remember(package)
-    components = package["components"]
-    if not any(component["id"] == "instruction" for component in components):
-        components = [{"id": "instruction", "name": "Instruction", "kind": "instruction"}, *components]
-    for component in components:
-        add(component, (package["id"],))
+    items.extend(_inventory_rows(package, packages))
+    bundle = {owner: {entry["path"]: entry["content"].encode("utf-8") for entry in saved.get("files", [])}
+              for owner, saved in packages.items()}
     return items, _stubs(skills), bundle
 
 
 def _stubs(skills):
     """Give every distinct skill source one key, in member order, and point its rows at the stub."""
-    sources = []
+    def identity(stub):
+        return stub["repo"].casefold(), stub["path"], stub["trackingRef"]
+
+    sources = {}
     for _, stub, component in skills:
-        if stub not in (known for known, _ in sources):
-            sources.append((stub, component))
+        sources.setdefault(identity(stub), (stub, component))
     counts = {}
-    for stub, _ in sources:
-        counts[_base_key(stub)] = counts.get(_base_key(stub), 0) + 1
-    keys, used = [], set()
-    for stub, _ in sources:
+    for stub, _ in sources.values():
+        key = _base_key(stub).casefold()
+        counts[key] = counts.get(key, 0) + 1
+    keys, used, stubs = {}, set(), {}
+    for source, (stub, component) in sources.items():
         key = _base_key(stub)
-        if counts[key] > 1:
+        if counts[key.casefold()] > 1:
             key = f"{stub['repo'].split('/')[1]}-{key}"
         unique, number = key, 2
-        while unique in used:
+        while unique.casefold() in used:
             unique, number = f"{key}-{number}", number + 1
-        used.add(unique)
-        keys.append(unique)
-    stubs = {}
-    for (stub, component), key in zip(sources, keys):
-        stubs[key] = (stub, component)
+        used.add(unique.casefold())
+        keys[source] = unique
+        stubs[unique] = (stub, component)
     for row, stub, _ in skills:
-        key = keys[[known for known, _ in sources].index(stub)]
+        key = keys[identity(stub)]
         row["target"] = f"skills/{key}/SKILL.md"
         row["conversion"] = _status("converted", f"Skill exported as skills/{key}, following {stub['trackingRef']}.")
     return stubs

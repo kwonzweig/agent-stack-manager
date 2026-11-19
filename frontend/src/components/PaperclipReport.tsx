@@ -68,7 +68,8 @@ export function PaperclipReport({ report, download, dirty, heading }: {
         {visible.length ? <div className="report-list">
           <ul>{visible.map((row, index) => <li key={row.id + index} className="report-row">
             <div className="component-label"><KindIcon kind={displayKind(row.kind)} className="h-4 w-4 shrink-0 text-muted" />
-              <div className="component-name"><button type="button" className="row-action" onClick={() => setItem(row)}>{row.name}</button><span className="component-kind">{KIND_LABELS[displayKind(row.kind)]}</span></div>
+              <div className="component-name"><button type="button" className="row-action" onClick={() => setItem(row)}>{row.name}</button><span className="component-kind">{KIND_LABELS[displayKind(row.kind)]}</span>
+                {row.originPackage && <span className="component-kind">From {row.originPackage.title}</span>}</div>
             </div>
             <Status result={row.conversion} />
             <p className="row-reason">{row.conversion.reason}{targetFile(row) && <> <code className="row-target">{targetFile(row)}</code></>}</p>

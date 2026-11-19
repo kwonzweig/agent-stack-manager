@@ -34,21 +34,25 @@ function inventoryKind(kind: string): Kind {
   }
 }
 
-export function inventoryComponents(items: InventoryItem[]): Component[] {
+export function inventoryComponents(items: InventoryItem[], changes: Draft["appInventorySelections"] = {}): Component[] {
   const components = new Map<string, Component>();
+  const parents = new Map(items.map(item => [item.id, item]));
   for (const item of items) {
     const key = item.canonicalId ?? item.id;
+    const states = new Set(Object.keys(item.apps).map(app => currentSelection(changes, item, app as InventoryApp)));
+    const membership = states.size > 1 ? "Mixed" : states.has(true) ? "Included" : states.has(false) ? "Excluded" : "Not set";
     const existing = components.get(key);
     if (existing) {
       existing.inventoryIds!.push(item.id);
-      existing.origins!.push(...inventoryOrigins(item.apps));
+      existing.origins!.push(...inventoryOrigins(item.apps, parents));
+      if (existing.presetMembership !== membership) existing.presetMembership = "Mixed";
       continue;
     }
     components.set(key, {
     id: `inventory:${item.id}`, inventoryId: item.id, name: item.name, kind: inventoryKind(item.kind),
-    canonicalId: item.canonicalId, pluginHost: item.pluginHost, inventoryIds: [item.id],
+    canonicalId: item.canonicalId, pluginHost: item.pluginHost, inventoryIds: [item.id], presetMembership: membership,
     description: item.description, details: item.details, sourceUrl: item.sourceUrl,
-    origins: inventoryOrigins(item.apps),
+    origins: inventoryOrigins(item.apps, parents),
     source: item.definitionSource ?? (item.source || item.sourcePath || item.sourceRef ? {
       repositoryUrl: item.source, path: item.sourcePath, ref: item.sourceRef,
     } : undefined),
@@ -63,6 +67,18 @@ function skillReference(repository: string, ref: string, path: string) {
   return JSON.stringify([repo, ref, directory]);
 }
 
+export function presetMembers(draft: Draft): Component[] {
+  const observed = inventoryComponents(draft.original.appInventory ?? [], draft.appInventorySelections);
+  const rows = new Map(observed.map(row => [row.canonicalId ?? row.id, row]));
+  for (const member of draft.members) {
+    const key = member.canonicalId ?? member.id;
+    const previous = rows.get(key);
+    if (!previous) rows.set(key, member);
+    else if (previous.inventoryId && previous.presetMembership !== "Included") previous.presetMembership = "Mixed";
+  }
+  return [...rows.values()];
+}
+
 export function managedInventoryMember(pkg: Package, item: Component) {
   if (item.managedByInventory) return true;
   if (item.kind !== "skill" || !item.source?.repositoryUrl || !item.source.ref) return false;
@@ -70,9 +86,13 @@ export function managedInventoryMember(pkg: Package, item: Component) {
   return pkg.appInventory?.some(row => row.apm && skillReference(row.apm.git, row.apm.ref, row.apm.path ?? "") === key) ?? false;
 }
 
+function currentSelection(selections: Draft["appInventorySelections"], item: InventoryItem, app: InventoryApp) {
+  const changes = Object.hasOwn(selections, item.id) ? selections[item.id] : undefined;
+  return changes?.[app] === undefined ? item.apps[app]?.selected : changes[app];
+}
+
 export function inventorySelection(draft: Draft, item: InventoryItem, app: InventoryApp) {
-  const changes = Object.hasOwn(draft.appInventorySelections, item.id) ? draft.appInventorySelections[item.id] : {};
-  return changes[app] === undefined ? item.apps[app]?.selected : changes[app];
+  return currentSelection(draft.appInventorySelections, item, app);
 }
 
 export function withInventorySelection(draft: Draft, item: InventoryItem, app: InventoryApp, selected: InventorySelection): Draft {
@@ -83,6 +103,24 @@ export function withInventorySelection(draft: Draft, item: InventoryItem, app: I
   if (!Object.keys(itemChanges).length) delete selections[item.id];
   else return { ...draft, appInventorySelections: { ...selections, [item.id]: itemChanges } };
   return { ...draft, appInventorySelections: selections };
+}
+
+// Observations keep their installed state and per-app choices even when excluded from a preset.
+// A regular member is included by its presence in the preset's component list.
+export function withComponentInclusion(draft: Draft, rows: Component[], included: boolean): Draft {
+  const keys = new Set(rows.map(row => row.canonicalId ?? row.id));
+  const selections = new Map(Object.entries(draft.appInventorySelections));
+  for (const item of draft.original.appInventory ?? []) {
+    if (!keys.has(item.canonicalId ?? `inventory:${item.id}`)) continue;
+    const changes: Partial<Record<InventoryApp, InventorySelection>> = {};
+    for (const app of Object.keys(item.apps) as InventoryApp[]) {
+      if (item.apps[app]!.selected !== included) changes[app] = included;
+    }
+    if (Object.keys(changes).length) selections.set(item.id, changes);
+    else selections.delete(item.id);
+  }
+  const members = included ? draft.members : draft.members.filter(item => !keys.has(item.canonicalId ?? item.id));
+  return { ...draft, members, appInventorySelections: Object.fromEntries(selections) };
 }
 
 // The saved package plus the given components it lacks; a package never contains itself.

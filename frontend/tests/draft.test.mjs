@@ -1,12 +1,44 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDraft, inventoryComponents, makePayload, rebaseDraft, withInventorySelection, withMembers } from "../src/draft.ts";
+import { createDraft, inventoryComponents, makePayload, presetMembers, rebaseDraft, withComponentInclusion, withInventorySelection, withMembers } from "../src/draft.ts";
 
 const component = (id) => ({ id, name: id, kind: "skill" });
 const saved = (revision, fields = {}, members = ["a", "b"]) => ({
   id: "example", title: "Example", kind: "preset", icon: "", version: "1.0.0", description: "",
   workArea: [], usage: [], instruction: "", revision, componentCount: members.length + 1,
   files: [], components: [{ id: "instruction", name: "Instruction", kind: "instruction" }, ...members.map(component)], ...fields,
+});
+
+test("bulk preset edits follow visible identity across observations and regular members", () => {
+  const observation = (id, canonicalId, app, selected) => ({
+    id, canonicalId, name: "Same name", kind: "skill", description: "",
+    apps: { [app]: { installed: true, enabled: true, selected } },
+  });
+  const items = [observation("one", "shared", "codex", true), observation("two", "shared", "claude", null),
+    observation("other", "unrelated", "claude", true)];
+  const original = createDraft(saved("old", { appInventory: items }));
+  const [shared] = inventoryComponents(items);
+  assert.equal(shared.presetMembership, "Mixed");
+  const excluded = withComponentInclusion(original, [shared, original.members[0]], false);
+  assert.deepEqual(makePayload(excluded).componentIds, ["b"]);
+  assert.deepEqual(makePayload(excluded).appInventorySelections, { one: { codex: false }, two: { claude: false } });
+  assert.equal(inventoryComponents(items, excluded.appInventorySelections)[0].presetMembership, "Excluded");
+  const included = withComponentInclusion(excluded, [shared], true);
+  assert.deepEqual(makePayload(included).appInventorySelections, { two: { claude: true } });
+  assert.equal(inventoryComponents(items, included.appInventorySelections)[0].presetMembership, "Included");
+  assert.equal(items[1].apps.claude.selected, null);
+});
+
+test("one row accounts for both an explicit member and an excluded observation of the same component", () => {
+  const member = { ...component("role-member"), canonicalId: "source-key" };
+  const observed = { ...member, id: "captured", apps: { codex: { enabled: true, installed: true, selected: false } } };
+  const draft = createDraft(saved("old", { components: [member], appInventory: [observed] }));
+  const rows = presetMembers(draft);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].presetMembership, "Mixed");
+  const next = withComponentInclusion(draft, rows, false);
+  assert.deepEqual(makePayload(next).componentIds, []);
+  assert.equal(presetMembers(next)[0].presetMembership, "Excluded");
 });
 
 test("reviewing a newer revision preserves unrelated external and local changes", () => {

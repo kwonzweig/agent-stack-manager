@@ -73,6 +73,7 @@ export interface Component extends SourceFacts {
   /** The file inside the package, for a component stored there. */
   file?: string;
   managedByInventory?: boolean;
+  presetMembership?: "Included" | "Excluded" | "Mixed" | "Not set";
   inventoryId?: string;
   canonicalId?: string;
   pluginHost?: "codex" | "claude";

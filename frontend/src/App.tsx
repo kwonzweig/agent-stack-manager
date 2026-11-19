@@ -3,7 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { api, ApiError, catalogMember, errorMessage, packagePath } from "./api";
 import type { CatalogItem, Component, ConsumerData, Package, PackageKind, PackageSummary, SourceData } from "./types";
 import { withSourceFacts } from "./catalog/catalogItem";
-import { createDraft, isDirty, makePayload, managedInventoryMember, overlappingChanges, rebaseDraft, withInventorySelection, withMembers, type Draft } from "./draft";
+import { createDraft, isDirty, makePayload, managedInventoryMember, overlappingChanges, rebaseDraft, withComponentInclusion, withInventorySelection, withMembers, type Draft } from "./draft";
 import CatalogPage from "./catalog/CatalogPage";
 import { hrefFor, Sidebar, type Route } from "./components/Sidebar";
 import { readRoute } from "./lib/route";
@@ -247,7 +247,7 @@ export function App() {
               : <PresetContents draft={draft} busy={activeLoading} facts={sourceFacts.data.items}
                 onOpen={item => setOverlay({ type: "component", item, id: draft.original.id })}
                 onAdd={() => setOverlay({ type: "picker", id: draft.original.id })}
-                onRemove={ids => updateDraft(draft.original.id, before => ({ ...before, members: before.members.filter(item => !ids.includes(item.id)) }))} />}
+                onSetIncluded={(rows, included) => updateDraft(draft.original.id, before => withComponentInclusion(before, rows, included))} />}
           </div>}
       </div>}
     </main>

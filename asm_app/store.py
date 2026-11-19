@@ -321,11 +321,12 @@ def _dependency_kind(section, value):
 
 
 def _identity(kind, value):
-    if kind in {"skill", "instruction", "other"} and (source := _source(kind, value)):
+    if kind in {"skill", "instruction", "other", "plugin"} and (source := _source(kind, value)):
+        source = source_coordinates({"kind": kind, "source": source, "configuration": value}) or source
         repo = source["repositoryUrl"]
         if repo.casefold().startswith("https://github.com/"):
             repo = repo.casefold()
-        return kind, repo, source["path"], source["ref"]
+        return kind, repo, source.get("path"), source.get("ref")
     native = _mapping(value)
     if kind == "plugin":
         return kind, native.get("marketplace"), native.get("name"), native.get("version")
@@ -473,8 +474,8 @@ class Store:
                 return self.base_root
         return self.root
 
-    def _snapshot(self, identifier):
-        root = self._package_root(identifier)
+    def _snapshot(self, identifier, *, root=None):
+        root = self._package_root(identifier) if root is None else root
         directory = self._directory(identifier, root=root)
         if not self._checked(directory / "apm.yml", root=root).is_file():
             raise StoreError(f"Package {identifier} was not found.", 404)
@@ -592,6 +593,8 @@ class Store:
                 if path == skill_file:
                     names = tuple(name for name in files if name.startswith(f"{skill_root}/"))
             entry = by_path.get(path)
+            if entry and data.replace(b"\r\n", b"\n") != entry["apm"]["content"].encode("utf-8").replace(b"\r\n", b"\n"):
+                entry = None
             name, description = PurePosixPath(path).stem, ""
             if entry:
                 name, description = entry["name"], entry.get("description", "")
@@ -915,6 +918,102 @@ class Store:
             raise StoreError(f"{field} must be a list of nonempty strings.")
         return list(dict.fromkeys(values))
 
+    def _copy_observations(self, identifier, model, definition, selected):
+        inventory = model.setdefault(_INVENTORY, {"items": []})["items"]
+        owned = {(id(row), app) for row in inventory for app in row["apps"]}
+        packages, copied, visiting, choices = {}, {}, set(), {}
+
+        def package(preset):
+            if preset not in packages:
+                packages[preset] = {row["id"]: row for row in self.get(preset).get("appInventory", [])}
+            return packages[preset]
+
+        def origin(state):
+            provenance = state.get("provenance") or {}
+            return json.dumps([state.get("scope"), state.get("locator") or provenance.get("location") or state.get("path"),
+                               state.get("parentId"), state.get("targetId"), provenance.get("field")], sort_keys=True)
+
+        def observed(state):
+            return {key: value for key, value in state.items() if key != "selected"}
+
+        def transfer(preset, item_id, provenance_only=False):
+            key = (preset, item_id)
+            if key in copied:
+                return copied[key]
+            if key in visiting:
+                raise StoreError("Observed component containers contain a cycle.")
+            visiting.add(key)
+            source_item = package(preset)[item_id]
+            canonical = source_item["canonicalId"]
+            row = copy.deepcopy(source_item)
+            row["definitionId"] = canonical
+            for state in row["apps"].values():
+                parent = state.get("parentId")
+                if parent in package(preset):
+                    parent_source = package(preset)[parent]
+                    state["parentId"] = transfer(preset, parent, parent_source["canonicalId"] not in selected and parent not in selected)["id"]
+                elif parent:
+                    state["provenance"] = {**(state.get("provenance") or {}), "parentId": state.pop("parentId")}
+                if provenance_only:
+                    state["selected"] = False
+            source = source_coordinates(row)
+            kind, host = kind_and_host(row)
+            if canonical == definition["canonicalId"] and kind == "skill" and source and source.get("ref") and source.get("path"):
+                spec = definition.get("apm") or {}
+                value = spec.get("value", spec)
+                if isinstance(value, dict) and _git(value) and _INVENTORY_REPO.fullmatch(source["repositoryUrl"]):
+                    directory = source["path"].removesuffix("SKILL.md").rstrip("/")
+                    row.setdefault("apm", {"git": source["repositoryUrl"], "ref": source["ref"],
+                                           **({"path": directory} if directory else {})})
+            if source and kind in {"skill", "plugin"} and not source.get("path"):
+                repository = source["repositoryUrl"]
+                if urlsplit(repository).hostname == "github.com":
+                    repository = repository.lower()
+                coordinates = (kind, host if kind == "plugin" else None, repository, source.get("ref"), source.get("path"))
+                row["definitionSourceKey"] = hashlib.sha256(json.dumps(coordinates).encode()).hexdigest()
+            target = None
+            for candidate in inventory:
+                if identify(candidate, identifier)["canonicalId"] != canonical:
+                    continue
+                overlaps = set(candidate["apps"]) & set(row["apps"])
+                same = all(origin(candidate["apps"][app]) == origin(row["apps"][app]) and
+                           ((id(candidate), app) in owned or observed(candidate["apps"][app]) == observed(row["apps"][app]))
+                           for app in overlaps)
+                combined = {**candidate, "apps": {**candidate["apps"], **row["apps"]}}
+                if same and identify(combined, identifier)["canonicalId"] == canonical:
+                    target = candidate
+                    break
+            if target is None:
+                existing = {item["id"] for item in inventory}
+                original = row["id"]
+                number = 1
+                while row["id"] in existing:
+                    row["id"] = original + "-" + canonical[-12:] + (f"-{number}" if number > 1 else "")
+                    number += 1
+                for field in ("canonicalId", "definitionSource", "sourceUrl"):
+                    row.pop(field, None)
+                inventory.append(row)
+                target = row
+            else:
+                for app, state in row["apps"].items():
+                    target["apps"].setdefault(app, state)
+                if row.get("sourceAccess") == "private":
+                    target["sourceAccess"] = "private"
+            for app, state in row["apps"].items():
+                choices.setdefault((canonical, app, origin(state)), set()).add(state["selected"])
+            copied[key] = target
+            visiting.remove(key)
+            return target
+
+        for membership in definition["memberships"]:
+            if "inventoryId" in membership:
+                transfer(membership["presetId"], membership["inventoryId"])
+        for row in inventory:
+            canonical = identify(row, identifier)["canonicalId"]
+            for app, state in row["apps"].items():
+                if (id(row), app) not in owned and len(choices.get((canonical, app, origin(state)), ())) > 1:
+                    state["selected"] = None
+
     def _select(self, identifier, model, entries, files, selected, catalog):
         recognized = {entry.item["id"]: entry for entry in entries}
         selected_set = set(selected)
@@ -923,7 +1022,20 @@ class Store:
                 selected.append(entry.item["id"])
                 selected_set.add(entry.item["id"])
         available = {row["id"]: row["apm"] for row in catalog}
+        catalog_identities = {row["id"]: identify({**row, "source": _item_source(row)}, "catalog")["canonicalId"] for row in catalog}
         manifest_entries = {}
+
+        def include_spec(spec):
+            if "path" in spec and "content" in spec:
+                path = _relative(spec["path"])
+                if not _native_file_kind(path) or any(name.casefold() == path.casefold() for name in files):
+                    raise StoreError(f"Component file path is unavailable: {path}")
+                files[path] = spec["content"].encode("utf-8")
+            elif spec.get("section") in ("apm", "mcp") and "value" in spec:
+                manifest_entries.setdefault(("dependencies", spec["section"]), []).append(spec["value"])
+            else:
+                return False
+            return True
         for entry in entries:
             if entry.location:
                 manifest_entries.setdefault(entry.location, [])
@@ -945,54 +1057,22 @@ class Store:
                         raise StoreError("Only stacks can be added as package dependencies.")
                 manifest_entries.setdefault(("dependencies", "apm"), []).append(f"../{target}")
             elif item_id in available:
-                spec = available[item_id]
-                if "path" in spec:
-                    path = _relative(spec["path"])
-                    if not _native_file_kind(path) or any(name.casefold() == path.casefold() for name in files):
-                        raise StoreError(f"Component file path is unavailable: {path}")
-                    files[path] = spec["content"].encode("utf-8")
-                elif spec["section"] in ("apm", "mcp"):
-                    manifest_entries.setdefault(("dependencies", spec["section"]), []).append(spec["value"])
-                else:
+                if not include_spec(available[item_id]):
                     raise StoreError(f"Unsupported catalog component: {item_id}")
+                definition = self.component(catalog_identities[item_id])
+                if any("inventoryId" in membership for membership in definition["memberships"]):
+                    self._copy_observations(identifier, model, definition, selected_set)
             else:
                 try:
                     definition = self.component(item_id)
                 except StoreError as error:
                     raise StoreError(f"Unknown component: {item_id}") from error
                 observed = next((membership for membership in definition["memberships"] if "inventoryId" in membership), None)
-                if observed is None:
-                    spec = definition.get("apm") or {}
-                    if spec.get("section") in {"apm", "mcp"} and "value" in spec:
-                        manifest_entries.setdefault(("dependencies", spec["section"]), []).append(spec["value"])
-                        continue
+                included = include_spec(definition.get("apm") or {})
+                if observed is None and not included:
                     raise StoreError(f"Component {item_id} has no reusable source. Add its source before including it.")
-                source_package = self.get(observed["presetId"])
-                source_item = next(row for row in source_package["appInventory"] if row["id"] == observed["inventoryId"])
-                # Keep the original observation ID and source; selections remain local to this preset.
-                copied = json.loads(json.dumps(source_item))
-                copied["definitionId"] = definition["canonicalId"]
-                source = source_coordinates(copied)
-                kind, host = kind_and_host(copied)
-                if source and kind in {"skill", "plugin"} and not source.get("path"):
-                    repository = source["repositoryUrl"]
-                    if urlsplit(repository).hostname == "github.com":
-                        repository = repository.lower()
-                    coordinates = (kind, host if kind == "plugin" else None, repository, source.get("ref"), source.get("path"))
-                    copied["definitionSourceKey"] = hashlib.sha256(json.dumps(coordinates).encode()).hexdigest()
-                inventory = model.setdefault(_INVENTORY, {"items": []})
-                existing = {row["id"]: row for row in inventory["items"]}
-                if copied["id"] in existing and identify(existing[copied["id"]], identifier)["canonicalId"] != definition["canonicalId"]:
-                    original_id = copied["id"]
-                    copied["id"] = original_id + "-" + definition["canonicalId"][-12:]
-                    suffix = 2
-                    while copied["id"] in existing and identify(existing[copied["id"]], identifier)["canonicalId"] != definition["canonicalId"]:
-                        copied["id"] = original_id + "-" + definition["canonicalId"][-12:] + "-" + str(suffix)
-                        suffix += 1
-                if copied["id"] not in existing:
-                    for field in ("canonicalId", "definitionSource", "sourceUrl"):
-                        copied.pop(field, None)
-                    inventory["items"].append(copied)
+                if observed is not None:
+                    self._copy_observations(identifier, model, definition, selected_set)
         for location, values in manifest_entries.items():
             parent = model if len(location) == 1 else model.setdefault(location[0], {})
             section = location[-1]

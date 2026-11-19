@@ -116,6 +116,27 @@ class NestedExportTests(unittest.TestCase):
             rows = target["preview"]["items"]
             self.assertCountEqual([row.get("conversion", row)["reason"] for row in rows], expectations)
 
+    def test_nested_cc_switch_parent_reference_uses_the_exported_parent_id_even_after_collision(self):
+        self.package("nested-parent", "stack", [], [
+            observed("child", "Nested child", "skill", {"codex": {**selection(True), "parentId": "tools", "scope": "plugin"}}),
+            observed("tools", "Nested parent", "plugin", {"codex": selection(False)}),
+            observed("unresolved", "Unresolved child", "skill", {"codex": {**selection(True), "parentId": "root-only"}}),
+        ])
+        self.package("with-parent", "preset", ["../nested-parent"], [
+            observed("tools", "Root parent", "plugin", {"codex": selection(True)}),
+            observed("nested-parent/tools", "Root collision", "plugin", {"codex": selection(True)}),
+            observed("root-only", "Unrelated parent", "plugin", {"codex": selection(True)}),
+        ])
+        switch = self.choices("with-parent")["ccswitch"]
+        report = json.loads(self.get("with-parent", switch["download"]))
+        rows = {row["name"]: row for row in report["items"]}
+        self.assertEqual(rows["Nested child"]["parentId"], rows["Nested parent"]["id"])
+        self.assertEqual(rows["Nested parent"]["status"], "excluded")
+        self.assertEqual(rows["Root parent"]["id"], "tools")
+        self.assertEqual(rows["Root collision"]["id"], "nested-parent/tools")
+        self.assertNotIn("parentId", rows["Unresolved child"])
+        self.assertEqual(len({row["id"] for row in rows.values()}), len(rows))
+
     def test_zip_preserves_distinct_local_skills_with_identical_paths_and_shared_remote_once(self):
         paperclip = self.choices()["paperclip"]
         with ZipFile(io.BytesIO(self.get("carrier", paperclip["download"]))) as archive:

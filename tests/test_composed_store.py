@@ -71,8 +71,47 @@ class ComposedStoreTests(unittest.TestCase):
         current = Store(self.private, base_root=self.base).get("shared")
         self.assertEqual(current["title"], "Private title")
         self.assertIn(".apm/skills/example/SKILL.md", [row["path"] for row in current["files"]])
+        generated = self.private / "exports/paperclip/shared/skills/example/SKILL.md"
+        self.assertTrue(generated.is_file(), "A title edit must keep the inherited skill exportable")
         with self.assertRaisesRegex(StoreError, "already exists"):
             store.create({"title": "Common"})
+
+    def test_export_uses_the_origin_of_the_entire_skill_directory(self):
+        from asm_app.exporters import EXPORTERS
+
+        private_repo = "example/private-kit"
+        base_repo = "kwonzweig/agent-stack-manager"
+        (self.private / "pyproject.toml").write_text(
+            f'[project.urls]\nRepository = "https://github.com/{private_repo}"\n', encoding="utf-8")
+        relative = Path(".apm/skills/example")
+        base_skill = self.stack.parent / relative
+        base_skill.mkdir(parents=True)
+        (base_skill / "SKILL.md").write_text("---\nname: example\n---\nRuns a check.\n", encoding="utf-8")
+        (base_skill / "sample.dat").write_bytes(b"\xff")
+
+        store = Store(self.private, base_root=self.base)
+        store.save("common", {"revision": store.get("common")["revision"], "title": "Private stack title"})
+        private_skill = self.private / "packages/common" / relative
+        exporter = EXPORTERS["paperclip"]
+
+        def downloaded_repo():
+            preset = store.get("personal-kit")
+            assessment = exporter.assess(preset, store)
+            data, _, _ = exporter.produce(preset, store, assessment.revision())
+            with ZipFile(io.BytesIO(data)) as archive:
+                stub = archive.read("skills/example/SKILL.md").decode()
+            return yaml.safe_load(stub.split("---", 2)[1])["metadata"]["sources"][0]["repo"]
+
+        self.assertEqual(downloaded_repo(), base_repo)
+        # Both binaries decode to the same replacement character. Compare their saved bytes.
+        (private_skill / "sample.dat").write_bytes(b"\xfe")
+        self.assertEqual(downloaded_repo(), private_repo)
+        (private_skill / "sample.dat").unlink()
+        self.assertEqual(downloaded_repo(), private_repo)
+        (private_skill / "sample.dat").write_bytes(b"\xff")
+        (private_skill / "private.dat").write_bytes(b"extra")
+        self.assertEqual(downloaded_repo(), private_repo)
+        self.assertEqual((base_skill / "sample.dat").read_bytes(), b"\xff")
 
     def test_exports_expand_a_base_stack_inside_a_private_preset(self):
         store = Store(self.private, base_root=self.base)

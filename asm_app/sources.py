@@ -65,7 +65,8 @@ def _plan(item):
         file = path if PurePosixPath(path).name == "SKILL.md" else str(PurePosixPath(path, "SKILL.md"))
         plan["file"] = (f"file:{repository}@{ref}:{file}", raw + quote(file), page + quote(file))
         plan["installs"] = (f"skills.sh:{repository}", f"https://skills.sh/api/search?q={quote(repository)}&limit=100")
-    elif item["kind"] == "plugin" and path and item.get("bodyAllowed", bool(source.get("ref"))):
+    elif (item["kind"] == "plugin" and path and item.get("pluginHost") in {"codex", "claude"}
+          and item.get("bodyAllowed", bool(source.get("ref")))):
         manifest = ".codex-plugin" if item.get("pluginHost") == "codex" else ".claude-plugin"
         file = path if PurePosixPath(path).name == "plugin.json" else str(PurePosixPath(path, manifest, "plugin.json"))
         plan["file"] = (f"file:{repository}@{ref}:{file}", raw + quote(file), page + quote(file))
@@ -145,16 +146,18 @@ class SourceReader:
                         cache[key] = answer
             return bool(stale)
 
-        candidates = {item["id"] for item in items if item.get("sourceAccess") == "verify" and not item.get("remoteApproved")}
-        native_ids = candidates | {item["id"] for item in items if item.get("sourceAccess") == "public"}
-        native_urls = {plans[key]["repository"][0]: plans[key]["repository"][1] for key in native_ids if key in plans}
-        changed = refresh(native_urls)
-        for key in candidates & plans.keys():
-            if cache.get(plans[key]["repository"][0], {}).get("visibility") != "public":
-                plans[key] = {"repository": plans[key]["repository"]}
+        candidates = {item["id"] for item in items if item.get("sourceAccess") in {"public", "verify"}}
+        repository_urls = {plan["repository"][0]: plan["repository"][1] for plan in plans.values()}
+        changed = refresh(repository_urls)
+        denied = {key for key in plans if cache.get(plans[key]["repository"][0], {}).get("visibility") == "private"}
+        denied.update(key for key in candidates & plans.keys()
+                      if plans[key]["repository"][0] in errors or
+                      cache.get(plans[key]["repository"][0], {}).get("visibility") != "public")
+        for key in denied:
+            plans[key] = {"repository": plans[key]["repository"]}
         resolved_refs = {}
         by_id = {item["id"]: item for item in items}
-        for key in native_ids & plans.keys():
+        for key in plans.keys() - denied:
             item = by_id[key]
             repository = cache.get(plans[key]["repository"][0], {})
             if (repository.get("visibility") == "public" and repository.get("defaultRef")
@@ -185,9 +188,9 @@ class SourceReader:
             if item["id"] in resolved_refs:
                 facts["sourceResolvedRef"] = resolved_refs[item["id"]]
             repository = cache.get(plan["repository"][0])
-            if item["id"] in candidates and (not repository or repository.get("visibility") != "public"):
+            if item["id"] in denied:
                 reason = ("GitHub identifies this repository as private. Its source and metrics were not requested."
-                          if repository and repository.get("visibility") == "private" else
+                          if repository and repository.get("visibility") == "private" and plan["repository"][0] not in errors else
                           "The repository visibility check failed. Its source and metrics are unavailable."
                           if plan["repository"][0] in errors else
                           "The repository's public visibility is unverified. Its source and metrics are unavailable.")

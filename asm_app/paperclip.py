@@ -96,12 +96,31 @@ def _github_source(repository, path, ref):
     return {"kind": "github-dir", "repo": repo, "path": folder, "trackingRef": ref, "url": url}, None
 
 
-def _skill_source(component, owner, root):
+def _inherited_skill(store, owner, file, snapshots):
+    base = store.base_root
+    manifest = store._directory(owner, root=base) / "apm.yml"
+    if owner not in snapshots:
+        snapshots[owner] = (
+            (store._snapshot(owner, root=store.root), store._snapshot(owner, root=base))
+            if store._checked(manifest, root=base).is_file() else None
+        )
+    pair = snapshots[owner]
+    if pair is None:
+        return False
+    prefix = PurePosixPath(file).parent.as_posix() + "/"
+    private, original = ({name: data for name, data in snapshot.items() if name.startswith(prefix)} for snapshot in pair)
+    return file in original and private == original
+
+
+def _skill_source(component, owner, store, snapshots):
     file = component.get("file")
     if file:
         # The preset's own skill, committed in this repository under packages/<owner>/.
         if PurePosixPath(file).name != "SKILL.md" or len(file.split("/")) < 4:
             return None, "A skill in the package needs its own folder with a SKILL.md."
+        root = store._package_root(owner)
+        if store.base_root is not None and root == store.root and _inherited_skill(store, owner, file, snapshots):
+            root = store.base_root
         repository = _repository(root)
         if not repository:
             return None, "Set project.urls.Repository in pyproject.toml to this repository's GitHub URL."
@@ -157,7 +176,7 @@ def _report(package, store):
     is_preset = package.get("kind", "preset") == "preset"
     packages, members = export_graph.expand(package, store, include_empty_instruction=is_preset)
     items, skills = [], []
-    seen = {}
+    seen, snapshots = {}, {}
     instruction_path = f"agents/{package['id']}/AGENTS.md"
 
     for member in members:
@@ -183,7 +202,7 @@ def _report(package, store):
         elif kind == "instruction":
             reason = "Paperclip takes one Instruction per agent; merge it into the Instruction."
         elif kind == "skill":
-            stub, reason = _skill_source(component, member.owner, store._package_root(member.owner))
+            stub, reason = _skill_source(component, member.owner, store, snapshots)
         elif kind == "mcp":
             reason = _because("Paperclip's company package has no MCP entry; "
                               "set it in the agent's adapter after import.", "adapter")

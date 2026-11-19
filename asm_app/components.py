@@ -39,7 +39,11 @@ def source_coordinates(row):
     repository = source.get("repositoryUrl")
     if not repository:
         return None
+    repository = re.sub(r"^git@github\.com:", "https://github.com/", repository, flags=re.IGNORECASE)
     parsed = urlsplit(repository)
+    if parsed.scheme == "ssh" and parsed.hostname == "github.com" and parsed.username == "git" and not parsed.password:
+        repository = f"https://github.com{parsed.path}"
+        parsed = urlsplit(repository)
     if parsed.scheme not in {"https", "http"} or not parsed.hostname or parsed.username or parsed.password:
         return None
     if parsed.query or parsed.fragment:
@@ -49,7 +53,7 @@ def source_coordinates(row):
         parts = parsed.path.strip("/").split("/")
         if len(parts) < 2:
             return None
-        repository = f"{parsed.scheme}://github.com/{parts[0]}/{parts[1].removesuffix('.git')}"
+        repository = f"https://github.com/{parts[0]}/{parts[1].removesuffix('.git')}"
         if len(parts) > 3 and parts[2] in {"tree", "blob"}:
             tail = "/".join(parts[3:])
             ref = source.get("ref")
@@ -74,8 +78,10 @@ def source_url(source):
     if not source:
         return None
     repository, path, ref = (source.get(key) for key in ("repositoryUrl", "path", "ref"))
-    if path and ref and urlsplit(repository).hostname == "github.com":
-        return f"{repository}/blob/{quote(ref, safe='')}/{quote(path)}"
+    host = urlsplit(repository).hostname
+    if path and ref and host in {"github.com", "gitlab.com"}:
+        prefix = "/-/blob/" if host == "gitlab.com" else "/blob/"
+        return f"{repository}{prefix}{quote(ref, safe='')}/{quote(path)}"
     return repository
 
 
@@ -93,7 +99,7 @@ def identify(row, namespace):
             if (row.get("definitionSourceKey") == source_key and isinstance(row.get("definitionId"), str)
                     and re.fullmatch(r"component-[a-f0-9]{64}", row["definitionId"])):
                 return {"canonicalId": row["definitionId"], "source": source, "pluginHost": host,
-                        "sourceUrl": row.get("sourceUrl") or source_url(source)}
+                        "sourceUrl": source_url(source)}
             coordinates += (namespace, row["id"])
     else:
         locators = []
@@ -111,4 +117,4 @@ def identify(row, namespace):
                        if locators else (kind, identity_host, namespace, row["id"]))
     digest = hashlib.sha256(json.dumps(coordinates, ensure_ascii=True).encode()).hexdigest()
     return {"canonicalId": "component-" + digest, "source": source, "pluginHost": host,
-            "sourceUrl": row.get("sourceUrl") or source_url(source)}
+            "sourceUrl": source_url(source) if source else row.get("sourceUrl")}

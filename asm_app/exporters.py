@@ -67,14 +67,25 @@ def _assess_cc_switch(package, store):
 
     identifiers = {item["id"] for item in package.get("appInventory", [])}
     for owner, current in packages.items():
-        for item in current.get("appInventory", []):
-            if owner != package["id"]:
-                identifier = f"{owner}/{item['id']}"
-                while identifier in identifiers:
-                    identifier = f"stack/{identifier}"
-                identifiers.add(identifier)
-                item = {**item, "id": identifier, "originPackage": export_graph.origin(current)}
-            inventory.append(item)
+        observations = current.get("appInventory", [])
+        if owner == package["id"]:
+            inventory.extend(observations)
+            continue
+
+        scoped_ids = {}
+        for item in observations:
+            identifier = f"{owner}/{item['id']}"
+            while identifier in identifiers:
+                identifier = f"stack/{identifier}"
+            identifiers.add(identifier)
+            scoped_ids[item["id"]] = identifier
+        for item in observations:
+            apps = {}
+            for app, state in item["apps"].items():
+                parent_id = state.get("parentId")
+                apps[app] = {**state, "parentId": scoped_ids.get(parent_id)} if isinstance(parent_id, str) else state
+            inventory.append({**item, "apps": apps, "id": scoped_ids[item["id"]],
+                              "originPackage": export_graph.origin(current)})
     if not inventory:
         return Assessment({"items": native}, None, "This preset has no app inventory.")
     review = cc_switch.convert({**package, "appInventory": inventory})

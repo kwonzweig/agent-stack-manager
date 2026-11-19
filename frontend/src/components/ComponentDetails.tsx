@@ -86,7 +86,7 @@ export function ComponentDetails({ item: initialItem, presetId, backLabel, onClo
   instruction?: string; onInstruction?: (value: string) => void; onBrowseStack?: () => void;
   membership?: ReactNode | ((definition: ComponentDefinition) => ReactNode);
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(() => Boolean(onInstruction && !instruction?.trim()));
   const [definition, setDefinition] = useState<ComponentDefinition>();
   const [sourceError, setSourceError] = useState("");
   const [enriching, setEnriching] = useState(false);

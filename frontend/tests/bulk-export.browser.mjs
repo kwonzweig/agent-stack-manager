@@ -40,7 +40,7 @@ async function writeFixture(root) {
     const manifest = join(root, "packages", id);
     const instructions = join(manifest, ".apm", "agents");
     await mkdir(instructions, { recursive: true });
-    await writeFile(join(instructions, `${id}.agent.md`), `Synthetic primary instruction for ${id}.\n`);
+    await writeFile(join(instructions, `${id}.agent.md`), id === mixed ? "" : `Synthetic primary instruction for ${id}.\n`);
     await writeFile(join(manifest, "apm.yml"), JSON.stringify({
       name: id, dependencies: { apm, hooks: [{ name: "watchdog" }] },
       "x-app-inventory": items && { items },
@@ -231,6 +231,10 @@ async function runBrowser(base, root) {
     await count(2);
     await assertChecked(["Readiness prompt", "Readiness MCP"]);
     await button("Include in preset").click();
+    await button("Add instruction").click();
+    const instructionEditor = page.getByRole("dialog", { name: "Instruction" });
+    await instructionEditor.getByRole("textbox", { name: "Instruction" }).fill(`Synthetic primary instruction for ${mixed}.\n`);
+    await instructionEditor.getByRole("button", { name: /^Back to / }).click();
     assert.deepEqual(patches, [], "Bulk edits must wait for Save changes");
     assert.equal((await preset(mixed)).revision, initial.revision);
     const lookup = (report, id, app) => report.items.find(item => item.id === id && item.app === app);

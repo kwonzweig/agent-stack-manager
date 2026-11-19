@@ -39,7 +39,7 @@ A **component** is an individual configuration item. A **stack** groups componen
 
 1. Open **Catalog** to search and inspect a component's source and details.
 2. Choose **New preset** in the sidebar, enter a name, and press **Create**. Choose **Stack** in the Type field instead when building a reusable group.
-3. Open **Add components**, choose components or stacks, and add them to the draft. Open **Instruction** to edit the role's instruction.
+3. Open **Add components**, choose components or stacks, and add them to the draft. Open **Instruction** to edit the role's instruction. A captured preset with an empty instruction shows **Add instruction** in the toolbar.
 4. Press **Save changes**. Open **Source files** to inspect the saved package, or **Export** to review the saved revision's target results and downloads.
 
 Changes made inside a preset remain a draft until saved. Adding from the Catalog directly to an existing preset saves immediately. Each save updates `packages/<id>/apm.yml` and generated Paperclip files under `exports/paperclip/<id>/`; review and commit these files with Git.

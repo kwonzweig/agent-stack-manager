@@ -137,12 +137,14 @@ export function PresetContents({ draft, facts, onOpen, onAdd, onSetIncluded, bus
   const [selectMode, setSelectMode] = useState(false);
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const noun = draft.kind === "stack" ? "stack" : "preset";
-  const instruction: Component = { ...draft.original.components.find(item => item.id === "instruction"),
+  const savedInstruction = draft.original.instruction.trim() ? draft.original.components.find(item => item.id === "instruction") : undefined;
+  const instruction: Component = { ...savedInstruction,
     id: "instruction", name: "Instruction", kind: "instruction",
     description: draft.instruction ? draft.instruction.replace(/\s+/g, " ").trim() : `Add instructions for this ${noun}.`,
     configuration: draft.instruction };
+  const showInstruction = !draft.original.appInventory || Boolean(draft.instruction.trim());
   const all = [
-    ...(!draft.original.appInventory || draft.instruction.trim() ? [instruction] : []),
+    ...(showInstruction ? [instruction] : []),
     ...withSourceFacts(presetMembers(draft), facts),
   ];
   const kinds = KINDS.filter(type => all.some(item => item.kind === type));
@@ -179,6 +181,7 @@ export function PresetContents({ draft, facts, onOpen, onAdd, onSetIncluded, bus
             <CheckSquare className="h-4 w-4" />
           </button>
         </div>
+        {!showInstruction && <button type="button" className="app-toolbar-button" onClick={() => onOpen(instruction)} disabled={busy}>Add instruction</button>}
         <button type="button" className="app-toolbar-button app-toolbar-button-primary disabled:opacity-50"
           onClick={onAdd} disabled={busy}><Plus className="h-3.5 w-3.5" /> Add components</button>
       </div>

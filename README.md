@@ -47,8 +47,9 @@ Not built yet: export for Claude Code, Codex and CC Switch, and importing their 
 - **CAO** ([package](packages/cao), [export](exports/paperclip/cao)): takes the human's request and delegates it.
 - **AI Resources** ([package](packages/ar), [export](exports/paperclip/ar)): researches, builds and hires roles as presets in ASM.
 - **Web app engineer** ([package](packages/web-app-engineer), [export](exports/paperclip/web-app-engineer)): builds and reviews web apps.
+- **Claude Code Discord Bridge for Paperclip** ([package](packages/claude-code-discord-bridge-for-paperclip), [export](exports/paperclip/claude-code-discord-bridge-for-paperclip)): a Claude Code session that runs as a Discord bot, manages the Paperclip companies on its machine and delegates each request to them.
 
-Each package lists its members, and the dashboard's Export tab counts them. CAO also holds a Stop hook that echoes one line and Anthropic's `session-report` plugin, a report of Claude Code session and subagent usage. Web app engineer holds a SessionStart hook that reminds the agent to check the project's build and test commands, and Anthropic's `frontend-design` plugin. The Paperclip export lists these hooks and plugins as left out.
+Each package lists its members, and the dashboard's Export tab counts them. CAO also holds a Stop hook that echoes one line and Anthropic's `session-report` plugin, a report of Claude Code session and subagent usage. Web app engineer holds a SessionStart hook that reminds the agent to check the project's build and test commands, and Anthropic's `frontend-design` plugin. Claude Code Discord Bridge for Paperclip holds Anthropic's `discord` plugin, which connects a Claude Code session to a Discord server. The Paperclip export lists these hooks and plugins as left out.
 
 ## What ASM is not
 

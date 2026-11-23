@@ -1,0 +1,18 @@
+name: claude-code-discord-bridge-for-paperclip
+version: 0.1.0
+description: Run as a Discord bot that manages the Paperclip companies on its machine
+  and delegates each request to them.
+dependencies:
+  apm:
+  - git: https://github.com/paperclipai/paperclip.git
+    ref: master
+    path: skills/paperclip-board
+  - name: discord
+    marketplace: claude-plugins-official
+  mcp: []
+x-preset-labels:
+  title: Claude Code Discord Bridge for Paperclip
+  kind: preset
+  workArea: []
+  usage: []
+  icon: bot

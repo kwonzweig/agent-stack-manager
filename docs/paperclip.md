@@ -9,6 +9,8 @@
 | `.paperclip.yaml` | Role `general`, heartbeat off, and `metadata.agentStackManagerPackageId` and `agentStackManagerRevision`. No adapter and no permissions. |
 | `skills/<key>/SKILL.md` | One stub per skill: repository, path and branch, no commit. |
 
+ASM writes skill stubs for GitHub repositories with a tracking branch. The Paperclip skill library also supports importing skills from approved local paths. [Paperclip skills documentation](https://github.com/paperclipai/paperclip-docs/blob/main/docs/guides/org/skills.md#3-import-from-a-local-file-or-folder)
+
 A preset holds nothing for one app alone, so the export takes no role or right from it. Every agent gets the role `general`, because Paperclip stores a role outside its own list when a package names none, and no permissions. Whoever imports gives the company what it needs in Paperclip (step 5 below).
 
 ## Import a preset

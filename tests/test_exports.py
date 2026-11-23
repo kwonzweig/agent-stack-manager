@@ -74,7 +74,7 @@ class ExportFolderTests(unittest.TestCase):
                               "  - git: https://gitlab.com/example/kit.git\n    ref: main\n    path: skills/x\n")
         code, output = run(self.root)
         self.assertEqual(code, 1)
-        self.assertIn("needs attention: x (skill): Paperclip imports skills from GitHub only.", output)
+        self.assertIn("needs attention: x (skill): ASM's Paperclip export requires a GitHub repository for this skill.", output)
         self.assertTrue((self.exports / "loose" / "COMPANY.md").is_file())
 
     def test_check_passes_on_a_current_export(self):

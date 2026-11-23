@@ -11,6 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 # A 40-hex commit, an npm version after a package name, or a version tag used as a ref.
 PINNED = re.compile(r"""\b[0-9a-f]{40}\b|@\d+\.\d+\.\d+|"?ref"?: "?v?\d+\.\d+[\w.-]*""")
 BRANCH = "main"
+# The repositories whose default branch has another name, by the address repository() gives.
+DEFAULT_BRANCHES = {"https://github.com/paperclipai/paperclip": "master"}
+
+
+def default_branch(git_url):
+    return DEFAULT_BRANCHES.get(repository(git_url), BRANCH)
 
 
 def apm_dependencies(text):
@@ -25,10 +31,11 @@ def pinned_dependencies(text):
     found = []
     for entry in apm_dependencies(text):
         git = _git(entry)
+        branch = default_branch(git["git"]) if git else BRANCH
         if isinstance(entry, dict):
-            pinned = "version" in entry or bool(git) and entry.get("ref", BRANCH) != BRANCH
+            pinned = "version" in entry or bool(git) and entry.get("ref", branch) != branch
         else:
-            pinned = bool(git) and (git["ref"] or BRANCH) != BRANCH
+            pinned = bool(git) and (git["ref"] or branch) != branch
         if pinned:
             found.append(entry)
     return found
@@ -56,6 +63,14 @@ class RemoteFirstTests(unittest.TestCase):
                 found = pinned_dependencies(text.replace("  apm:\n", f"  apm:\n  - {line}\n", 1))
                 self.assertEqual(found, [line] if caught else [])
 
+    def test_a_repository_with_another_default_branch_follows_that_branch(self):
+        text = (ROOT / "packages" / "ar" / "apm.yml").read_text(encoding="utf-8")
+        for ref, caught in (("#master", False), ("", False), ("#main", True), ("#v1.0", True)):
+            line = f"paperclipai/paperclip/skills/paperclip-board{ref}"
+            with self.subTest(entry=line):
+                found = pinned_dependencies(text.replace("  apm:\n", f"  apm:\n  - {line}\n", 1))
+                self.assertEqual(found, [line] if caught else [])
+
     def test_catalog_sources_and_links_follow_the_default_branch(self):
         catalog = json.loads((ROOT / "catalog" / "components.json").read_text(encoding="utf-8"))
         for row in catalog["items"]:
@@ -63,7 +78,8 @@ class RemoteFirstTests(unittest.TestCase):
                 value = row["apm"].get("value")
                 if isinstance(value, dict):
                     self.assertNotIn("version", value)
-                    self.assertIn(value.get("ref", BRANCH), (BRANCH,))
+                    branch = default_branch(value["git"]) if isinstance(value.get("git"), str) else BRANCH
+                    self.assertIn(value.get("ref", branch), (branch,))
                 if row.get("source"):
                     self.assertEqual(row["source"]["ref"], BRANCH)
                 if row.get("sourceUrl") and "/blob/" in row["sourceUrl"]:

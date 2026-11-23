@@ -548,6 +548,37 @@
         "path": ".apm/hooks/cao-stop.json",
         "content": "{\n  \"hooks\": {\n    \"Stop\": [\n      {\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"echo \\\"CAO preset stop event\\\"\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
       }
+    },
+    {
+      "id": "paperclip-board",
+      "name": "paperclip-board",
+      "kind": "skill",
+      "apm": {
+        "section": "apm",
+        "value": {
+          "git": "https://github.com/paperclipai/paperclip.git",
+          "ref": "master",
+          "path": "skills/paperclip-board"
+        }
+      }
+    },
+    {
+      "id": "discord",
+      "name": "discord",
+      "kind": "plugin",
+      "sourceUrl": "https://github.com/anthropics/claude-plugins-official/blob/main/external_plugins/discord/.claude-plugin/plugin.json",
+      "source": {
+        "repositoryUrl": "https://github.com/anthropics/claude-plugins-official",
+        "path": "external_plugins/discord",
+        "ref": "main"
+      },
+      "apm": {
+        "section": "apm",
+        "value": {
+          "name": "discord",
+          "marketplace": "claude-plugins-official"
+        }
+      }
     }
   ]
 }

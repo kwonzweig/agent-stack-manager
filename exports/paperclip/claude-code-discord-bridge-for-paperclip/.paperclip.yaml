@@ -1,0 +1,10 @@
+schemaVersion: 7
+agents:
+  claude-code-discord-bridge-for-paperclip:
+    role: general
+    runtime:
+      heartbeat:
+        enabled: false
+    metadata:
+      agentStackManagerPackageId: claude-code-discord-bridge-for-paperclip
+      agentStackManagerRevision: 3e58ffc863b4375d8cf3037a0de8a8e96db872b99ad80b04c26b3387fc0657ba

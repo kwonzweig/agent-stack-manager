@@ -46,25 +46,7 @@ def _assess_paperclip(package, store):
 
 def _assess_cc_switch(package, store):
     packages, members = export_graph.expand(package, store)
-    native, inventory = [], []
-    for member in members:
-        row = member.component
-        if row.get("managedByInventory"):
-            continue
-        unsupported = row["kind"] in cc_switch.UNSUPPORTED_KINDS
-        result = {field: row[field] for field in ("id", "name", "kind")}
-        if member.owner != package["id"]:
-            result.update(id=f"{member.owner}/{row['id']}", originPackage=export_graph.origin(packages[member.owner]))
-        if member.error:
-            status, reason = "unsupported", member.error
-        elif member.dependency:
-            status, reason = "manual", "The review lists this stack's members separately."
-        elif unsupported:
-            status, reason = "unsupported", cc_switch.UNSUPPORTED_REASON
-        else:
-            status, reason = "manual", "No Codex or Claude Code selection is recorded for this APM component."
-        native.append({**result, "status": status, "reason": reason})
-
+    inventory = []
     identifiers = {item["id"] for item in package.get("appInventory", [])}
     for owner, current in packages.items():
         observations = current.get("appInventory", [])
@@ -86,12 +68,34 @@ def _assess_cc_switch(package, store):
                 apps[app] = {**state, "parentId": scoped_ids.get(parent_id)} if isinstance(parent_id, str) else state
             inventory.append({**item, "apps": apps, "id": scoped_ids[item["id"]],
                               "originPackage": export_graph.origin(current)})
-    if not inventory:
-        return Assessment({"items": native}, None, "This preset has no app inventory.")
-    review = cc_switch.convert({**package, "appInventory": inventory})
-    if native:
-        review["unassignedItems"] = native
-    return Assessment({"items": review["items"] + native}, review)
+    authored, unassigned = [], []
+    for member in members:
+        row = member.component
+        if row.get("managedByInventory"):
+            continue
+        result = {field: row[field] for field in ("id", "name", "kind")}
+        if member.owner != package["id"]:
+            result.update(id=f"{member.owner}/{row['id']}", originPackage=export_graph.origin(packages[member.owner]))
+        while result["id"] in identifiers:
+            result["id"] = f"apm/{result['id']}"
+        identifiers.add(result["id"])
+        if member.error:
+            status, reason = "unsupported", member.error
+        elif member.dependency:
+            status, reason = "manual", "The review lists this stack's members separately."
+        elif row.get("appSelections"):
+            authored.append((row, result))
+            continue
+        elif row["kind"] in cc_switch.UNSUPPORTED_KINDS:
+            status, reason = "unsupported", cc_switch.UNSUPPORTED_REASON
+        else:
+            status, reason = "manual", "No Codex or Claude Code selection is recorded for this APM component."
+        unassigned.append({**result, "status": status, "reason": reason})
+
+    review = cc_switch.convert({**package, "appInventory": inventory}, authored)
+    if unassigned:
+        review["unassignedItems"] = unassigned
+    return Assessment({"items": review["items"] + unassigned}, review)
 
 
 @dataclass(frozen=True)

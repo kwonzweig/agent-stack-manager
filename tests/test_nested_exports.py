@@ -112,7 +112,7 @@ class NestedExportTests(unittest.TestCase):
         self.package("loop", "stack", ["../missing", "../loop"])
         expectations = ("Local stack missing could not be read.", "Stack dependency cycle at loop.")
         for target in self.choices("loop").values():
-            self.assertFalse(target["available"])
+            self.assertEqual(target["available"], target["id"] == "ccswitch")
             rows = target["preview"]["items"]
             self.assertCountEqual([row.get("conversion", row)["reason"] for row in rows], expectations)
 

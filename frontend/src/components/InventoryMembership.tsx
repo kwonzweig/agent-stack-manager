@@ -3,7 +3,17 @@ import { inventorySelection, type Draft } from "../draft";
 import type { InventoryApp, InventoryItem, InventorySelection } from "../types";
 import { observationAppName } from "../lib/componentLocation";
 
-const apps = [["codex", "Codex"], ["claude", "Claude Code"]] as const;
+export const apps = [["codex", "Codex"], ["claude", "Claude Code"]] as const;
+
+export function AppMembershipSelect({ name, chosen, onSelect }: {
+  name: string; chosen: InventorySelection; onSelect: (selection: InventorySelection) => void;
+}) {
+  return <select className="app-input min-h-7 max-w-full" aria-label={`${name} preset membership`}
+    value={chosen === null ? "" : String(chosen)}
+    onChange={event => onSelect(event.target.value === "" ? null : event.target.value === "true")}>
+    <option value="true">Included</option><option value="false">Excluded</option><option value="">Not set</option>
+  </select>;
+}
 
 function Observation({ value, labels }: { value: boolean | null; labels: [string, string, string] }) {
   const Icon = value === true ? Check : value === false ? Minus : CircleHelp;
@@ -21,8 +31,8 @@ export function InventoryMembership({ draft, item, onSelect }: {
     <div className="values sm:grid-cols-2">
       {apps.map(([app]) => {
         const observation = item.apps[app];
-        const chosen = inventorySelection(draft, item, app);
         if (!observation) return null;
+        const chosen = inventorySelection(draft, item, app) ?? null;
         const name = observationAppName(app, observation);
         return <section className="app-panel p-3 text-[13px]" key={app} aria-label={name}>
           <h4 className="font-semibold text-primary">{name}</h4>
@@ -31,11 +41,7 @@ export function InventoryMembership({ draft, item, onSelect }: {
             <dt className="text-muted">Activity</dt><dd><Observation value={observation.enabled} labels={["Enabled", "Disabled", "Unknown"]} /></dd>
             {observation.scope && <><dt className="text-muted">Scope</dt><dd className="break-words text-secondary">{observation.scope}</dd></>}
             <dt className="text-muted">Preset</dt><dd>
-              <select className="app-input min-h-7 max-w-full" aria-label={`${name} preset membership`}
-                value={chosen === null ? "" : String(chosen)}
-                onChange={event => onSelect(app, event.target.value === "" ? null : event.target.value === "true")}>
-                <option value="true">Included</option><option value="false">Excluded</option><option value="">Not set</option>
-              </select>
+              <AppMembershipSelect name={name} chosen={chosen} onSelect={selection => onSelect(app, selection)} />
             </dd>
           </dl>
         </section>;

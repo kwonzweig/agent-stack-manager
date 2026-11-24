@@ -286,6 +286,15 @@ async function runBrowser(base, root) {
     await download("Download Paperclip package", `${mixed}-paperclip.zip`);
 
     await open(curated);
+    await button("native-keep").click();
+    const nativeDetail = page.getByRole("dialog", { name: "native-keep" });
+    const codexChoice = nativeDetail.getByRole("combobox", { name: "Codex preset membership" });
+    const claudeChoice = nativeDetail.getByRole("combobox", { name: "Claude Code preset membership" });
+    await codexChoice.selectOption("true");
+    await claudeChoice.selectOption("false");
+    assert.equal(await nativeDetail.getByText("Install", { exact: true }).count(), 0);
+    assert.equal(await nativeDetail.getByText("Activity", { exact: true }).count(), 0);
+    await nativeDetail.getByRole("button", { name: /^Back to / }).click();
     await button("Select components").click();
     await search.fill("native-drop-");
     await check("native-keep").waitFor({ state: "hidden" });
@@ -299,11 +308,19 @@ async function runBrowser(base, root) {
     assert.equal(await button("native-drop-b").count(), 0);
     await page.getByRole("link", { name: "Export", exact: true }).click();
     await target("Paperclip").click();
-    const unavailable = await api(`${presetPath(curated)}/cc-switch`, 400);
-    assert.equal(await target("CC Switch").count(), 0);
-    await page.getByText("CC Switch unavailable", { exact: true }).click();
-    await page.getByText(unavailable.error, { exact: true }).waitFor();
     await download("Download Paperclip package", `${curated}-paperclip.zip`);
+    await target("CC Switch").click();
+    const nativeFile = await download("Download CC Switch review", `${curated}-cc-switch.json`);
+    const authored = JSON.parse(await readFile(nativeFile, "utf8"));
+    assert.deepEqual(authored, await review(curated));
+    assert.deepEqual(authored, JSON.parse(execFileSync(python,
+      ["-B", "-m", "asm_app", "--root", root, "cc-switch", curated], { cwd: repo, encoding: "utf8" })));
+    assert.equal((await preset(curated)).appInventory, undefined);
+    assert.deepEqual(authored.items.map(row => [row.name, row.app, row.status]), [
+      ["native-keep", "codex", "registration-only"], ["native-keep", "claude", "excluded"],
+    ]);
+    assert.ok(authored.items.every(row => !("installed" in row) && !("enabled" in row)));
+    assert.equal(authored.skillRepositories[0].directory, "skills/native-keep");
 
     execFileSync(python, ["-B", fileURLToPath(new URL("./assert-paperclip.py", import.meta.url)), root, mixed, curated]);
     assert.deepEqual(patches, allowedPatches);

@@ -1,4 +1,4 @@
-"""Build a CC Switch review report from saved inventory without touching any app."""
+"""Build a CC Switch review from saved selections and portable configuration."""
 import base64
 import json
 import re
@@ -7,6 +7,8 @@ from urllib.parse import quote, urlencode, urlsplit
 
 UNSUPPORTED_KINDS = {"hook", "plugin", "claude-code-plugin", "codex-plugin", "connector"}
 UNSUPPORTED_REASON = "CC Switch does not manage this component."
+_GLOBAL_SCOPES = (None, "user", "global", "user-global")
+_REGISTRATION = ("registration-only", "The link adds the skill repository. Install or enable the skill separately.")
 _REPO_PART = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9._-]*")
 
 
@@ -41,16 +43,14 @@ def _registration(item):
             **({"directory": directory} if directory else {}), "url": url}
 
 
-def _portable_link(item, app, state):
-    # Only explicit payloads are portable. Observed configuration never becomes a payload.
-    portable = state.get("portable")
+def _portable_link(item, app, portable):
     if not isinstance(portable, dict):
         return None
     if item["kind"] in {"instruction", "prompt"} and set(portable) == {"prompt"}:
         prompt = portable["prompt"]
         if isinstance(prompt, str) and prompt.strip():
             return _link(resource="prompt", app=app, name=item["name"], content=_encoded(prompt), enabled="false")
-    if item["kind"] != "mcp" or state["enabled"] is not True or set(portable) != {"mcp"}:
+    if item["kind"] != "mcp" or set(portable) != {"mcp"}:
         return None
     mcp = portable["mcp"]
     if not isinstance(mcp, dict) or set(mcp) != {"name", "url"}:
@@ -71,11 +71,89 @@ def _portable_link(item, app, state):
     return _link(resource="mcp", apps=app, config=_encoded(json.dumps({"mcpServers": {name: {"url": url}}})))
 
 
-def convert(package):
-    if "appInventory" not in package:
-        raise ValueError("This preset has no app inventory.")
+def _import_link(row, portable, mcp_imports):
+    if not (url := _portable_link(row, row["app"], portable)):
+        return None
+    row["url"] = url
+    if row["kind"] == "mcp":
+        mcp = portable["mcp"]
+        row["targetId"] = mcp["name"]
+        mcp_imports.setdefault(mcp["name"], []).append((row, mcp["url"]))
+    return "import-ready", "Review and import this configuration in CC Switch."
+
+
+def _authored_skill(item):
+    source = item.get("source") or {}
+    repository = source.get("repositoryUrl") or ""
+    match = re.fullmatch(r"https://github\.com/([^/]+)/([^/]+)", repository, re.IGNORECASE)
+    if not match:
+        return None, "Provide a GitHub skill repository to register this skill in CC Switch."
+    branch = source.get("ref")
+    if not branch:
+        return None, "Provide a branch to register this skill in CC Switch."
+    path = source.get("path")
+    if not path:
+        return None, "The APM dependency does not identify this skill's SKILL.md."
+    directory = path.removesuffix("SKILL.md").rstrip("/") or None
+    registration = _registration({"skillRepository": {
+        "owner": match[1], "repo": match[2], "branch": branch, "directory": directory,
+    }})
+    return registration, "The skill repository or directory cannot be represented by a CC Switch link."
+
+
+def _authored_portable(item):
+    config = item.get("configuration")
+    if item["kind"] == "prompt":
+        if isinstance(config, str) and config.lstrip().partition("\n")[0].rstrip() != "---":
+            return {"prompt": config}, "The package prompt is empty."
+        return None, "Apply this prompt using its file and front matter."
+    if not isinstance(config, dict) or not config.get("url"):
+        return None, "This MCP server has no standalone HTTPS endpoint. Configure it in the app."
+    if config.get("scope") not in _GLOBAL_SCOPES:
+        return None, "CC Switch imports into the app's global configuration. Apply this MCP server at its declared scope."
+    if (set(config) - {"name", "url", "registry", "transport", "scope"} or
+            config.get("registry", False) is not False or
+            config.get("transport") not in (None, "http", "streamable-http")):
+        return None, "This MCP server requires additional settings. Configure it in the app."
+    return {"mcp": {key: config.get(key) for key in ("name", "url")}}, "The MCP name or HTTPS endpoint is not portable."
+
+
+def _authored_rows(item, projected, registrations, mcp_imports):
+    kind = item["kind"]
+    path = item.get("file") or ""
+    if kind == "other" and path.startswith(".apm/prompts/") and path.endswith(".md"):
+        kind = "prompt"
+    if kind == "skill":
+        registration, skill_reason = _authored_skill(item)
+        if registration:
+            projected = {**projected, "source": f"https://github.com/{registration['owner']}/{registration['repo']}",
+                         "sourcePath": item["source"]["path"], "sourceRef": registration["branch"]}
+    for app, selected in item["appSelections"].items():
+        row = {**projected, "kind": kind, "app": app, "selected": selected}
+        if not selected:
+            status, reason = "excluded", "Excluded from the preset for this app."
+        elif kind in UNSUPPORTED_KINDS:
+            status, reason = "unsupported", UNSUPPORTED_REASON
+        elif kind == "skill":
+            status, reason = "manual", skill_reason
+            if registration:
+                status, reason = _REGISTRATION
+                registrations[registration["url"]] = registration
+                row["skillRepository"] = registration
+        elif kind in {"prompt", "mcp"}:
+            portable, reason = _authored_portable({**item, "kind": kind})
+            status, reason = _import_link(row, portable, mcp_imports) or ("manual", reason)
+        elif kind == "instruction":
+            status, reason = "manual", "Apply this instruction using the app's instruction file."
+        else:
+            status, reason = "manual", "ASM cannot convert this APM component into a CC Switch import."
+        row.update(status=status, reason=reason)
+        yield row
+
+
+def convert(package, authored=()):
     items, registrations, mcp_imports = [], {}, {}
-    for item in package["appInventory"]:
+    for item in package.get("appInventory", []):
         kind = item["kind"]
         registration = _registration(item) if kind == "skill" else None
         for app, state in item["apps"].items():
@@ -106,22 +184,21 @@ def convert(package):
             elif state["selected"] is None:
                 status, reason = "manual", "The selection for this app has not been set."
             elif registration:
-                status, reason = "registration-only", "The link adds the skill repository. Install or enable the skill separately."
+                status, reason = _REGISTRATION
                 registrations[registration["url"]] = registration
             elif (kind in {"instruction", "prompt", "mcp"} and state.get("portable") and
-                  state.get("scope") not in (None, "user", "global", "user-global")):
+                  state.get("scope") not in _GLOBAL_SCOPES):
                 status, reason = "manual", "CC Switch imports into the app's global configuration. Apply this item at its recorded scope."
-            elif url := _portable_link(item, app, state):
-                status, reason = "import-ready", "Review and import this configuration in CC Switch."
-                row["url"] = url
-                if kind == "mcp":
-                    mcp = state["portable"]["mcp"]
-                    row["targetId"] = mcp["name"]
-                    mcp_imports.setdefault(mcp["name"], []).append((row, mcp["url"]))
+            elif (kind != "mcp" or state["enabled"] is True) and (
+                    outcome := _import_link(row, state.get("portable"), mcp_imports)):
+                status, reason = outcome
             else:
                 status, reason = "manual", "The inventory identifies this item. It does not contain an importable configuration."
             row.update(status=status, reason=reason)
             items.append(row)
+
+    for item, projected in authored:
+        items.extend(_authored_rows(item, projected, registrations, mcp_imports))
 
     # CC Switch stores one configuration per MCP ID. A second import only enables more apps.
     for entries in mcp_imports.values():

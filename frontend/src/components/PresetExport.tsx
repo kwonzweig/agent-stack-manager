@@ -93,7 +93,7 @@ function SwitchReport({ target, download, dirty, heading }: {
       {download}
     </div>
     {dirty && <p className="mb-2 text-[12px] text-muted">Showing the saved revision.</p>}
-    <div className="section-heading flex-wrap">
+    {items.length ? <><div className="section-heading flex-wrap">
       <h3>Component results</h3>
       <label className="inline-flex items-center gap-2 text-[13px]">
         Result
@@ -106,7 +106,7 @@ function SwitchReport({ target, download, dirty, heading }: {
         </select>
       </label>
     </div>
-    <SwitchRows items={visible} />
+    <SwitchRows items={visible} /></> : <p className="empty">No components in this review.</p>}
   </section>;
 }
 

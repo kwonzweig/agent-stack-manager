@@ -3,7 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { api, ApiError, catalogMember, errorMessage, packagePath } from "./api";
 import type { CatalogItem, Component, ConsumerData, Package, PackageKind, PackageSummary, SourceData } from "./types";
 import { withSourceFacts } from "./catalog/catalogItem";
-import { createDraft, isDirty, listedMember, makePayload, overlappingChanges, rebaseDraft, withComponentInclusion, withInventorySelection, withMembers, type Draft } from "./draft";
+import { createDraft, isDirty, listedMember, makePayload, overlappingChanges, rebaseDraft, withAppSelection, withComponentInclusion, withInventorySelection, withMembers, withNativeInclusion, type Draft } from "./draft";
 import CatalogPage from "./catalog/CatalogPage";
 import { hrefFor, Sidebar, type Route } from "./components/Sidebar";
 import { readRoute } from "./lib/route";
@@ -159,9 +159,8 @@ export function App() {
     definition={definition} drafts={drafts} loadPreset={getPackage} saving={saving} errors={saveErrors}
     loadErrors={loadErrors} onConflict={setConflictId}
     onSelect={(id, item, app, selected) => updateDraft(id, before => withInventorySelection(before, item, app, selected))}
-    onNativeSelect={(id, item, included) => updateDraft(id, before => ({
-      ...before, members: included ? [...before.members.filter(row => row.id !== item.id), item] : before.members.filter(row => row.id !== item.id),
-    }))}
+    onAppSelect={(id, item, app, selected) => updateDraft(id, before => withAppSelection(before, item, app, selected))}
+    onNativeSelect={(id, item, included) => updateDraft(id, before => withNativeInclusion(before, item, included))}
     onSave={id => void save(id)} />;
   function addMembers(id: string, items: Component[]) {
     updateDraft(id, before => withMembers(before, items).draft);

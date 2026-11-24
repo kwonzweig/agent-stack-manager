@@ -12,6 +12,7 @@ export interface Draft {
   instruction: string;
   members: Component[];
   appInventorySelections: Record<string, Partial<Record<InventoryApp, InventorySelection>>>;
+  appSelections: Record<string, Partial<Record<InventoryApp, InventorySelection>>>;
 }
 
 const fields = ["title", "description", "kind", "icon", "workArea", "usage", "instruction"] as const;
@@ -21,7 +22,7 @@ const equal = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b
 export function createDraft(pkg: Package): Draft {
   const { title, description, kind, icon, workArea, usage, instruction, components } = pkg;
   return { original: pkg, title, description, kind, icon, workArea, usage, instruction,
-    members: components.filter(item => item.id !== "instruction" && !item.managedByInventory), appInventorySelections: {} };
+    members: components.filter(item => item.id !== "instruction" && !item.managedByInventory), appInventorySelections: {}, appSelections: {} };
 }
 
 function inventoryKind(kind: string): Kind {
@@ -111,6 +112,32 @@ export function withInventorySelection(draft: Draft, item: InventoryItem, app: I
   return { ...draft, appInventorySelections: selections };
 }
 
+export function appSelection(draft: Draft, item: Component, app: InventoryApp) {
+  const key = item.appSelectionKey;
+  const changes = key && Object.hasOwn(draft.appSelections, key) ? draft.appSelections[key] : undefined;
+  return changes?.[app] === undefined ? item.appSelections?.[app] ?? null : changes[app];
+}
+
+export function withAppSelection(draft: Draft, item: Component, app: InventoryApp, selected: InventorySelection): Draft {
+  const key = item.appSelectionKey;
+  if (!key) return draft;
+  const selections = new Map(Object.entries(draft.appSelections));
+  const changes = { ...selections.get(key) };
+  if ((item.appSelections?.[app] ?? null) === selected) delete changes[app];
+  else changes[app] = selected;
+  if (Object.keys(changes).length) selections.set(key, changes);
+  else selections.delete(key);
+  return { ...draft, appSelections: Object.fromEntries(selections) };
+}
+
+export function withNativeInclusion(draft: Draft, item: Component, included: boolean): Draft {
+  const members = draft.members.filter(row => row.id !== item.id);
+  if (included) return { ...draft, members: [...members, item] };
+  const appSelections = { ...draft.appSelections };
+  if (item.appSelectionKey) delete appSelections[item.appSelectionKey];
+  return { ...draft, members, appSelections };
+}
+
 // Observations keep their installed state and per-app choices even when excluded from a preset.
 // A regular member is included by its presence in the preset's component list.
 export function withComponentInclusion(draft: Draft, rows: Component[], included: boolean): Draft {
@@ -125,8 +152,14 @@ export function withComponentInclusion(draft: Draft, rows: Component[], included
     if (Object.keys(changes).length) selections.set(item.id, changes);
     else selections.delete(item.id);
   }
+  const appSelections = new Map(Object.entries(draft.appSelections));
+  if (!included) {
+    for (const item of draft.members) {
+      if (item.appSelectionKey && keys.has(item.canonicalId ?? item.id)) appSelections.delete(item.appSelectionKey);
+    }
+  }
   const members = included ? draft.members : draft.members.filter(item => !keys.has(item.canonicalId ?? item.id));
-  return { ...draft, members, appInventorySelections: Object.fromEntries(selections) };
+  return { ...draft, members, appInventorySelections: Object.fromEntries(selections), appSelections: Object.fromEntries(appSelections) };
 }
 
 export function withMembers(base: Draft, items: Component[]) {
@@ -141,10 +174,12 @@ export function withMembers(base: Draft, items: Component[]) {
   return { added, draft: { ...base, members: [...base.members, ...added] } };
 }
 
-export function makePayload({ original, members, title, description, kind, icon, workArea, usage, instruction, appInventorySelections }: Draft) {
+export function makePayload({ original, members, title, description, kind, icon, workArea, usage, instruction,
+  appInventorySelections, appSelections }: Draft) {
   return { revision: original.revision, title, description, kind, icon, workArea, usage, instruction,
     componentIds: members.map(item => item.id),
-    ...(Object.keys(appInventorySelections).length ? { appInventorySelections } : {}) };
+    ...(Object.keys(appInventorySelections).length ? { appInventorySelections } : {}),
+    ...(Object.keys(appSelections).length ? { appSelections } : {}) };
 }
 
 export function isDirty(draft: Draft) {
@@ -175,6 +210,16 @@ export function rebaseDraft(draft: Draft, latest: Package, baseline = createDraf
       const chosen = inventorySelection(draft, old, app);
       if (chosen !== undefined && chosen !== inventorySelection(baseline, old, app))
         rebased = withInventorySelection(rebased, item, app, chosen);
+    }
+  }
+  const previous = new Map(draft.original.components.map(item => [item.appSelectionKey, item]));
+  for (const item of rebased.members.concat(latest.components.filter(row => row.id === "instruction"))) {
+    if (!item.appSelectionKey) continue;
+    const old = previous.get(item.appSelectionKey);
+    if (!old) continue;
+    for (const app of ["codex", "claude"] as const) {
+      const chosen = appSelection(draft, old, app);
+      if (chosen !== appSelection(baseline, old, app)) rebased = withAppSelection(rebased, item, app, chosen);
     }
   }
   return rebased;

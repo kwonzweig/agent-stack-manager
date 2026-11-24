@@ -31,6 +31,7 @@ _SIBLING = re.compile(r"\.\./([^/]+)")
 _PRIMARY = ".apm/agents/{}.agent.md"
 _KINDS = {"skill", "mcp", "hook", "plugin", "instruction", "package", "other"}
 _INVENTORY = "x-app-inventory"
+_APP_SELECTIONS = "x-app-selections"
 _INVENTORY_APPS = {"codex", "claude"}
 _INVENTORY_REPO = re.compile(r"https://github\.com/[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+")
 _LISTS = (("dependencies", "apm"), ("dependencies", "mcp"), ("dependencies", "lsp"),
@@ -352,6 +353,58 @@ def _component(identifier, name, kind, config, *, source=None, description="", s
     return component
 
 
+def _app_selection_key(row):
+    if row["kind"] == "package" or row.get("managedByInventory"):
+        return None
+    if row.get("file"):
+        return row["file"]
+    if row["id"] == "instruction":
+        return "instruction"
+    config = row["configuration"]
+    name = config.get("name") if isinstance(config, dict) else config
+    if isinstance(name, str) and name and row["kind"] in {"mcp", "hook", "plugin"}:
+        return f"{row['kind']}:{name}"
+    if source := source_coordinates(row):
+        repository, path, ref = (source.get(field) or "" for field in ("repositoryUrl", "path", "ref"))
+        repository = repository.removeprefix("https://github.com/")
+        if row["kind"] == "skill" and PurePosixPath(path).name == "SKILL.md":
+            path = path.removesuffix("SKILL.md").rstrip("/")
+        return repository + (f"/{path}" if path else "") + (f"#{ref}" if ref else "")
+    return row["id"]
+
+
+def _app_selections(values, *, allow_unset=False):
+    if not isinstance(values, dict):
+        raise StoreError(f"{_APP_SELECTIONS} must map components to app selections.")
+    for key, apps in values.items():
+        if not isinstance(key, str) or not key or not isinstance(apps, dict) or set(apps) - _INVENTORY_APPS:
+            raise StoreError(f"Invalid app selection: {key}")
+        if any(type(value) is not bool and not (allow_unset and value is None) for value in apps.values()):
+            expected = "true, false or null" if allow_unset else "true or false"
+            raise StoreError(f"App selections must be {expected}.")
+    return values
+
+
+def _update_app_selections(model, changes, keys):
+    current = _app_selections(model.get(_APP_SELECTIONS, {}))
+    changes = _app_selections(changes, allow_unset=True)
+    if unknown := changes.keys() - keys:
+        raise StoreError(f"No selectable component matches {min(unknown)}.")
+    updated = {key: apps.copy() for key, apps in current.items() if key in keys}
+    for key, apps in changes.items():
+        result = updated.setdefault(key, {})
+        for app, value in apps.items():
+            if value is None:
+                result.pop(app, None)
+            else:
+                result[app] = value
+    updated = {key: apps for key, apps in updated.items() if apps}
+    if updated:
+        model[_APP_SELECTIONS] = updated
+    else:
+        model.pop(_APP_SELECTIONS, None)
+
+
 def _app_inventory(model):
     if _INVENTORY not in model:
         return None
@@ -630,9 +683,18 @@ class Store:
                       for path, data in sorted(files.items())],
         }
         catalog_ids = {row["id"] for row in catalog}
+        selections = _app_selections(model.get(_APP_SELECTIONS, {}))
+        keys = set()
         for row in package["components"]:
             namespace = "catalog" if row["id"] in catalog_ids else identifier
             row.update(identify(row, namespace))
+            if key := _app_selection_key(row):
+                keys.add(key)
+                row["appSelectionKey"] = key
+                if key in selections:
+                    row["appSelections"] = selections[key]
+        if unknown := selections.keys() - keys:
+            raise StoreError(f"No selectable component matches {min(unknown)}.")
         if inventory is not None:
             package["appInventory"] = _json_value(inventory["items"])
             for row in package["appInventory"]:
@@ -768,7 +830,9 @@ class Store:
                     content = item.get("configuration")
                     detail = {"availability": "available", "content": content if isinstance(content, str) else json.dumps(content, indent=2),
                               "format": "markdown" if item["kind"] in {"instruction", "skill"} else "json"}
-                add(item, "catalog" if item["id"] in public_ids else package_id,
+                definition = {key: value for key, value in item.items()
+                              if key not in {"appSelectionKey", "appSelections"}}
+                add(definition, "catalog" if item["id"] in public_ids else package_id,
                     {"type": "package", "presetId": package_id, "memberId": item["id"], "file": item.get("file")},
                     {**membership, "memberId": item["id"]}, details=detail)
             parents = {row["id"]: row for row in package.get("appInventory", [])}
@@ -872,6 +936,12 @@ class Store:
             selected = self._strings(payload["componentIds"], "componentIds")
             self._select(identifier, model, entries, files, selected, catalog)
         _sync_inventory_skills(model)
+        if "appSelections" in payload or _APP_SELECTIONS in model:
+            inventory = _app_inventory(model)
+            managed = _managed_inventory_skills(inventory) if inventory is not None else None
+            keys = {"instruction"} | {key for entry in self._entries(identifier, model, files, catalog, managed)
+                                      if (key := _app_selection_key(entry.item))}
+            _update_app_selections(model, payload.get("appSelections", {}), keys)
 
         if previous is None or _load_manifest(previous["apm.yml"]) != model:
             files["apm.yml"] = _yaml(model)

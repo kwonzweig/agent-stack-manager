@@ -53,7 +53,7 @@ def main(argv=None):
     lock=commands.add_parser('lock',help='Resolve APM dependencies without deploying host configuration.')
     lock.add_argument('preset')
     lock.add_argument('--update',action='store_true')
-    cc_switch=commands.add_parser('cc-switch',help='Print the selected preset inventory as a CC Switch review report.')
+    cc_switch=commands.add_parser('cc-switch',help='Print the CC Switch review for a saved preset.')
     cc_switch.add_argument('preset')
     args=parser.parse_args(argv)
     if args.base_root is not None and args.root is None:

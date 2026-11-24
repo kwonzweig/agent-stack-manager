@@ -1,13 +1,14 @@
 import { useEffect } from "react";
 import type { Component, ComponentDefinition, InventoryApp, InventoryItem, InventorySelection } from "../types";
-import { isDirty, type Draft } from "../draft";
-import { InventoryMembership } from "./InventoryMembership";
+import { appSelection, isDirty, type Draft } from "../draft";
+import { AppMembershipSelect, apps, InventoryMembership } from "./InventoryMembership";
 
-export function ComponentMemberships({ definition, drafts, loadPreset, onSelect, onNativeSelect, onSave, saving, errors, loadErrors, onConflict }: {
+export function ComponentMemberships({ definition, drafts, loadPreset, onSelect, onAppSelect, onNativeSelect, onSave, saving, errors, loadErrors, onConflict }: {
   definition: ComponentDefinition;
   drafts: Record<string, Draft>;
   loadPreset: (id: string) => Promise<unknown>;
   onSelect: (presetId: string, item: InventoryItem, app: InventoryApp, selected: InventorySelection) => void;
+  onAppSelect: (presetId: string, item: Component, app: InventoryApp, selected: InventorySelection) => void;
   onNativeSelect: (presetId: string, component: Component, included: boolean) => void;
   onSave: (presetId: string) => void;
   saving: string[];
@@ -42,13 +43,26 @@ export function ComponentMemberships({ definition, drafts, loadPreset, onSelect,
         {errors[id]?.conflict && <button type="button" className="app-button-secondary" onClick={() => onConflict(id)}>Review saved version</button>}
         {draft && observations.map(item => <InventoryMembership key={item.id} draft={draft} item={item}
           onSelect={(app, selected) => onSelect(id, item, app, selected)} />)}
-        {draft && native.map(item => item.id === "instruction" ? <p key={item.id} className="text-secondary">Primary instruction</p> :
-          <label className="form-field" key={item.id}>Preset membership
-            <select className="app-input" value={draft.members.some(row => row.id === item.id) ? "true" : "false"}
-              onChange={event => onNativeSelect(id, item, event.target.value === "true")}>
-              <option value="true">Included</option><option value="false">Excluded</option>
-            </select>
-          </label>)}
+        {draft && native.map(item => {
+          const instruction = item.id === "instruction";
+          const included = instruction || draft.members.some(row => row.id === item.id);
+          return <div className="space-y-3" key={item.id}>
+            {instruction ? <p className="text-secondary">Primary instruction</p> :
+              <label className="form-field">Preset membership
+                <select className="app-input" value={String(included)}
+                  onChange={event => onNativeSelect(id, item, event.target.value === "true")}>
+                  <option value="true">Included</option><option value="false">Excluded</option>
+                </select>
+              </label>}
+            {included && item.appSelectionKey && <div className="values sm:grid-cols-2">
+              {apps.map(([app, appName]) => <label key={app} className="form-field">
+                {appName}
+                <AppMembershipSelect name={appName} chosen={appSelection(draft, item, app)}
+                  onSelect={selected => onAppSelect(id, item, app, selected)} />
+              </label>)}
+            </div>}
+          </div>;
+        })}
       </section>;
     })}
   </section>;

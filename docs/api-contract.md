@@ -38,7 +38,7 @@ Package extends summary: `revision,instruction,components:[],files:[{path,conten
 
 Component: `id,name,kind` (`skill,mcp,hook,plugin,instruction,package,other`), `description,sourceUrl,source,configuration`. Source uses `repositoryUrl,path,ref`; `ref` names a branch, and an empty `ref` follows the default branch. A component stored as a file in the package also has `file`, its path inside the package (for example `.apm/skills/<name>/SKILL.md`). Catalog components additionally contain `type:"component"` and native `apm` creation metadata; what their source says comes from `/api/catalog/sources`. A catalog row with an APM `git` value stores no `source` or `sourceUrl`; `catalog()` derives both from that value, and only rows without `git` (marketplace plugins, MCP servers) store them; catalog package summaries contain `type:"preset"|"stack"` and `packageId`.
 
-Create/save payload: `title,description,kind,icon,workArea,usage,instruction,componentIds`; any other field is ignored. A save also carries the `revision` of the Package it edits; every other field may be left out, and a field left out keeps its stored value, so `{"revision":"…","description":"…"}` changes only the description. A field that is sent is written: `kind`, `workArea` and `usage` go into `x-preset-labels` even when they are the defaults `preset` and `[]`, and the dashboard sends every field, so its first save of a package without them adds those lines to `apm.yml`. `componentIds` replaces the member list: the ids of the Package's `components` to keep (a file in the package keeps its own id, such as `skill:.apm/skills/<name>/SKILL.md`; `instruction` is ignored, the `instruction` field holds it) plus catalog ids to add. An empty `icon` removes the stored one. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save retains unsupported native fields unless deliberately removed. A new package id is derived from the title; a collision is rejected rather than replaced.
+Create/save accepts `title,description,kind,icon,workArea,usage,instruction,componentIds,appSelections,appInventorySelections`. Unknown fields are ignored. A save also carries the `revision` of the Package it edits; every other field may be left out, and a field left out keeps its stored value, so `{"revision":"…","description":"…"}` changes only the description. A field that is sent is written: `kind`, `workArea` and `usage` go into `x-preset-labels` even when they are the defaults `preset` and `[]`, and the dashboard sends every field, so its first save of a package without them adds those lines to `apm.yml`. `componentIds` replaces the member list: the ids of the Package's `components` to keep (a file in the package keeps its own id, such as `skill:.apm/skills/<name>/SKILL.md`; `instruction` is ignored, the `instruction` field holds it) plus catalog ids to add. An empty `icon` removes the stored one. `componentIds` accepts catalog component ids and `package:<id>` for a stack dependency. Save retains unsupported native fields unless deliberately removed. A new package id is derived from the title; a collision is rejected rather than replaced.
 
 ## HTTP routes (`asm_app/server.py`)
 
@@ -56,7 +56,7 @@ Create/save payload: `title,description,kind,icon,workArea,usage,instruction,com
 - GET `/api/presets/{id}/exports` -> the saved preset's assessed targets, previews and download paths.
 - GET `/api/presets/{id}/paperclip` -> conversion report from `convert()`
 - GET `/api/presets/{id}/paperclip/export` -> the same files as `exports/paperclip/{id}/`, as a ZIP
-- GET `/api/presets/{id}/cc-switch` -> the saved app inventory's CC Switch review, as a JSON download (see below).
+- GET `/api/presets/{id}/cc-switch` -> the saved preset's CC Switch review, as a JSON download (see below).
 
 ## Export targets
 
@@ -66,7 +66,7 @@ Both exporters expand a shared nested stack's members and observations once, whi
 
 Paperclip assesses whether the package describes a single agent. A preset's preview is the Paperclip conversion report without file bodies. The conversion includes each observed app row as an omission because the company package cannot represent its installed, enabled and selected states, including excluded or unknown states. A matching shared APM skill may still produce a Paperclip skill reference independently. A stack has a preview and a reason, and produces a package only when a preset includes it. The Paperclip ZIP and generated directory use the same file map. Unavailable targets retain their omission reports.
 
-CC Switch produces a review when the preset or its included stacks contain Codex or Claude Code inventory rows. It records existing per-app selections. Ordinary APM components with no app mapping appear as unassigned rows in the preview and under `unassignedItems` in the downloaded review. Its `items` field contains only per-app rows. ASM does not infer app selections or run any import.
+CC Switch produces a review for any readable preset or stack, including an empty one. The review uses saved per-app choices from authored package components and captured inventories. Components without app choices appear as unassigned rows in the preview and under `unassignedItems` in the download. Its `items` field holds the per-app rows.
 
 ## Component identity
 
@@ -94,6 +94,24 @@ The response includes normalized `source`, `pluginHost` (`codex` or `claude` whe
 
 Origins identify the preset, app, scope, safe locator and parent container when known. Memberships refer to the original preset member or inventory IDs and observed app states. Editing memberships uses that preset's ordinary revision-checked save. Private or local metadata can be reviewed without resolving its files or contacting its source. Source bodies appear only when present in the package, captured safely, or read through the permitted remote-source route.
 
+## App selections
+
+An authored preset or stack can declare app selections in `x-app-selections` in its `apm.yml`. The selectable component exposes its key as `appSelectionKey` in `GET /api/presets/{id}`. Use `codex` or `claude` as the app key. A missing choice is unset; `true` includes the component and `false` records an explicit exclusion.
+
+```yaml
+dependencies:
+  apm:
+  - example/tools/skills/review#main
+x-app-selections:
+  example/tools/skills/review#main:
+    codex: true
+    claude: false
+```
+
+GitHub keys use `owner/repo/path#ref` in both dependency forms. Use the skill directory for its path, or omit the path for a repository-root skill. Local files use the path inside the package. The primary instruction uses `instruction`, and named MCP servers, hooks and plugins use `mcp:<name>`, `hook:<name>` and `plugin:<name>`. For other entries, use the key returned by the API.
+
+The component's saved values are returned in `appSelections`. `PATCH` accepts `appSelections` keyed by `appSelectionKey` and merges the listed app choices. Pass `null` to unset a choice. Removing a component from the package clears its choices. Captured rows use `appInventorySelections` instead.
+
 ## App inventory
 
 A private preset can hold a captured inventory under `x-app-inventory` in its `apm.yml`. ASM accepts an existing package file. The dashboard neither scans nor applies configuration to the apps. Open it beside the shared presets and Catalog with `python -m asm_app --root <private-root> --base-root <shared-checkout> serve`. The base is read-only. Editing a shared preset in this view creates a private copy for subsequent edits. Keep its package, generated files and downloads private. Do not add credentials or raw settings to the manifest. Source access follows the policy above.
@@ -104,13 +122,15 @@ An inventory skill with a verified source can carry an `apm` reference with `git
 
 `GET /api/presets/{id}` returns `appInventory` and, if supplied, `appInventoryCoverage`. `PATCH` accepts `appInventorySelections`, an object whose keys are item IDs and whose values are objects mapping an observed app to the new selection. For example, `{"revision":"…","appInventorySelections":{"sample":{"codex":false}}}` excludes an item in Codex. Saving changes only the named selections. The inventory retains excluded items so they can be included again.
 
-### CC Switch review
+## CC Switch review
 
-`python -m asm_app --root <private-root> cc-switch <preset-id>` prints the same JSON as the dashboard download. The report includes `presetId`, `consumer: "cc-switch"`, one `items` row per item and app, a deduplicated `skillRepositories` list and, when needed, `unassignedItems`. Rows in `items` carry `id`, `name`, `kind`, `app`, `installed`, `enabled`, `selected`, `status` and `reason`, plus available source metadata. A repository entry contains `owner`, `repo`, `branch`, optional `directory`, and its official CC Switch deep link in `url`. Supply `skillRepository` only when you have approved the repository for CC Switch to read. Registering a repository does not install or enable a skill.
+`python -m asm_app --root <root> cc-switch <preset-id>` prints the same JSON as the dashboard download. The report includes `presetId`, `consumer: "cc-switch"`, one `items` row per component and app, a deduplicated `skillRepositories` list and, when needed, `unassignedItems`. Per-app rows carry `id`, `name`, `kind`, `app`, `selected`, `status` and `reason`. Captured observations also carry their saved `installed` and `enabled` values.
 
-`status` is `excluded`, `unsupported`, `manual`, `registration-only`, or `import-ready`. Known hooks, plugins and Connectors require their own host route. Observations without portable configuration require manual action. For an item with an explicitly supplied, credential-free app payload, `portable: {prompt: "<text>"}` or `portable: {mcp: {name: "<id>", url: "<https-url>"}}` can generate a per-row import link in `url`. Review the prompt text before adding it. A prompt import defaults to disabled. An MCP link requires an observed enabled state because CC Switch writes the server into the app configuration on confirmation. The endpoint must be valid HTTPS without credentials, query or fragment.
+GitHub skill rows expose their repository URL in `source`, the path to `SKILL.md` in `sourcePath`, and their branch in `sourceRef` when all three are available. A selected GitHub skill with a usable branch can supply a repository registration. Its `skillRepository` holds `owner`, `repo`, `branch`, the skill's `directory` when available, and a CC Switch deep link. Registering the source adds the repository. Select the skill and app in CC Switch to install or enable it. For a captured item, supply `skillRepository` when you have approved the repository for CC Switch to read.
 
-A prompt or MCP whose recorded scope would be promoted to global remains `manual` with no import URL. Selected MCP rows with conflicting endpoints for one server ID also remain `manual`. Matching endpoints with absent or user scope remain eligible. These links are for review and confirmed import. Use CC Switch to reconcile existing entries before using a deep link. See [CC Switch's deep link reference](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/en/5-faq/5.3-deeplink.md).
+A selected authored Markdown prompt in `.apm/prompts/` with no front matter can provide a prompt import link. A selected authored MCP server can provide a link if it declares its name and a standalone HTTPS endpoint using HTTP transport. Endpoints containing credentials, query strings, or fragments stay manual. A primary instruction stays manual because it belongs in the app's instruction file. Hooks, plugins, and Connectors use their host's own setup.
+
+A captured item with a portable payload can supply a link using `portable: {prompt: "<text>"}` or `portable: {mcp: {name: "<id>", url: "<https-url>"}}`. A captured MCP must also be recorded as enabled. Prompt links default to disabled. MCP links write configuration when confirmed. Entries with a scope that would be promoted to global, or MCP entries with conflicting endpoints for the same ID, stay manual. Review links before importing them. [CC Switch deep link reference](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/en/5-faq/5.3-deeplink.md)
 
 ## Paperclip interface (`asm_app/paperclip.py`)
 

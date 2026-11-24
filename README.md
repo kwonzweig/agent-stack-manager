@@ -46,7 +46,7 @@ Changes made inside a preset remain a draft until saved. Adding from the Catalog
 
 The Catalog also brings together components from loaded packages and captured app inventories. Details show their sources, origins and preset memberships. An item without reusable source data can be inspected but cannot be added elsewhere. Source descriptions and available repository metrics are read from their owners, with missing information shown explicitly.
 
-For captured inventory, open a component's details to change its membership separately for Codex and Claude Code. Excluding an observation keeps it available for later review and inclusion; it does not uninstall anything.
+Open a saved component's details to choose its membership separately for Codex and Claude Code, then save the preset. App choices live in `apm.yml`. Captured observations also retain their recorded install and activity states when excluded.
 
 ## Export
 
@@ -55,7 +55,7 @@ The **Export** tab separates what an app supports from what ASM can produce for 
 | Target | Output | Next step |
 | --- | --- | --- |
 | Paperclip | Company-package ZIP with an agent instruction and skill references | [Import the agent and configure its skill sources, adapter and permissions](docs/paperclip.md). |
-| CC Switch | JSON review for recorded Codex or Claude Code inventory, including inventory in nested stacks | Review eligible import links, repository registrations and items requiring their host's own route. [Format and limits](docs/api-contract.md#cc-switch-review). |
+| CC Switch | JSON review for saved Codex and Claude Code selections in the preset and its stacks | Review eligible import links, repository registrations and items requiring their host's own route. [Format and limits](docs/api-contract.md#cc-switch-review). |
 
 A skill repository link registers a source in CC Switch; it does not install or enable its skills. Hooks, plugins and other unsupported items remain in the APM package. ASM does not scan your machine, apply configuration to apps, or confirm that an external import succeeded. Direct Claude Code/Codex deployment and reverse conversion are not implemented.
 
@@ -64,7 +64,7 @@ The dashboard reads the app support matrix from [catalog/consumers.json](catalog
 ```sh
 python -m asm_app export          # regenerate Paperclip folders
 python -m asm_app export --check  # check without writing
-python -m asm_app cc-switch <preset-id>  # print an inventory review
+python -m asm_app cc-switch <preset-id>  # print a CC Switch review
 ```
 
 To review a captured private inventory alongside the shared presets, use a separate write folder and a read-only base checkout. See [app inventory](docs/api-contract.md#app-inventory) for the command, data format and source-access policy.

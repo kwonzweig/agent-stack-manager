@@ -73,6 +73,8 @@ export interface Component extends SourceFacts {
   /** The file inside the package, for a component stored there. */
   file?: string;
   managedByInventory?: boolean;
+  appSelectionKey?: string;
+  appSelections?: Partial<Record<InventoryApp, boolean>>;
   presetMembership?: "Included" | "Excluded" | "Mixed" | "Not set";
   inventoryId?: string;
   canonicalId?: string;

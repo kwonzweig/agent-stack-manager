@@ -85,7 +85,7 @@ def _github_source(repository, path, ref):
     """The stub source of a skill, or the reason it cannot have one."""
     match = GITHUB.fullmatch(repository.rstrip("/").removesuffix(".git")) if isinstance(repository, str) else None
     if not match:
-        return None, "Paperclip imports skills from GitHub only."
+        return None, "ASM's Paperclip export requires a GitHub repository for this skill."
     folder = _folder(path)
     if folder is None:
         return None, "The skill's path is not a folder inside its repository."

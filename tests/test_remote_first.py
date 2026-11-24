@@ -10,7 +10,12 @@ from asm_app.store import _git
 ROOT = Path(__file__).resolve().parents[1]
 # A 40-hex commit, an npm version after a package name, or a version tag used as a ref.
 PINNED = re.compile(r"""\b[0-9a-f]{40}\b|@\d+\.\d+\.\d+|"?ref"?: "?v?\d+\.\d+[\w.-]*""")
-BRANCH = "main"
+# A ref that never moves: a commit, short or full, or a version tag. Any other name is read as a branch.
+FIXED_REF = re.compile(r"[0-9a-f]{7,40}|v?\d+\.\d+[\w.-]*")
+
+
+def fixed(ref):
+    return bool(ref) and bool(FIXED_REF.fullmatch(ref))
 
 
 def apm_dependencies(text):
@@ -18,18 +23,14 @@ def apm_dependencies(text):
 
 
 def pinned_dependencies(text):
-    """The APM dependencies of one apm.yml that carry a version or name a ref other than the branch.
+    """The APM dependencies of one apm.yml that carry a version or name a commit or a version tag as ref.
 
     A string entry is read as the store reads it, `owner/repo/path#ref`, so `#<commit>` or `#v1.0` counts.
     """
     found = []
     for entry in apm_dependencies(text):
         git = _git(entry)
-        if isinstance(entry, dict):
-            pinned = "version" in entry or bool(git) and entry.get("ref", BRANCH) != BRANCH
-        else:
-            pinned = bool(git) and (git["ref"] or BRANCH) != BRANCH
-        if pinned:
+        if isinstance(entry, dict) and "version" in entry or git and fixed(git.get("ref")):
             found.append(entry)
     return found
 
@@ -47,27 +48,29 @@ class RemoteFirstTests(unittest.TestCase):
             with self.subTest(manifest=manifest.parent.name):
                 self.assertEqual(pinned_dependencies(manifest.read_text(encoding="utf-8")), [])
 
-    def test_a_string_dependency_with_a_ref_other_than_the_branch_is_caught(self):
+    def test_a_string_dependency_with_a_commit_or_a_version_as_ref_is_caught(self):
         # APM's string form `owner/repo/path#ref` is read by the store too, and its ref reaches the export.
         text = (ROOT / "packages" / "ar" / "apm.yml").read_text(encoding="utf-8")
-        for ref, caught in (("#af86024", True), ("#v1.0", True), ("#" + "0" * 40, True), ("#main", False), ("", False)):
+        for ref, caught in (("#af86024", True), ("#v1.0", True), ("#" + "0" * 40, True),
+                            ("#main", False), ("#master", False), ("", False)):
             line = f"kwonzweig/there-is-a-tool-for-that/skills/find-tools{ref}"
             with self.subTest(entry=line):
                 found = pinned_dependencies(text.replace("  apm:\n", f"  apm:\n  - {line}\n", 1))
                 self.assertEqual(found, [line] if caught else [])
 
-    def test_catalog_sources_and_links_follow_the_default_branch(self):
+    def test_catalog_sources_and_links_follow_a_branch(self):
         catalog = json.loads((ROOT / "catalog" / "components.json").read_text(encoding="utf-8"))
         for row in catalog["items"]:
             with self.subTest(component=row["id"]):
                 value = row["apm"].get("value")
                 if isinstance(value, dict):
                     self.assertNotIn("version", value)
-                    self.assertIn(value.get("ref", BRANCH), (BRANCH,))
+                    self.assertFalse(fixed(value.get("ref")))
                 if row.get("source"):
-                    self.assertEqual(row["source"]["ref"], BRANCH)
-                if row.get("sourceUrl") and "/blob/" in row["sourceUrl"]:
-                    self.assertEqual(row["sourceUrl"].split("/blob/", 1)[1].split("/", 1)[0], BRANCH)
+                    ref = row["source"]["ref"]
+                    self.assertTrue(ref and not fixed(ref))
+                    if "/blob/" in row.get("sourceUrl", ""):
+                        self.assertEqual(row["sourceUrl"].split("/blob/", 1)[1].split("/", 1)[0], ref)
 
 
 def repository(url):

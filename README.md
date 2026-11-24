@@ -69,6 +69,13 @@ python -m asm_app cc-switch <preset-id>  # print an inventory review
 
 To review a captured private inventory alongside the shared presets, use a separate write folder and a read-only base checkout. See [app inventory](docs/api-contract.md#app-inventory) for the command, data format and source-access policy.
 
+## Presets in this repo
+
+- **CAO** ([package](packages/cao), [export](exports/paperclip/cao)) receives requests and delegates them.
+- **AI Resources** ([package](packages/ar), [export](exports/paperclip/ar)) researches, builds and hires roles as presets in ASM.
+- **Web app engineer** ([package](packages/web-app-engineer), [export](exports/paperclip/web-app-engineer)) builds and reviews web apps.
+- **Claude Code Discord Bridge for Paperclip** ([package](packages/claude-code-discord-bridge-for-paperclip), [export](exports/paperclip/claude-code-discord-bridge-for-paperclip)) runs as a Discord bot and delegates requests to Paperclip companies.
+
 ## Development
 
 ```sh

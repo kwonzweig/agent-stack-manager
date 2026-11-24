@@ -138,7 +138,10 @@ class PaperclipTests(unittest.TestCase):
     def test_skill_outside_github_needs_attention(self):
         self.package["components"][1]["source"]["repositoryUrl"] = "https://gitlab.com/example/preset-tools"
         conversion = by_id(self.convert())["check"]["conversion"]
-        self.assertEqual(conversion, {"status": "unconverted", "reason": "Paperclip imports skills from GitHub only."})
+        self.assertEqual(conversion, {
+            "status": "unconverted",
+            "reason": "ASM's Paperclip export requires a GitHub repository for this skill.",
+        })
 
     def test_skills_with_the_same_folder_name_get_distinct_keys(self):
         self.package["components"].append(skill("check:2", "https://github.com/other/kit", "skills/check/SKILL.md",

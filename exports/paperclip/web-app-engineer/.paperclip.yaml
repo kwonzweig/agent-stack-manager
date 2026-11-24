@@ -7,4 +7,4 @@ agents:
         enabled: false
     metadata:
       agentStackManagerPackageId: web-app-engineer
-      agentStackManagerRevision: db0380e939a6e1c4cbf00e924e87b2c76e7305e7973c556b5370547fe141958d
+      agentStackManagerRevision: 9a127a1a96a445247fa017e8af8f685ad9b1ff34c6ba160ba204558656918c01

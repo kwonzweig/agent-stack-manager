@@ -120,7 +120,7 @@ A prompt or MCP whose recorded scope would be promoted to global remains `manual
 
 Conversion statuses are `converted` and `unconverted`. Reasons are concise English. Every source component appears; `target` is the written file the component went to (`agents/<id>/AGENTS.md`, `skills/<key>/SKILL.md`), `{packageId}` for an expanded stack, or null when the component is not exported.
 
-`cause` names why the export leaves a component out as expected: `not-in-format` for hooks and plugins, which Paperclip's company package has no entry for, and `adapter` for MCP servers: the company package has no MCP entry either, the export writes no adapter, and Paperclip's docs do not say how an imported agent gets an MCP server, so the report asks for it to be set in the agent's adapter after import. An unconverted component without a `cause` needs attention: a skill with no branch or outside GitHub.
+`cause` names why the export leaves a component out as expected: `not-in-format` for hooks and plugins, which Paperclip's company package has no entry for, and `adapter` for MCP servers: the company package has no MCP entry either, the export writes no adapter, and Paperclip's docs do not say how an imported agent gets an MCP server, so the report asks for it to be set in the agent's adapter after import. An unconverted component without a `cause` needs attention. For example, ASM can write a skill stub only when it has a GitHub repository and a branch.
 
 The files, named by the package id:
 

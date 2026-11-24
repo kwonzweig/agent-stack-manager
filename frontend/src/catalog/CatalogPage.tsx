@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import type { CatalogItem, PackageKind, PackageSummary } from '../types';
 import AddToMenu from './AddToMenu';
 import ComponentGrid from './ComponentGrid';
+import { SourceFailures } from '../components/SourceFailures';
 import './catalog.css';
 
 export interface CatalogPageProps {
@@ -24,13 +25,13 @@ export default function CatalogPage({
 }: CatalogPageProps) {
   const [selection, setSelection] = useState<ReadonlySet<string>>(() => new Set());
   const [onlySelected, setOnlySelected] = useState(false);
-  const selectedIds = items.filter((item) => selection.has(item.id) && item.type !== 'preset').map((item) => item.id);
+  const selectedIds = items.filter((item) => selection.has(item.id) && item.type !== 'preset' && item.addable !== false).map((item) => item.id);
 
   function select(changed: CatalogItem[], selected: boolean) {
     setSelection((previous) => {
       const next = new Set(previous);
       for (const item of changed) {
-        if (item.type === 'preset') continue;
+        if (item.type === 'preset' || item.addable === false) continue;
         if (selected) next.add(item.id);
         else next.delete(item.id);
       }
@@ -51,14 +52,12 @@ export default function CatalogPage({
   return (
     <section className="aitmpl-catalog min-h-full pb-24" aria-label="Catalog">
       {(sourceStatus.loading || sourceStatus.error || sourceStatus.failed.length > 0) && (
-        <p role="status" className="mx-4 mt-3 text-[12px] text-[var(--color-text-secondary)] sm:mx-6"
-          title={sourceStatus.failed.join('\n') || undefined}>
-          {sourceStatus.loading ? 'Reading descriptions, stars and installs from GitHub and skills.sh…' : <>
-            {sourceStatus.error || 'Could not read ' + sourceStatus.failed.length + (sourceStatus.failed.length === 1 ? ' source' : ' sources')
-              + '; what was read before is shown.'}{' '}
+        <div role="status" className="mx-4 mt-3 text-[12px] text-[var(--color-text-secondary)] sm:mx-6">
+          {sourceStatus.loading ? 'Reading descriptions, stars and installs from GitHub and skills.sh…' : sourceStatus.error ? <>
+            {sourceStatus.error}{' '}
             <button type="button" className="underline underline-offset-2" onClick={sourceStatus.onRetry}>Retry</button>
-          </>}
-        </p>
+          </> : <SourceFailures errors={sourceStatus.failed} onRetry={sourceStatus.onRetry} />}
+        </div>
       )}
       <ComponentGrid
         items={items}

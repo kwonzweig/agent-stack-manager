@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Bookmark, CircleEllipsis, FileText, Layers, PackageOpen, Plug, Server, Webhook } from "lucide-react";
+import { Bookmark, Braces, Cable, CircleEllipsis, FileText, Layers, PackageOpen, Plug, Server, Settings, Waypoints, Webhook } from "lucide-react";
 import type { Kind, PackageKind } from "../types";
 
 export interface KindStyle {
@@ -27,6 +27,14 @@ export const KIND_STYLES: Record<Kind | PackageKind, KindStyle> = {
     chip: "bg-amber-500/15 text-amber-600 dark:text-amber-400", chipActive: "bg-amber-500 text-white" },
   plugin: { singular: "Plugin", plural: "Plugins", icon: Plug, color: "#f43f5e",
     chip: "bg-rose-500/15 text-rose-600 dark:text-rose-400", chipActive: "bg-rose-500 text-white" },
+  connector: { singular: "Connector", plural: "Connectors", icon: Cable, color: "#0d9488",
+    chip: "bg-teal-500/15 text-teal-700 dark:text-teal-400", chipActive: "bg-teal-600 text-white" },
+  provider: { singular: "Provider", plural: "Providers", icon: Waypoints, color: "#9333ea",
+    chip: "bg-purple-500/15 text-purple-700 dark:text-purple-400", chipActive: "bg-purple-600 text-white" },
+  setting: { singular: "Setting", plural: "Settings", icon: Settings, color: "#64748b",
+    chip: "bg-slate-500/15 text-slate-700 dark:text-slate-300", chipActive: "bg-slate-600 text-white" },
+  lsp: { singular: "LSP", plural: "LSPs", icon: Braces, color: "#0284c7",
+    chip: "bg-sky-500/15 text-sky-700 dark:text-sky-400", chipActive: "bg-sky-600 text-white" },
   package: stack,
   stack,
   preset: { singular: "Preset", plural: "Presets", icon: Bookmark, color: "#6366f1",

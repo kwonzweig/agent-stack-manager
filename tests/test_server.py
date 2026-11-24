@@ -1,5 +1,6 @@
 import json
 import io
+from contextlib import redirect_stdout
 from pathlib import Path
 import tempfile
 import threading
@@ -40,9 +41,12 @@ class ServerTests(unittest.TestCase):
         (Path(self.temp.name) / 'catalog/consumers.json').write_bytes(source.read_bytes())
         code, body, _ = self.request('/api/consumers')
         self.assertEqual(code, 200)
-        self.assertEqual(json.loads(body), json.loads(source.read_text(encoding='utf-8')))
-        consumers = json.loads(body)['consumers']
-        self.assertEqual([x['id'] for x in consumers if x['export']], ['paperclip'])
+        data = json.loads(body)
+        consumers = data['consumers']
+        catalog = {**data, 'consumers': [{key: value for key, value in row.items() if key != 'export'}
+                                        for row in consumers]}
+        self.assertEqual(catalog, json.loads(source.read_text(encoding='utf-8')))
+        self.assertEqual([x['id'] for x in consumers if x['export']], ['paperclip', 'ccswitch'])
 
     def test_rejects_cross_origin_write_before_loading_store(self):
         code, _, _ = self.request('/api/presets', data=b'{}', headers={
@@ -192,6 +196,190 @@ class ServerTests(unittest.TestCase):
     def test_package_path_is_not_a_filesystem_route(self):
         code, _, _ = self.request('/api/presets/%2e%2e%2fsecret')
         self.assertEqual(code, 400)
+
+    def test_export_targets_preview_real_artifacts_for_a_new_mixed_preset(self):
+        import yaml
+        from asm_app.paperclip import write_exports
+
+        identifier = "new-mixed"
+        root = Path(self.temp.name)
+        package_dir = root / "packages" / identifier
+        instruction_path = package_dir / ".apm/agents/new-mixed.agent.md"
+        instruction_path.parent.mkdir(parents=True)
+        instruction_path.write_text("Use the fixture workflow.\n", encoding="utf-8")
+        manifest = {
+            "name": identifier,
+            "dependencies": {"hooks": [{"name": "stop"}]},
+            "x-app-inventory": {"items": [
+                {"id": "portable-prompt", "name": "Example prompt", "kind": "prompt",
+                 "description": "Portable instructions",
+                 "apps": {"codex": {"installed": False, "enabled": None, "selected": True,
+                                     "portable": {"prompt": "# New prompt\n"}}}},
+                {"id": "unknown-skill", "name": "Undecided skill", "kind": "skill",
+                 "description": "Unknown selection",
+                 "apps": {"claude": {"installed": True, "enabled": None, "selected": None}}},
+                {"id": "hidden-hook", "name": "Observed hook", "kind": "hook",
+                 "description": "Observed local hook",
+                 "apps": {"codex": {"installed": True, "enabled": True, "selected": False}}},
+            ]},
+        }
+        (package_dir / "apm.yml").write_text(yaml.safe_dump(manifest), encoding="utf-8")
+
+        base = f"/api/presets/{identifier}"
+        code, body, _ = self.request(base + "/exports")
+        self.assertEqual(code, 200)
+        targets = {row["id"]: row for row in json.loads(body)["targets"]}
+        paperclip = targets["paperclip"]
+        switch = targets["ccswitch"]
+        self.assertTrue(paperclip["available"])
+        self.assertTrue(switch["available"])
+        self.assertEqual({row["app"] for row in paperclip["preview"]["items"] if "app" in row},
+                         {"codex", "claude"})
+        self.assertTrue(all(row["conversion"]["status"] == "unconverted"
+                            for row in paperclip["preview"]["items"] if "app" in row))
+        self.assertEqual([row["status"] for row in switch["preview"]["items"] if row.get("app")],
+                         ["import-ready", "manual", "excluded"])
+        self.assertTrue(any(row["status"] == "manual" for row in switch["preview"]["items"] if not row.get("app")))
+        self.assertTrue(any(row["kind"] == "hook" and row["status"] == "unsupported"
+                            for row in switch["preview"]["items"] if not row.get("app")))
+
+        code, body, _ = self.request(base + paperclip["download"])
+        self.assertEqual(code, 200)
+        with ZipFile(io.BytesIO(body)) as archive:
+            files = {name: archive.read(name) for name in archive.namelist()}
+        self.assertIn(b"Use the fixture workflow.", files[f"agents/{identifier}/AGENTS.md"])
+        self.assertTrue(all(b"# New prompt" not in content for content in files.values()))
+        write_exports(root)
+        self.assertEqual(files, {path: (root / "exports/paperclip" / identifier / path).read_bytes()
+                                 for path in files})
+
+        code, body, _ = self.request(base + switch["download"])
+        self.assertEqual(code, 200)
+        review = json.loads(body)
+        self.assertEqual(review["items"], [row for row in switch["preview"]["items"] if row.get("app")])
+        self.assertEqual(review["unassignedItems"], [row for row in switch["preview"]["items"] if not row.get("app")])
+        self.assertEqual(review["items"][0]["app"], "codex")
+
+        instruction_path.write_text("The saved instruction changed.\n", encoding="utf-8")
+        code, _, _ = self.request(base + paperclip["download"])
+        self.assertEqual(code, 409)
+        code, _, _ = self.request(base + "/paperclip/export")
+        self.assertEqual(code, 200)
+
+    def test_empty_presets_and_stacks_produce_cc_switch_reviews(self):
+        root = Path(self.temp.name)
+        for identifier, kind in (("ordinary", "preset"), ("aggregate", "stack")):
+            directory = root / "packages" / identifier
+            directory.mkdir(parents=True)
+            (directory / "apm.yml").write_text(f"name: {identifier}\nx-preset-labels: {{kind: {kind}}}\n",
+                                                 encoding="utf-8")
+            with self.subTest(identifier=identifier):
+                base = f"/api/presets/{identifier}"
+                code, body, _ = self.request(base + "/exports")
+                self.assertEqual(code, 200)
+                targets = {row["id"]: row for row in json.loads(body)["targets"]}
+                self.assertEqual(targets["paperclip"]["available"], kind == "preset")
+                self.assertTrue(targets["ccswitch"]["available"])
+                code, body, _ = self.request(base + targets["ccswitch"]["download"])
+                self.assertEqual(code, 200)
+                self.assertEqual(json.loads(body), {"presetId": identifier, "consumer": "cc-switch",
+                                                    "items": [], "skillRepositories": []})
+
+    def test_authored_choices_round_trip_and_export_without_inventory(self):
+        from asm_app import cli
+        from urllib.parse import parse_qs, urlsplit
+        import yaml
+
+        root = Path(self.temp.name)
+        folder = root / "packages" / "authored"
+        prompt = folder / ".apm" / "prompts" / "review.prompt.md"
+        prompt.parent.mkdir(parents=True)
+        prompt.write_text("Read the deployment notes.", encoding="utf-8")
+        path = folder / "apm.yml"
+        path.write_text("""name: authored
+dependencies:
+  apm:
+  - example/tools/skills/review#release/active
+  - git: https://github.com/example/tools
+    ref: main
+    path: skills/review-extra/SKILL.md
+  - git: https://github.com/example/root-skill.git
+    ref: main
+    kind: skill
+  mcp:
+  - name: docs
+    registry: false
+    transport: http
+    url: https://docs.example.invalid/mcp
+  - name: scoped
+    scope: project
+    url: https://docs.example.invalid/scoped
+  - name: protected
+    url: https://docs.example.invalid/mcp?token=fixture-secret
+  plugins:
+  - name: sample-plugin
+x-app-selections:
+  example/tools/skills/review#release/active: {codex: true, claude: false}
+  example/tools/skills/review-extra#main: {codex: false}
+  example/root-skill#main: {codex: true}
+  .apm/prompts/review.prompt.md: {claude: true}
+  mcp:docs: {codex: true}
+  mcp:scoped: {claude: true}
+  mcp:protected: {claude: true}
+  plugin:sample-plugin: {claude: true}
+""", encoding="utf-8")
+        base = "/api/presets/authored"
+        code, body, _ = self.request(base)
+        self.assertEqual(code, 200)
+        package = json.loads(body)
+        self.assertNotIn("appInventory", package)
+        key = "example/tools/skills/review#release/active"
+        skill = next(row for row in package["components"] if row.get("appSelectionKey") == key)
+        self.assertEqual(skill["appSelections"], {"codex": True, "claude": False})
+        code, body, _ = self.request(base + "/exports")
+        self.assertEqual(code, 200)
+        target = next(row for row in json.loads(body)["targets"] if row["id"] == "ccswitch")
+        code, body, _ = self.request(base + target["download"])
+        self.assertEqual(code, 200)
+        review = json.loads(body)
+        self.assertEqual(review["items"], target["preview"]["items"])
+        self.assertNotIn("fixture-secret", body.decode())
+        self.assertTrue(all("installed" not in row and "enabled" not in row for row in review["items"]))
+        skill_coordinates = {(row["name"], row["app"]): (row["source"], row["sourcePath"], row["sourceRef"])
+                             for row in review["items"] if row["kind"] == "skill"}
+        self.assertEqual(skill_coordinates, {
+            ("review", "codex"): ("https://github.com/example/tools", "skills/review/SKILL.md", "release/active"),
+            ("review", "claude"): ("https://github.com/example/tools", "skills/review/SKILL.md", "release/active"),
+            ("review-extra", "codex"): ("https://github.com/example/tools", "skills/review-extra/SKILL.md", "main"),
+            ("root-skill", "codex"): ("https://github.com/example/root-skill", "SKILL.md", "main"),
+        })
+        self.assertCountEqual([(row["name"], row["app"], row["status"]) for row in review["items"]], [
+            ("review", "codex", "registration-only"), ("review", "claude", "excluded"),
+            ("review-extra", "codex", "excluded"), ("review.prompt", "claude", "import-ready"),
+            ("root-skill", "codex", "registration-only"),
+            ("sample-plugin", "claude", "unsupported"), ("docs", "codex", "import-ready"),
+            ("scoped", "claude", "manual"), ("protected", "claude", "manual"),
+        ])
+        repositories = review["skillRepositories"]
+        self.assertEqual(len(repositories), 2)
+        self.assertNotIn("directory", repositories[1])
+        self.assertEqual(parse_qs(urlsplit(repositories[0]["url"]).query),
+                         {"resource": ["skill"], "repo": ["example/tools"], "branch": ["release/active"],
+                          "directory": ["skills/review"]})
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = cli.main(["--root", str(root), "cc-switch", "authored"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output.getvalue()), review)
+
+        code, body, _ = self.request(base, method="PATCH", headers={"Content-Type": "application/json"},
+                                     data=json.dumps({"revision": package["revision"],
+                                                      "appSelections": {key: {"claude": True, "codex": None}}}).encode())
+        self.assertEqual(code, 200, body)
+        saved = yaml.safe_load(path.read_text(encoding="utf-8"))
+        self.assertEqual(saved["x-app-selections"][key], {"claude": True})
+        self.assertNotIn("x-app-inventory", saved)
+        self.assertEqual(self.request(base + target["download"])[0], 409)
 
     def test_edit_export_comment_and_stale_save_through_http(self):
         root = Path(self.temp.name)

@@ -1,6 +1,8 @@
 import json
 import tempfile
 import unittest
+import threading
+from urllib.error import HTTPError
 from pathlib import Path
 
 from asm_app.sources import MAX_AGE, SourceReader
@@ -8,6 +10,7 @@ from asm_app.sources import MAX_AGE, SourceReader
 SKILL = {"id": "brainstorming-1", "name": "brainstorming", "kind": "skill",
          "source": {"repositoryUrl": "https://github.com/obra/superpowers", "path": "skills/brainstorming/SKILL.md", "ref": "main"}}
 PLUGIN = {"id": "frontend-design", "name": "frontend-design", "kind": "plugin",
+          "pluginHost": "claude",
           "source": {"repositoryUrl": "https://github.com/anthropics/claude-plugins-official", "path": "plugins/frontend-design", "ref": "main"}}
 MCP = {"id": "playwright", "name": "playwright", "kind": "mcp",
        "source": {"repositoryUrl": "https://github.com/microsoft/playwright-mcp", "path": "README.md", "ref": "main"}}
@@ -79,6 +82,140 @@ class SourceReaderTests(unittest.TestCase):
             REPLIES.update(saved)
         self.assertEqual(result["items"]["brainstorming-1"]["stars"], 318722)
         self.assertTrue(any("api.github.com/repos/obra/superpowers" in error for error in result["errors"]))
+
+    def test_unverified_and_private_inventory_never_reach_third_party_hosts(self):
+        for access, reply in ((None, None), ("private", None), ("verify", {"private": True})):
+            self.asked.clear()
+            item = {**SKILL, "id": "private-observation", "remoteApproved": False,
+                    "sourceAccess": access}
+            def lookup(url):
+                self.asked.append(url)
+                self.assertEqual(url, "https://api.github.com/repos/obra/superpowers")
+                return json.dumps({"stargazers_count": 0, "description": "", **reply}).encode()
+            reader = SourceReader(self.cache.with_name(str(access) + ".json"), fetch=lookup, clock=lambda: self.now)
+            result = reader.read([item])
+            self.assertEqual(len(self.asked), 1 if access == "verify" else 0)
+            self.assertFalse(any("skills.sh" in url or "raw.githubusercontent.com" in url for url in self.asked))
+            self.assertNotIn("content", result["items"].get(item["id"], {}))
+
+    def test_a_new_explicit_remote_is_verified_then_reads_its_default_branch_without_rewriting_observation(self):
+        # Real installations have fresh cache records from before visibility/body support.
+        self.cache.parent.mkdir(parents=True)
+        self.cache.write_text(json.dumps({"repository:obra/superpowers": {
+            "stars": 11, "description": "Legacy metadata", "readAt": self.now,
+        }}))
+        item = {**SKILL, "id": "new-observation", "sourceAccess": "verify", "remoteApproved": False,
+                "source": {**SKILL["source"], "ref": ""}}
+        def lookup(url):
+            self.asked.append(url)
+            if url == "https://api.github.com/repos/obra/superpowers":
+                return json.dumps({"private": False, "stargazers_count": 42, "description": "Skills", "default_branch": "stable"}).encode()
+            if url == "https://raw.githubusercontent.com/obra/superpowers/stable/skills/brainstorming/SKILL.md":
+                return b"---\nname: brainstorming\ndescription: Current purpose.\n---\n# Full body\n"
+            if url.startswith("https://skills.sh/"):
+                return b'{"skills":[]}'
+            raise AssertionError(url)
+        result = SourceReader(self.cache, fetch=lookup, clock=lambda: self.now).read([item])["items"][item["id"]]
+        self.assertEqual(result["stars"], 42)
+        self.assertEqual(result["sourceResolvedRef"], "stable")
+        self.assertIn("# Full body", result["content"])
+        self.assertEqual(item["source"]["ref"], "")
+        self.assertEqual(self.asked[0], "https://api.github.com/repos/obra/superpowers")
+        refreshed = json.loads(self.cache.read_text())["repository:obra/superpowers"]
+        self.assertEqual(refreshed["visibility"], "public")
+        self.assertEqual(refreshed["defaultRef"], "stable")
+
+    def test_an_explicitly_private_source_does_not_upgrade_or_consume_legacy_public_cache(self):
+        self.cache.parent.mkdir(parents=True)
+        self.cache.write_text(json.dumps({"repository:obra/superpowers": {
+            "stars": 11, "description": "Legacy metadata", "readAt": self.now,
+        }}))
+        item = {**SKILL, "sourceAccess": "private", "remoteApproved": False}
+        result = self.reader().read([item])
+        self.assertEqual(result["items"], {})
+        self.assertEqual(self.asked, [])
+
+    def test_negative_cache_preserves_network_cause_without_calling_it_private(self):
+        item = {**SKILL, "sourceAccess": "verify", "remoteApproved": False}
+        def failing(url):
+            self.asked.append(url)
+            raise OSError("Network unavailable")
+        reader = SourceReader(self.cache, fetch=failing, clock=lambda: self.now)
+        initial = reader.read([item])
+        retry = reader.read([item])
+        self.assertEqual(len(self.asked), 1)
+        self.assertEqual(initial["errors"], retry["errors"])
+        self.assertIn("Network unavailable", retry["errors"][0])
+        self.assertIn("visibility check failed", retry["items"][item["id"]]["sourceUnavailable"])
+        self.assertNotIn("repository as private", retry["items"][item["id"]]["sourceUnavailable"])
+
+    def test_an_unlocated_skill_does_not_use_the_repository_description_as_its_purpose(self):
+        for kind in ("skill", "plugin"):
+            item = {**SKILL, "kind": kind, "source": {"repositoryUrl": SKILL["source"]["repositoryUrl"], "ref": "main"}}
+            facts = self.reader().read([item])["items"][item["id"]]
+            self.assertEqual(facts["stars"], 318722)
+            self.assertNotIn("description", facts)
+            self.assertNotIn("content", facts)
+
+    def test_a_previously_public_receipt_cannot_override_github_reporting_private(self):
+        item = {**SKILL, "sourceAccess": "public", "remoteApproved": True, "bodyAllowed": True}
+        def lookup(url):
+            self.asked.append(url)
+            self.assertEqual(url, "https://api.github.com/repos/obra/superpowers")
+            return b'{"private":true,"stargazers_count":0,"description":"Private","default_branch":"main"}'
+        result = SourceReader(self.cache, fetch=lookup, clock=lambda: self.now).read([item])
+        self.assertEqual(self.asked, ["https://api.github.com/repos/obra/superpowers"])
+        self.assertIn("repository as private", result["items"][item["id"]]["sourceUnavailable"])
+        self.assertNotIn("content", result["items"][item["id"]])
+
+    def test_unknown_plugin_host_does_not_guess_the_claude_manifest(self):
+        item = {key: value for key, value in PLUGIN.items() if key != "pluginHost"}
+        facts = self.reader().read([item])["items"][item["id"]]
+        self.assertNotIn("content", facts)
+        self.assertEqual(self.asked, ["https://api.github.com/repos/anthropics/claude-plugins-official"])
+
+    def test_public_and_verify_permissions_fail_closed_on_fresh_or_stale_visibility_errors(self):
+        for access in ("public", "verify"):
+            for stale in (False, True):
+                with self.subTest(access=access, stale=stale):
+                    self.asked.clear()
+                    cache = {}
+                    if stale:
+                        cache = {"repository:obra/superpowers": {"stars": 99, "description": "Old public", "visibility": "public",
+                                 "defaultRef": "main", "readAt": self.now - MAX_AGE},
+                                 "file:obra/superpowers@main:skills/brainstorming/SKILL.md": {
+                                     "content": "Old body", "description": "Old purpose", "readAt": self.now}}
+                    self.cache.parent.mkdir(parents=True, exist_ok=True)
+                    self.cache.write_text(json.dumps(cache))
+                    item = {**SKILL, "sourceAccess": access, "remoteApproved": True, "bodyAllowed": True}
+                    def missing(url):
+                        self.asked.append(url)
+                        raise HTTPError(url, 404, "Not found", {}, None)
+                    result = SourceReader(self.cache, fetch=missing, clock=lambda: self.now).read([item])
+                    self.assertEqual(self.asked, ["https://api.github.com/repos/obra/superpowers"])
+                    self.assertEqual(set(result["items"][item["id"]]), {"sourceUnavailable"})
+                    self.assertIn("visibility check failed", result["items"][item["id"]]["sourceUnavailable"])
+
+    def test_cold_bulk_read_does_not_hold_the_cache_lock_while_fetching(self):
+        started, release = threading.Event(), threading.Event()
+        def lookup(url):
+            if "slow/project" in url:
+                started.set()
+                release.wait(3)
+            return b'{"stargazers_count":1,"description":"Source"}'
+        reader = SourceReader(self.cache, fetch=lookup, clock=lambda: self.now)
+        slow = {**MCP, "source": {"repositoryUrl": "https://github.com/slow/project"}}
+        worker = threading.Thread(target=lambda: reader.read([slow]))
+        worker.start()
+        try:
+            self.assertTrue(started.wait(1))
+            fast = {**MCP, "id": "fast", "source": {"repositoryUrl": "https://github.com/fast/project"}}
+            result = reader.read([fast])
+            self.assertEqual(result["items"]["fast"]["stars"], 1)
+            self.assertFalse(release.is_set())
+        finally:
+            release.set()
+            worker.join(3)
 
 
 if __name__ == "__main__":

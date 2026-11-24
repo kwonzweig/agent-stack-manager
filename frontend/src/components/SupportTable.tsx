@@ -13,7 +13,7 @@ function Cell({ cell, label }: { cell: TableCell; label: string }) {
 }
 
 // CC Switch's "Supported Features by Tool" form: one row per component kind, one column per app.
-export function SupportTable({ data, report, packageKind }: { data: ConsumerData; report?: Report; packageKind: PackageKind }) {
+export function SupportTable({ data, report, packageKind }: { data: ConsumerData; report?: Pick<Report, "consumer" | "items">; packageKind: PackageKind }) {
   if (!data.consumers.length) return null;
   const rows = supportRows(data, report);
   const unplaced = unplacedPlugins(report?.items);

@@ -10,7 +10,7 @@ const countClass = 'inline-flex shrink-0 items-center gap-1 font-mono text-[11px
 // A Catalog item's properties under its title. The card and the detail page both render this,
 // so the detail page shows everything the card does (instructions/design-policy.md).
 export default function ItemProperties({ item, repository }: {
-  item: SourceFacts & { kind: Kind | PackageKind; source?: Source | null; componentCount?: number };
+  item: SourceFacts & { kind: Kind | PackageKind; pluginHost?: "codex" | "claude"; source?: Source | null; componentCount?: number };
   /** A function filters the Catalog to the repository; "link" opens it; unset hides it where a group heading names it. */
   repository?: 'link' | ((url: string) => void);
 }) {
@@ -21,7 +21,7 @@ export default function ItemProperties({ item, repository }: {
     <span className="truncate">{label}</span>
   </>;
   return <>
-    <KindBadge kind={item.kind} />
+    <KindBadge kind={item.kind} pluginHost={item.pluginHost} />
     {item.componentCount !== undefined && <span className={countClass}>
       {item.componentCount + (item.componentCount === 1 ? ' component' : ' components')}
     </span>}

@@ -26,8 +26,9 @@ class DashboardServer(ThreadingHTTPServer):
     # would serve the other program without an error. Elsewhere it only allows a quick restart.
     allow_reuse_address = os.name != 'nt'
 
-    def __init__(self, address, root):
+    def __init__(self, address, root, *, base_root=None):
         self.root = Path(root).resolve()
+        self.base_root = base_root
         self.io_lock = threading.RLock()
         self._store = None
         self._sources = None
@@ -37,14 +38,14 @@ class DashboardServer(ThreadingHTTPServer):
     def store(self):
         if self._store is None:
             from .store import Store
-            self._store = Store(self.root)
+            self._store = Store(self.root, base_root=self.base_root)
         return self._store
 
     @property
     def sources(self):
         if self._sources is None:
             from .sources import SourceReader
-            self._sources = SourceReader(self.root / '.asm' / 'sources.json')
+            self._sources = SourceReader(self.store._checked(self.root / '.asm' / 'sources.json'))
         return self._sources
 
 
@@ -127,8 +128,36 @@ class Handler(BaseHTTPRequestHandler):
                 if path == '/api/catalog':
                     return self.send(200, self.server.store.catalog())
                 if path == '/api/catalog/sources':
-                    items = [item for item in self.server.store.catalog()['items'] if item['type'] == 'component']
-                    return self.send(200, self.server.sources.read(items))
+                    items = self.server.store.source_components()
+                    result = self.server.sources.read(items)
+                    for item in items:
+                        if item["id"] not in result["items"]:
+                            continue
+                        facts = result["items"].get(item["id"], {})
+                        metadata = {key: value for key, value in facts.items() if key not in ("content", "contentFormat", "contentUrl", "contentReadAt")}
+                        result["items"][item["id"]] = metadata
+                        result["items"][item["canonicalId"]] = metadata
+                    return self.send(200, result)
+                if path.startswith('/api/components/'):
+                    identifier = unquote(path.removeprefix('/api/components/'))
+                    enrich = identifier.endswith('/source')
+                    if enrich:
+                        identifier = identifier.removesuffix('/source')
+                    definition = self.server.store.component(identifier)
+                    if enrich and (definition["remoteApproved"] or definition.get("sourceAccess") == "verify"):
+                        result = self.server.sources.read([definition])
+                        facts = result["items"].get(definition["id"], {})
+                        definition.update(facts)
+                        if facts.get("sourceUnavailable"):
+                            definition["details"] = {**definition["details"], "reason": facts["sourceUnavailable"]}
+                        if facts.get("content") is not None:
+                            definition["details"] = {"availability": "available", "format": facts.get("contentFormat", "markdown"),
+                                                     "content": facts["content"], "url": facts.get("contentUrl")}
+                            definition["sourceUrl"] = facts.get("contentUrl") or definition.get("sourceUrl")
+                        elif result["errors"]:
+                            definition["details"] = {**definition["details"], "reason": facts.get("sourceUnavailable") or "The source could not be read. Try again when it is available."}
+                        definition["sourceErrors"] = result["errors"]
+                    return self.send(200, definition)
                 if path == '/api/presets':
                     return self.send(200, {'presets':self.server.store.list_packages()})
                 if path == '/api/comments':
@@ -153,13 +182,16 @@ class Handler(BaseHTTPRequestHandler):
                         return self.send(200,self.server.store.get(pid))
                     if suffix == '/export':
                         return self.send(200,self.server.store.export(pid),'application/zip',pid+'.zip')
-                    if suffix in ('/paperclip','/paperclip/export'):
-                        from .paperclip import convert, export_package
-                        package = self.server.store.get(pid)
-                        report = convert(package,root=self.server.root)
-                        if suffix.endswith('/export'):
-                            return self.send(200,export_package(report),'application/zip',pid+'-paperclip.zip')
-                        return self.send(200,report)
+                    from .exporters import DOWNLOADS, EXPORTERS, choices
+                    if suffix == '/exports':
+                        return self.send(200,choices(self.server.store.get(pid),self.server.store))
+                    if exporter := DOWNLOADS.get(suffix):
+                        revision = query.get('revision',[None])[0]
+                        return self.send(200,*exporter.produce(self.server.store.get(pid),self.server.store,revision))
+                    if suffix == '/paperclip':
+                        assessment = EXPORTERS['paperclip'].assess(self.server.store.get(pid),self.server.store)
+                        return self.send(200,assessment.artifact if assessment.artifact is not None
+                                         else {**assessment.preview, 'files': []})
                 elif self.command == 'PATCH' and not suffix:
                     with self.server.io_lock:
                         return self.send(200,self.server.store.save(pid,data))
@@ -190,7 +222,7 @@ class Handler(BaseHTTPRequestHandler):
     do_PATCH = dispatch
 
 
-def create_server(root, host='127.0.0.1', port=4319):
+def create_server(root, host='127.0.0.1', port=4319, *, base_root=None):
     if host not in ('127.0.0.1','localhost'):
         raise ValueError('This local server binds to loopback only.')
-    return DashboardServer((host,port),root)
+    return DashboardServer((host,port),root,base_root=base_root)

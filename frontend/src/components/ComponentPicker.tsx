@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Plus, X } from "lucide-react";
 import { cn } from "../utils";
 import type { Component, Kind, PackageKind } from "../types";
-import { KIND_LABELS, KindIcon, KINDS, SearchField, TypeFilter } from "./ComponentUI";
+import { KindBadge, KINDS, SearchField, TypeFilter } from "./ComponentUI";
+import { componentSearchText, displayDescription } from "../lib/componentLocation";
+import { repositoryLabel } from "../catalog/catalogItem";
+import { ComponentLocation } from "./ComponentLocation";
 
 // From Skills Manager's AddSkillsSheet and SkillPickerRow.
 export function ComponentPicker({ items, existing, packageKind, onClose, onAdd, error, loading, onRetry }: {
@@ -15,6 +18,7 @@ export function ComponentPicker({ items, existing, packageKind, onClose, onAdd, 
   const [kind, setKind] = useState<Kind | "all">("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const ref = useRef<HTMLDialogElement>(null);
+  const pickerId = useId();
   useEffect(() => {
     const dialog = ref.current!;
     dialog.showModal();
@@ -22,7 +26,7 @@ export function ComponentPicker({ items, existing, packageKind, onClose, onAdd, 
   }, []);
   const q = query.trim().toLowerCase();
   const visible = items.filter(item => (kind === "all" || item.kind === kind) &&
-    `${item.name} ${item.description ?? ""} ${item.source?.repositoryUrl ?? ""}`.toLowerCase().includes(q));
+    componentSearchText(item).includes(q));
   const kinds = KINDS.filter(type => items.some(item => item.kind === type));
   const selected = items.filter(item => selectedIds.has(item.id) && !existing.has(item.id));
 
@@ -46,25 +50,26 @@ export function ComponentPicker({ items, existing, packageKind, onClose, onAdd, 
           {visible.map(item => {
             const included = existing.has(item.id);
             const selected = selectedIds.has(item.id);
-            return <label key={item.id} className={cn("flex select-none items-center gap-3 px-5 py-2.5 transition-colors",
+            const inputId = pickerId + item.id;
+            return <div key={item.id} className={cn("relative flex select-none items-center gap-3 px-5 py-2.5 transition-colors",
               included ? "opacity-60" : "cursor-pointer hover:bg-surface-hover", selected && "bg-accent-bg")}>
-              <input type="checkbox" checked={included || selected} disabled={included} className="sr-only peer"
+              <input id={inputId} type="checkbox" checked={included || selected} disabled={included} className="sr-only peer"
                 onChange={() => setSelectedIds(prev => { const next = new Set(prev); if (!next.delete(item.id)) next.add(item.id); return next; })} />
               <span className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent",
-                selected ? "border-accent bg-accent text-white" : "border-border")}>
-                {selected && <Check className="h-3 w-3" />}
+                included || selected ? "border-accent bg-accent text-white" : "border-border")}>
+                {(included || selected) && <Check className="h-3 w-3" />}
               </span>
-              <span className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1">
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-[13px] font-medium text-primary">{item.name}</span>
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-hover px-1.5 py-0.5 text-[11px] font-medium text-muted">
-                    <KindIcon kind={item.kind} className="h-3 w-3" />{KIND_LABELS[item.kind]}
-                  </span>
+                  <label htmlFor={inputId} className="cursor-[inherit] truncate text-[13px] font-medium text-primary after:absolute after:inset-0">{item.name}</label>
+                  <KindBadge kind={item.kind} pluginHost={item.pluginHost} />
                 </span>
-                {item.description && <span className="mt-0.5 block truncate text-[12px] text-muted">{item.description}</span>}
-              </span>
-              {included && <span className="shrink-0 rounded-full bg-accent-bg px-2 py-0.5 text-[11px] font-medium text-accent">In {noun}</span>}
-            </label>;
+                {displayDescription(item) && <p className="mt-0.5 truncate text-[12px] text-muted">{displayDescription(item)}</p>}
+                {item.source?.repositoryUrl && <p className="break-words text-[12px] text-muted">{repositoryLabel(item.source.repositoryUrl)}</p>}
+                <ComponentLocation item={item} compact />
+              </div>
+              {included && <span className="shrink-0 rounded-full bg-accent-bg px-2 py-0.5 text-[11px] font-medium text-accent">Already listed</span>}
+            </div>;
           })}
         </div> : <p className="px-5 py-12 text-center text-[13px] text-muted">No matching components.</p>}
       </div>

@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Ban, ChevronRight, CircleCheck, CircleX, Download, FolderGit2 } from "lucide-react";
-import { api, downloadArchive, errorMessage, packagePath } from "../api";
+import { useState, type ReactNode } from "react";
+import { Ban, ChevronRight, CircleCheck, CircleX, FolderGit2 } from "lucide-react";
 import { cn } from "../utils";
 import type { Report, ReportItem, Result } from "../types";
 import { KindBadge, KindIcon, KIND_LABELS, KINDS } from "./ComponentUI";
@@ -18,43 +17,19 @@ const filters = [["all", "All"], ["expected", "Left out as expected"], ["attenti
 const columns = ["Type", "Total", "Converted", "Left out as expected", "Needs attention"];
 const countTones = ["", "count-good", "", "count-bad"];
 
-export interface Conversion { report?: Report; error: string; loading: boolean }
-
-// The conversion runs by itself whenever the preset opens or its saved revision changes.
-export function useConversion(id: string, revision: string): Conversion {
-  const [state, setState] = useState<Conversion>({ error: "", loading: true });
-  const request = useRef<AbortController | null>(null);
-  useEffect(() => {
-    request.current?.abort();
-    const controller = new AbortController();
-    request.current = controller;
-    setState({ error: "", loading: true });
-    api<Report>(packagePath(id, "/paperclip"), { signal: controller.signal })
-      .then(report => { if (!controller.signal.aborted) setState({ report, error: "", loading: false }); })
-      .catch(err => { if (!controller.signal.aborted) setState({ error: errorMessage(err), loading: false }); });
-    return () => controller.abort();
-  }, [id, revision]);
-  return state;
+function displayKind(kind: ReportItem["kind"]) {
+  return KINDS.includes(kind) ? kind : "other";
 }
 
-export function PaperclipReport({ id, conversion, dirty, heading }: {
-  id: string; conversion: Conversion; dirty: boolean; heading: ReactNode;
+export function PaperclipReport({ report, download, dirty, heading }: {
+  report: Omit<Report, "files">; download: ReactNode; dirty: boolean; heading: ReactNode;
 }) {
-  const { report } = conversion;
   const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
-  const [downloadError, setDownloadError] = useState("");
-  const [downloading, setDownloading] = useState(false);
   const [item, setItem] = useState<ReportItem>();
-  const error = conversion.error || downloadError;
-  const busy = conversion.loading ? "convert" : downloading ? "download" : "";
-  async function download() {
-    setDownloadError(""); setDownloading(true);
-    try { await downloadArchive(id, true); } catch (err) { setDownloadError(errorMessage(err)); } finally { setDownloading(false); }
-  }
-  const all = report?.items ?? [];
+  const all = report.items;
   const shown = { all, expected: all.filter(row => outcome(row) === "expected"), attention: all.filter(row => outcome(row) === "attention") };
   const visible = shown[filter];
-  const groups = KINDS.map(kind => [kind, all.filter(row => row.kind === kind)] as const).filter(([, rows]) => rows.length);
+  const groups = KINDS.map(kind => [kind, all.filter(row => displayKind(row.kind) === kind)] as const).filter(([, rows]) => rows.length);
   const metrics = (rows: ReportItem[]) => [rows.length,
     ...(["converted", "expected", "attention"] as const).map(result => rows.filter(row => outcome(row) === result).length)];
   function cells(rows: ReportItem[]) {
@@ -64,18 +39,14 @@ export function PaperclipReport({ id, conversion, dirty, heading }: {
     <div className="section-heading flex-wrap">
       {heading}
       <div className="flex flex-wrap items-center gap-2">
-        {report?.folder && (report.folder.url
+        {report.folder && (report.folder.url
           ? <a className="app-button-secondary" href={report.folder.url} target="_blank" rel="noreferrer"
               title="The export folder on GitHub, once it is committed"><FolderGit2 className="h-4 w-4" /> {report.folder.path}</a>
           : <span className="inline-flex items-center gap-1.5 text-[13px] text-muted"><FolderGit2 className="h-4 w-4" /> {report.folder.path}</span>)}
-        <button className="app-button-secondary" type="button" disabled={Boolean(busy) || !all.some(row => row.conversion.status === "converted")}
-          onClick={download}><Download className="h-4 w-4" /> Download Paperclip package</button>
+        {download}
       </div>
     </div>
     {dirty && <p className="mb-2 text-[12px] text-muted">Showing the saved revision.</p>}
-    {error && <p role="alert" className="mb-2 text-[13px] text-danger">{error}</p>}
-    {busy && <p role="status" className="mb-2 text-[13px] text-muted">{{ convert: "Converting package…", download: "Preparing download…" }[busy]}</p>}
-    {report && <>
       <section aria-label="Conversion summary">
         <div className="section-heading"><h3>Conversion summary</h3></div>
         <div className="summary-box"><table className="summary-table">
@@ -96,8 +67,9 @@ export function PaperclipReport({ id, conversion, dirty, heading }: {
         </div>
         {visible.length ? <div className="report-list">
           <ul>{visible.map((row, index) => <li key={row.id + index} className="report-row">
-            <div className="component-label"><KindIcon kind={row.kind} className="h-4 w-4 shrink-0 text-muted" />
-              <div className="component-name"><button type="button" className="row-action" onClick={() => setItem(row)}>{row.name}</button><span className="component-kind">{KIND_LABELS[row.kind]}</span></div>
+            <div className="component-label"><KindIcon kind={displayKind(row.kind)} className="h-4 w-4 shrink-0 text-muted" />
+              <div className="component-name"><button type="button" className="row-action" onClick={() => setItem(row)}>{row.name}</button><span className="component-kind">{KIND_LABELS[displayKind(row.kind)]}</span>
+                {row.originPackage && <span className="component-kind">From {row.originPackage.title}</span>}</div>
             </div>
             <Status result={row.conversion} />
             <p className="row-reason">{row.conversion.reason}{targetFile(row) && <> <code className="row-target">{targetFile(row)}</code></>}</p>
@@ -105,8 +77,7 @@ export function PaperclipReport({ id, conversion, dirty, heading }: {
           </li>)}</ul>
         </div> : <p className="empty">{{ all: "No conversion results.", expected: "No components left out as expected.", attention: "No components need attention." }[filter]}</p>}
       </section>
-    </>}
-    {item && <DetailSheet open title={item.name} meta={<KindBadge kind={item.kind} />} backLabel="Paperclip export" onClose={() => setItem(undefined)}>
+    {item && <DetailSheet open title={item.name} meta={<KindBadge kind={displayKind(item.kind)} />} backLabel="Paperclip export" onClose={() => setItem(undefined)}>
       <div className="asm-preset space-y-4">
         <section className="conversion-detail">
           <h3>Conversion<Status result={item.conversion} /></h3>

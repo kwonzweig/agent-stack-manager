@@ -25,11 +25,11 @@ def _report(results):
     return attention
 
 
-def _export(root, check):
+def _export(root, check, store):
     from .paperclip import EXPORTS, check_exports, write_exports
     if not check:
-        return 1 if _report(write_exports(root)) else 0
-    results, differences = check_exports(root)
+        return 1 if _report(write_exports(root, store=store)) else 0
+    results, differences = check_exports(root, store=store)
     attention = _report(results)
     stale = [(word, name) for word in ('changed', 'missing', 'extra') for name in differences[word]]
     for word, name in stale:
@@ -43,7 +43,8 @@ def _export(root, check):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(prog='agent-stack-manager')
-    parser.add_argument('--root',type=Path,default=Path.cwd(),help='Repo containing packages/ and catalog/.')
+    parser.add_argument('--root',type=Path,help='Folder containing packages/ and catalog/, or the private write root.')
+    parser.add_argument('--base-root',type=Path,help='Read packages and catalog from a separate, read-only ASM checkout.')
     commands=parser.add_subparsers(dest='command',required=True)
     serve=commands.add_parser('serve',help='Open the local dashboard server.')
     serve.add_argument('--port',type=int,default=4319)
@@ -52,16 +53,23 @@ def main(argv=None):
     lock=commands.add_parser('lock',help='Resolve APM dependencies without deploying host configuration.')
     lock.add_argument('preset')
     lock.add_argument('--update',action='store_true')
+    cc_switch=commands.add_parser('cc-switch',help='Print the CC Switch review for a saved preset.')
+    cc_switch.add_argument('preset')
     args=parser.parse_args(argv)
-    packages=args.root.resolve()/'packages'
+    if args.base_root is not None and args.root is None:
+        parser.error('--base-root requires an explicit private --root.')
+    args.root = args.root if args.root is not None else Path.cwd()
+    packages=(args.base_root or args.root).resolve()/'packages'
     if args.command in ('serve','export') and not packages.is_dir():
         print(f'{packages} is not a folder. Run in a clone of the repo, or name one with --root <clone>.')
         return 2
     try:
+        from .store import Store
+        store=Store(args.root,base_root=args.base_root)
         if args.command=='serve':
             from .server import create_server
             logging.basicConfig(level=logging.INFO,format='%(message)s')
-            server=create_server(args.root,port=args.port)
+            server=create_server(args.root,port=args.port,base_root=args.base_root)
             print('Agent Stack Manager: http://127.0.0.1:'+str(server.server_port),flush=True)
             try:
                 server.serve_forever()
@@ -71,9 +79,12 @@ def main(argv=None):
                 server.server_close()
             return 0
         if args.command=='export':
-            return _export(args.root,args.check)
-        from .store import Store
-        store=Store(args.root)
+            return _export(args.root,args.check,store)
+        if args.command=='cc-switch':
+            from .exporters import EXPORTERS
+            assessment = EXPORTERS['ccswitch'].assess(store.get(args.preset),store)
+            print(json.dumps(assessment.require_artifact(),ensure_ascii=True,indent=2))
+            return 0
         if args.command=='lock':
             result=store.lock(args.preset,args.update)
             print(json.dumps(result,ensure_ascii=False,indent=2))
